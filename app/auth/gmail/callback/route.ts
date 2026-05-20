@@ -20,7 +20,7 @@ function createRouteClient(request: NextRequest) {
 }
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
+const GMAIL_PROFILE_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/profile'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -86,16 +86,20 @@ export async function GET(request: NextRequest) {
     scope: string
   }
 
-  // Fetch the Gmail address associated with these tokens.
-  const profileResponse = await fetch(GOOGLE_USERINFO_URL, {
+  // Fetch the Gmail address using the Gmail profile endpoint (requires gmail.readonly).
+  // We don't request the OpenID email scope, so the generic userinfo endpoint
+  // is not available — the Gmail-specific profile endpoint works with our scopes.
+  const profileResponse = await fetch(GMAIL_PROFILE_URL, {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   })
 
   if (!profileResponse.ok) {
+    const body = await profileResponse.text()
+    console.error('[gmail/callback] profile fetch failed:', profileResponse.status, body)
     return NextResponse.redirect(`${settingsUrl}?error=profile_fetch_failed`)
   }
 
-  const profile = (await profileResponse.json()) as { email: string }
+  const profile = (await profileResponse.json()) as { emailAddress: string }
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
   const scopes = tokens.scope.split(' ')
 
@@ -108,7 +112,7 @@ export async function GET(request: NextRequest) {
         workspace_id: workspaceId,
         user_id: userId,
         provider: 'google' as const,
-        email_address: profile.email,
+        email_address: profile.emailAddress,
         access_token_encrypted: encryptToken(tokens.access_token),
         refresh_token_encrypted: encryptToken(tokens.refresh_token),
         token_expires_at: expiresAt,
