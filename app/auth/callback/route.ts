@@ -16,5 +16,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=Could+not+sign+in`)
+  return NextResponse.redirect(`${origin}/sign-in?error=Could+not+sign+in`)
 }

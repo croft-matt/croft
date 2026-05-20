@@ -19,7 +19,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Called from a Server Component — cookie writes are a no-op here.
+            // Called from a Server Component. Cookie writes are a no-op here.
             // Route handlers and Server Actions can write cookies without issue.
           }
         },

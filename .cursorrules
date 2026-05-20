@@ -157,7 +157,7 @@ email_processing_log is append-only. Never update or delete rows. It is the sour
 - All forms validate with Zod schemas in lib/validators/.
 - Async APIs (cookies, params, searchParams) must be awaited in Next.js 16.
 - Imports use the @/ alias. No relative imports across top-level folders.
-- Next.js 16 root middleware file is middleware.ts and exports middleware.
+- Next.js 16 root proxy file is proxy.ts and exports proxy (renamed from middleware.ts in Next.js 16).
 - Validate every external URL before redirecting. Only allow relative paths starting with / and not //. Use safeRelativePath from lib/auth/helpers.ts.
 
 ## Code style
@@ -183,7 +183,7 @@ email_processing_log is append-only. Never update or delete rows. It is the sour
 - Every authenticated user has at least one workspace
 - Workspace membership is the authorisation primitive
 - Server actions and route handlers check auth.getUser() and verify workspace access
-- Middleware (middleware.ts) uses getUser() not getSession()
+- Proxy file (proxy.ts) uses getUser() not getSession()
 - Never use getSession() anywhere
 
 ## File organisation
@@ -208,19 +208,19 @@ email_processing_log is append-only. Never update or delete rows. It is the sour
 - public/ for static assets
 
 ## URL structure
-- / is the public marketing landing
-- /pricing, /about are public marketing pages
-- /login, /auth/callback, /auth/sign-out form the auth flow
-- /app is the authenticated cockpit dashboard
-- /app/rooms for room management
-- /app/rooms/[id] for individual room view
-- /app/emails for email list and search
-- /app/jobs for open jobs
-- /app/assets for extracted assets
-- /app/contacts for extracted contacts
-- /app/settings for workspace settings and cost configuration
+- / is the authenticated cockpit dashboard (redirects to /home if not signed in)
+- /home is the public marketing landing page
+- /sign-in, /auth/callback, /auth/sign-out form the auth flow
+- /rooms for room management
+- /rooms/[id] for individual room view
+- /emails for email list and search
+- /jobs for open jobs
+- /assets for extracted assets
+- /contacts for extracted contacts
+- /settings for workspace settings and cost configuration
 - /api/email/inbound is the Resend inbound webhook endpoint
 - /api/webhooks/stripe is the Stripe webhook endpoint
+- No /app prefix on any routes. Keep URLs clean.
 
 ## Brand voice
 - Short sentences. No corporate language.
