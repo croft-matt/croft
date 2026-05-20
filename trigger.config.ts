@@ -1,4 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
+import { createRequire } from "module";
 
 export default defineConfig({
   project: "proj_hyrguaodlpvlxcwmwxra",
@@ -20,10 +21,18 @@ export default defineConfig({
   },
   dirs: ["./trigger/jobs"],
   build: {
-    // voyageai@0.2.1 has broken directory imports in its ESM build.
-    // The CJS build (require condition) is fine. Setting conditions here
-    // tells esbuild to resolve the "require" export entry from package.json
-    // for all packages, which bundles the CJS version of voyageai correctly.
-    conditions: ["require", "node"],
+    // voyageai@0.2.1 has broken directory imports in its ESM build. The CJS
+    // build works fine. This esbuild plugin intercepts the voyageai import and
+    // redirects it to the resolved CJS entry point, bypassing the broken ESM one.
+    esbuildPlugins: [
+      {
+        name: "force-voyageai-cjs",
+        setup(build) {
+          const require = createRequire(import.meta.url);
+          const cjsPath = require.resolve("voyageai");
+          build.onResolve({ filter: /^voyageai$/ }, () => ({ path: cjsPath }));
+        },
+      },
+    ],
   },
 });
