@@ -24,6 +24,7 @@ export interface Workspace {
   id: string
   name: string
   active: boolean
+  receiving_address: string | null
   created_at: string
 }
 
@@ -102,6 +103,7 @@ export interface Email {
   extraction: Extraction | null
   extraction_complete: boolean | null
   attachments: AttachmentMeta[]
+  resend_email_id: string | null
   embedding: number[] | null
   processed_at: string | null
   created_at: string
