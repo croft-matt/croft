@@ -10,14 +10,6 @@ export type ProcessingState =
   | 'failed'
   | 'ignored'
 
-export type JobIntent =
-  | 'REQUEST'
-  | 'DELIVER'
-  | 'CONFIRM'
-  | 'CHASE'
-  | 'QUERY'
-  | 'INTRODUCE'
-
 export type WorkspaceMemberRole = 'owner' | 'member'
 
 export interface Workspace {
@@ -131,6 +123,89 @@ export interface VipSender {
   created_at: string
 }
 
+export interface Room {
+  id: string
+  workspace_id: string
+  parent_room_id: string | null
+  name: string
+  description: string | null
+  created_by: string | null
+  archived_at: string | null
+  room_data: Record<string, unknown>
+  progress_total: number
+  progress_closed: number
+  created_at: string
+  updated_at: string
+}
+
+export type RoomEmailSource = 'user' | 'ai'
+
+export interface RoomEmail {
+  id: string
+  room_id: string
+  email_id: string
+  source: RoomEmailSource
+  created_at: string
+}
+
+export type JobIntent =
+  | 'REQUEST'
+  | 'DELIVER'
+  | 'CONFIRM'
+  | 'CHASE'
+  | 'QUERY'
+  | 'INTRODUCE'
+
+export type JobStatus = 'open' | 'closed' | 'cancelled'
+
+export interface Job {
+  id: string
+  workspace_id: string
+  email_id: string
+  intent: JobIntent
+  description: string
+  owner: string | null
+  due: string | null
+  status: JobStatus
+  confidence: number
+  parent_job_id: string | null
+  closed_at: string | null
+  closed_by_email_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AssetStatus = 'received' | 'sent' | 'submitted' | 'accepted' | 'not_reviewed'
+
+export interface Asset {
+  id: string
+  workspace_id: string
+  email_id: string
+  filename: string
+  storage_path: string
+  mime_type: string | null
+  size_bytes: number | null
+  likely_type: string | null
+  confidence: number | null
+  status: AssetStatus
+  status_updated_at: string | null
+  created_at: string
+}
+
+export interface Contact {
+  id: string
+  workspace_id: string
+  email_address: string
+  name: string | null
+  role: string | null
+  organisation: string | null
+  phone: string | null
+  first_seen_at: string
+  last_seen_at: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -158,6 +233,31 @@ export interface Database {
         Row: VipSender
         Insert: Omit<VipSender, 'id' | 'created_at'> & { id?: string; created_at?: string }
         Update: Partial<Omit<VipSender, 'id'>>
+      }
+      rooms: {
+        Row: Room
+        Insert: Omit<Room, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }
+        Update: Partial<Omit<Room, 'id'>>
+      }
+      room_emails: {
+        Row: RoomEmail
+        Insert: Omit<RoomEmail, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: never
+      }
+      jobs: {
+        Row: Job
+        Insert: Omit<Job, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }
+        Update: Partial<Omit<Job, 'id'>>
+      }
+      assets: {
+        Row: Asset
+        Insert: Omit<Asset, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Omit<Asset, 'id'>>
+      }
+      contacts: {
+        Row: Contact
+        Insert: Omit<Contact, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }
+        Update: Partial<Omit<Contact, 'id'>>
       }
     }
   }
