@@ -11,13 +11,8 @@ create table workspaces (
 
 alter table workspaces enable row level security;
 
-create policy "workspace members can read own workspace"
-  on workspaces for select
-  using (id in (
-    select workspace_id from workspace_members where user_id = auth.uid()
-  ));
-
 -- Workspace members: links auth users to workspaces with a role.
+-- Created before the workspaces policy so the subquery reference resolves.
 create table workspace_members (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references workspaces(id) on delete cascade,
@@ -32,6 +27,12 @@ create index on workspace_members(user_id);
 create index on workspace_members(workspace_id);
 
 alter table workspace_members enable row level security;
+
+create policy "workspace members can read own workspace"
+  on workspaces for select
+  using (id in (
+    select workspace_id from workspace_members where user_id = auth.uid()
+  ));
 
 create policy "users can read own memberships"
   on workspace_members for select
