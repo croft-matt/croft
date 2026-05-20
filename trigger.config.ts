@@ -27,14 +27,19 @@ export default defineConfig({
   },
   dirs: ["./trigger/jobs"],
   build: {
-    // @huggingface/transformers is only used by voyageai's local offline model path.
-    // We use the Voyage AI API (voyage-3-lite), so this is never called at runtime.
-    external: ["@huggingface/transformers"],
     extensions: [
       esbuildPlugin({
         name: "force-voyageai-cjs",
         setup(build) {
+          // Redirect voyageai to its CJS build.
           build.onResolve({ filter: /^voyageai$/ }, () => ({ path: voyageaiCjsPath }));
+          // @huggingface/transformers is a lazy require inside voyageai's local
+          // tokenizer — only used for offline models. We use the API so mark it
+          // external to prevent esbuild failing on an unresolvable optional dep.
+          build.onResolve({ filter: /^@huggingface\/transformers$/ }, () => ({
+            path: "@huggingface/transformers",
+            external: true,
+          }));
         },
       }),
     ],
