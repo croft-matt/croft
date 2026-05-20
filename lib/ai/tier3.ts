@@ -1,0 +1,97 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
+import type { Email, Extraction } from '@/lib/types/database'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+export interface ClassificationResult {
+  extraction: Extraction
+  extraction_complete: boolean
+  subject_summary: string
+}
+
+function buildEmailContent(email: Email): string {
+  // Include thread context if available. Cap at ~2000 words to manage token cost.
+  const body = (email.body_text ?? '').split(/\s+/).slice(0, 2000).join(' ')
+  const attachmentList = email.attachments.length > 0
+    ? `\nAttachments: ${email.attachments.map((a) => a.filename).join(', ')}`
+    : ''
+
+  return `From: ${email.from_name ? `${email.from_name} <${email.from_address}>` : email.from_address}
+To: ${(email.to_addresses as string[]).join(', ')}${email.cc_addresses && (email.cc_addresses as string[]).length > 0 ? `\nCC: ${(email.cc_addresses as string[]).join(', ')}` : ''}
+Subject: ${email.subject ?? '(no subject)'}
+Date: ${email.received_at}${attachmentList}
+
+${body}`
+}
+
+export async function runFullClassification(email: Email): Promise<ClassificationResult> {
+  const startedAt = Date.now()
+  const supabase = createAdminClient()
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      system: [
+        {
+          type: 'text',
+          text: TIER_3_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [
+        {
+          role: 'user',
+          content: buildEmailContent(email),
+        },
+      ],
+      tools: [EXTRACTION_TOOL_SCHEMA],
+      tool_choice: { type: 'tool', name: 'extract_email_data' },
+    })
+
+    const usage = response.usage as Record<string, unknown>
+    const cacheReadTokens = (usage.cache_read_input_tokens as number) ?? 0
+    const cacheWriteTokens = (usage.cache_creation_input_tokens as number) ?? 0
+
+    await supabase.from('email_processing_log').insert({
+      email_id: email.id,
+      tier: 3,
+      model: 'claude-sonnet-4-6',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_read_tokens: cacheReadTokens,
+      cache_write_tokens: cacheWriteTokens,
+      duration_ms: Date.now() - startedAt,
+      error: null,
+    })
+
+    const toolUse = response.content.find((c) => c.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      throw new Error('Model did not return tool use output')
+    }
+
+    const extraction = toolUse.input as Extraction
+
+    return {
+      extraction,
+      extraction_complete: extraction.extraction_complete,
+      subject_summary: extraction.subject_summary,
+    }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    await supabase.from('email_processing_log').insert({
+      email_id: email.id,
+      tier: 3,
+      model: 'claude-sonnet-4-6',
+      input_tokens: null,
+      output_tokens: null,
+      cache_read_tokens: null,
+      cache_write_tokens: null,
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
+    throw err
+  }
+}
