@@ -20,9 +20,10 @@ export default defineConfig({
   },
   dirs: ["./trigger/jobs"],
   build: {
-    // voyageai@0.2.1 has broken relative imports in its ESM build.
-    // Marking it external tells esbuild to leave the require() call in place
-    // and resolve it from node_modules at runtime instead of bundling it.
-    external: ["voyageai"],
+    // voyageai@0.2.1 has broken directory imports in its ESM build.
+    // The CJS build (require condition) is fine. Setting conditions here
+    // tells esbuild to resolve the "require" export entry from package.json
+    // for all packages, which bundles the CJS version of voyageai correctly.
+    conditions: ["require", "node"],
   },
 });
