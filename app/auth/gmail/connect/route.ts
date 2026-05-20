@@ -31,25 +31,19 @@ function createRouteClient(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url)
 
-  console.log('[gmail/connect] cookies:', request.cookies.getAll().map(c => c.name))
-
   const supabase = createRouteClient(request)
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-  console.log('[gmail/connect] getUser result:', { userId: user?.id ?? null, error: userError?.message ?? null })
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.redirect(`${origin}/sign-in`)
   }
 
-  const { data: membership, error: membershipError } = await supabase
+  const { data: membership } = await supabase
     .from('workspace_members')
     .select('workspace_id')
     .eq('user_id', user.id)
     .limit(1)
     .single()
-
-  console.log('[gmail/connect] membership:', { workspaceId: membership?.workspace_id ?? null, error: membershipError?.message ?? null })
 
   if (!membership) {
     return NextResponse.redirect(`${origin}/sign-in`)
