@@ -46,18 +46,18 @@ export async function GET(request: NextRequest) {
   }
 
   // Retrieve and immediately delete the PKCE state to prevent replay.
-  const stored = await redis.get<string>(`gmail:pkce:${state}`)
+  // Upstash Redis automatically deserialises stored JSON, so the value is
+  // already a plain object — no JSON.parse needed.
+  const stored = await redis.get<{ verifier: string; workspaceId: string; userId: string }>(
+    `gmail:pkce:${state}`
+  )
   await redis.del(`gmail:pkce:${state}`)
 
   if (!stored) {
     return NextResponse.redirect(`${settingsUrl}?error=invalid_state`)
   }
 
-  const { verifier, workspaceId, userId } = JSON.parse(stored) as {
-    verifier: string
-    workspaceId: string
-    userId: string
-  }
+  const { verifier, workspaceId, userId } = stored
 
   // Exchange the authorisation code for tokens.
   const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
