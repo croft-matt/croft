@@ -1,5 +1,4 @@
 import { task } from '@trigger.dev/sdk/v3'
-import { google } from 'googleapis'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getValidAccessToken } from '@/lib/email/google-client'
 import { storeGmailMessage } from '@/lib/email/ingest'
@@ -9,8 +8,40 @@ export interface ImportGmailHistoryPayload {
   accountId: string
 }
 
+const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const BATCH_SIZE = 50
 const BATCH_DELAY_MS = 100
+
+interface GmailMessageRef {
+  id: string
+  threadId: string
+}
+
+interface GmailMessageListResponse {
+  messages?: GmailMessageRef[]
+  nextPageToken?: string
+}
+
+interface GmailHeader {
+  name: string
+  value: string
+}
+
+interface GmailPart {
+  mimeType?: string
+  body?: { data?: string }
+  parts?: GmailPart[]
+}
+
+interface GmailMessage {
+  id: string
+  payload?: {
+    mimeType?: string
+    headers?: GmailHeader[]
+    body?: { data?: string }
+    parts?: GmailPart[]
+  }
+}
 
 export const importGmailHistoryTask = task({
   id: 'import-gmail-history',
@@ -29,21 +60,22 @@ export const importGmailHistoryTask = task({
 
     const accessToken = await getValidAccessToken(accountId)
 
-    const auth = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
-    )
-    auth.setCredentials({ access_token: accessToken })
-    const gmail = google.gmail({ version: 'v1', auth })
-
     // Fetch the last 7 days of message IDs.
-    const listResponse = await gmail.users.messages.list({
-      userId: 'me',
-      q: 'newer_than:7d',
-      maxResults: 500,
+    const listUrl = new URL(`${GMAIL_API}/messages`)
+    listUrl.searchParams.set('q', 'newer_than:7d')
+    listUrl.searchParams.set('maxResults', '500')
+
+    const listRes = await fetch(listUrl.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
     })
 
-    const messages = listResponse.data.messages ?? []
+    if (!listRes.ok) {
+      const body = await listRes.text()
+      throw new Error(`import-gmail-history: messages.list failed (${listRes.status}): ${body}`)
+    }
+
+    const listData = (await listRes.json()) as GmailMessageListResponse
+    const messages = listData.messages ?? []
     let stored = 0
     let skipped = 0
 
@@ -52,16 +84,22 @@ export const importGmailHistoryTask = task({
       const batch = messages.slice(i, i + BATCH_SIZE)
 
       for (const msg of batch) {
-        if (!msg.id) continue
-
         try {
-          const full = await gmail.users.messages.get({
-            userId: 'me',
-            id: msg.id,
-            format: 'full',
+          const msgUrl = new URL(`${GMAIL_API}/messages/${msg.id}`)
+          msgUrl.searchParams.set('format', 'full')
+
+          const msgRes = await fetch(msgUrl.toString(), {
+            headers: { Authorization: `Bearer ${accessToken}` },
           })
 
-          const headers = full.data.payload?.headers ?? []
+          if (!msgRes.ok) {
+            console.error(`[import-gmail-history] messages.get failed for ${msg.id}: ${msgRes.status}`)
+            continue
+          }
+
+          const full = (await msgRes.json()) as GmailMessage
+
+          const headers = full.payload?.headers ?? []
           const header = (name: string) =>
             headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? null
 
@@ -72,7 +110,7 @@ export const importGmailHistoryTask = task({
           const subject = header('Subject')
           const dateStr = header('Date')
           const receivedAt = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString()
-          const bodyText = extractPlainText(full.data.payload)
+          const bodyText = extractPlainText(full.payload ?? null)
 
           const result = await storeGmailMessage({
             workspaceId: account.workspace_id,
@@ -95,7 +133,7 @@ export const importGmailHistoryTask = task({
             skipped++
           }
         } catch (err) {
-          // Log and continue — one bad message should not stop the import.
+          // Log and continue — one bad message must not stop the import.
           console.error(`[import-gmail-history] failed on message ${msg.id}:`, err)
         }
       }
@@ -114,15 +152,13 @@ export const importGmailHistoryTask = task({
   },
 })
 
-// Parses a comma-separated address header into an array of strings.
 function parseAddressList(value: string | null): string[] {
   if (!value) return []
   return value.split(',').map((a) => a.trim()).filter(Boolean)
 }
 
-// Recursively walks the message payload to find the first text/plain part.
 function extractPlainText(
-  payload: { mimeType?: string | null; body?: { data?: string | null } | null; parts?: unknown[] | null } | null | undefined
+  payload: { mimeType?: string; body?: { data?: string }; parts?: GmailPart[] } | null
 ): string | null {
   if (!payload) return null
 
@@ -132,9 +168,7 @@ function extractPlainText(
 
   if (payload.parts) {
     for (const part of payload.parts) {
-      const result = extractPlainText(
-        part as Parameters<typeof extractPlainText>[0]
-      )
+      const result = extractPlainText(part)
       if (result) return result
     }
   }

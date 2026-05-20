@@ -64,8 +64,8 @@ async function writeExtractionResults(
   const now = new Date().toISOString()
 
   // 1. Insert jobs.
-  if (extraction.jobs.length > 0) {
-    const jobRows = extraction.jobs.map((j) => ({
+  if ((extraction.jobs ?? []).length > 0) {
+    const jobRows = (extraction.jobs ?? []).map((j) => ({
       workspace_id: workspaceId,
       email_id: emailId,
       intent: j.intent,
@@ -84,7 +84,7 @@ async function writeExtractionResults(
 
   // 2. Upsert contacts.
   // on conflict: update last_seen_at always; fill null fields only, never overwrite existing values.
-  for (const c of extraction.entities.contacts) {
+  for (const c of extraction.entities?.contacts ?? []) {
     if (!c.email) continue
 
     const { error } = await supabase.from('contacts').upsert(
@@ -113,7 +113,7 @@ async function writeExtractionResults(
   // Match room_suggestions against existing room names (case-insensitive) within the workspace.
   // Insert room_emails with source = 'ai' for any match.
   // Never auto-create a room. Room creation is a user action.
-  if (extraction.room_suggestions.length > 0) {
+  if ((extraction.room_suggestions ?? []).length > 0) {
     const { data: existingRooms, error: roomLookupError } = await supabase
       .from('rooms')
       .select('id, name')
@@ -126,7 +126,7 @@ async function writeExtractionResults(
         roomLookupError.message,
       )
     } else if (existingRooms && existingRooms.length > 0) {
-      const suggestionsLower = extraction.room_suggestions.map((s) => s.toLowerCase())
+      const suggestionsLower = (extraction.room_suggestions ?? []).map((s) => s.toLowerCase())
 
       const matchedRoomIds = existingRooms
         .filter((r) => suggestionsLower.includes(r.name.toLowerCase()))
@@ -155,7 +155,7 @@ async function writeExtractionResults(
 
   // 4. Close resolved jobs.
   // closes_jobs contains IDs of existing open jobs this email resolves.
-  if (extraction.closes_jobs.length > 0) {
+  if ((extraction.closes_jobs ?? []).length > 0) {
     const { error } = await supabase
       .from('jobs')
       .update({
@@ -163,7 +163,7 @@ async function writeExtractionResults(
         closed_at: now,
         closed_by_email_id: emailId,
       })
-      .in('id', extraction.closes_jobs)
+      .in('id', extraction.closes_jobs ?? [])
       .eq('status', 'open')
 
     if (error) {

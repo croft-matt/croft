@@ -1,4 +1,4 @@
-import { CheckCircle, Circle, AlertTriangle, Mail } from 'lucide-react'
+import { CheckCircle, Circle, AlertTriangle, Mail, Copy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -21,6 +21,10 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
 
   const account = membership
     ? await getAccount(membership.workspace_id)
+    : null
+
+  const inboundAddress = membership
+    ? await getInboundAddress(membership.workspace_id)
     : null
 
   const isRevoked =
@@ -50,7 +54,11 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
         {!account || isRevoked ? (
           <NotConnectedCard isRevoked={isRevoked} justConnected={false} />
         ) : (
-          <ConnectedCard account={account} justConnected={params.connected === '1'} />
+          <ConnectedCard
+            account={account}
+            inboundAddress={inboundAddress}
+            justConnected={params.connected === '1'}
+          />
         )}
 
         <div className="space-y-3">
@@ -64,7 +72,7 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
             </li>
             <li className="flex gap-2">
               <span className="shrink-0 text-neutral-600">2.</span>
-              Croft sets up automatic forwarding — no manual steps required.
+              Add your Croft address as a forwarding address in Gmail settings.
             </li>
             <li className="flex gap-2">
               <span className="shrink-0 text-neutral-600">3.</span>
@@ -118,9 +126,11 @@ function NotConnectedCard({ isRevoked }: { isRevoked: boolean; justConnected: bo
 
 function ConnectedCard({
   account,
+  inboundAddress,
   justConnected,
 }: {
   account: NonNullable<Awaited<ReturnType<typeof getAccount>>>
+  inboundAddress: string | null
   justConnected: boolean
 }) {
   const fullyReady = account.forwarding_configured && account.history_imported
@@ -146,7 +156,7 @@ function ConnectedCard({
         <StatusRow
           done={account.forwarding_configured}
           label="Forwarding configured"
-          pending="Setting up email forwarding..."
+          pending="Forwarding not yet set up"
         />
         <StatusRow
           done={account.history_imported}
@@ -155,11 +165,40 @@ function ConnectedCard({
         />
       </div>
 
-      {!fullyReady && (
+      {!account.forwarding_configured && inboundAddress && (
+        <ForwardingInstructions inboundAddress={inboundAddress} />
+      )}
+
+      {!fullyReady && account.forwarding_configured && (
         <p className="text-xs text-neutral-500">
           Setup is running in the background. This page will reflect progress on next refresh.
         </p>
       )}
+    </div>
+  )
+}
+
+function ForwardingInstructions({ inboundAddress }: { inboundAddress: string }) {
+  return (
+    <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4 space-y-3">
+      <p className="text-sm font-medium text-amber-300">Set up email forwarding</p>
+      <p className="text-sm text-neutral-400">
+        Add this address as a forwarding address in your Gmail settings, then confirm the
+        verification email Gmail sends to it.
+      </p>
+      <div className="flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2">
+        <Copy className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+        <span className="flex-1 truncate font-mono text-xs text-neutral-200">
+          {inboundAddress}
+        </span>
+      </div>
+      <ol className="space-y-1 text-xs text-neutral-500">
+        <li>1. Open Gmail and go to Settings (gear icon) &gt; See all settings</li>
+        <li>2. Click the Forwarding and POP/IMAP tab</li>
+        <li>3. Click Add a forwarding address and paste the address above</li>
+        <li>4. Confirm the verification email that Gmail sends</li>
+        <li>5. Select Forward a copy of incoming mail and save changes</li>
+      </ol>
     </div>
   )
 }
@@ -199,4 +238,14 @@ async function getAccount(workspaceId: string) {
     .limit(1)
     .maybeSingle()
   return data
+}
+
+async function getInboundAddress(workspaceId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('workspaces')
+    .select('receiving_address')
+    .eq('id', workspaceId)
+    .single()
+  return data?.receiving_address ?? null
 }
