@@ -13,3 +13,10 @@ export const inboundRatelimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(100, '10 s'),
   prefix: 'croft:inbound',
 })
+
+// Outbound sends: 60 per hour per workspace.
+export const sendRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 h'),
+  prefix: 'croft:send',
+})
