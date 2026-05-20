@@ -2,8 +2,6 @@ import { CheckCircle, Circle, AlertTriangle, Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Button } from '@/components/ui/button'
-import { connectGmail } from './actions'
 
 interface PageProps {
   searchParams: Promise<{ connected?: string; error?: string }>
@@ -108,11 +106,12 @@ function NotConnectedCard({ isRevoked }: { isRevoked: boolean; justConnected: bo
           </p>
         </>
       )}
-      <form action={connectGmail}>
-        <Button type="submit" className="w-full">
-          {isRevoked ? 'Reconnect Gmail' : 'Connect Gmail'}
-        </Button>
-      </form>
+      <a
+        href="/auth/gmail/connect"
+        className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 text-sm font-medium text-neutral-950 transition-colors hover:bg-neutral-100"
+      >
+        {isRevoked ? 'Reconnect Gmail' : 'Connect Gmail'}
+      </a>
     </div>
   )
 }
