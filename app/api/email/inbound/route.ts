@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import type { WebhookEventPayload } from 'resend'
 import { storeEmailMetadata } from '@/lib/email/ingest'
 import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
+import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -43,9 +44,7 @@ export async function POST(request: NextRequest) {
     const result = await storeEmailMetadata(parsed.data.data)
 
     if (result) {
-      // Trigger.dev fetch-body job wired in Commit 6.
-      // The job fetches the full body from Resend, then enqueues Tier 1.
-      console.info('[inbound] email stored, pending fetch-body job:', result.emailId)
+      await fetchBodyTask.trigger({ emailId: result.emailId })
     }
   } catch (err) {
     console.error('[inbound] failed to store email:', err)

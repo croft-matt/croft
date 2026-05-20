@@ -1,0 +1,54 @@
+import { task } from '@trigger.dev/sdk/v3'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { runUrgencyScan } from '@/lib/ai/tier2'
+
+export interface UrgencyPayload {
+  emailId: string
+}
+
+export const urgencyTask = task({
+  id: 'urgency-scan',
+  maxDuration: 60,
+  run: async (payload: UrgencyPayload) => {
+    const { emailId } = payload
+    const supabase = createAdminClient()
+
+    const { data: email } = await supabase
+      .from('emails')
+      .select('*')
+      .eq('id', emailId)
+      .single()
+
+    if (!email) throw new Error(`urgency-scan: email ${emailId} not found`)
+
+    const result = await runUrgencyScan(email)
+
+    await supabase
+      .from('emails')
+      .update({
+        urgency_score: result.urgency_score,
+        urgency_reason: result.urgency_reason,
+        requires_response: result.requires_response,
+        response_by: result.response_by,
+        processing_state: 'queued',
+      })
+      .eq('id', emailId)
+
+    // Broadcast urgency data to the UI via Supabase Realtime.
+    // The cockpit subscribes to this channel per workspace.
+    const channel = supabase.channel(`workspace:${email.workspace_id}`)
+    await channel.send({
+      type: 'broadcast',
+      event: 'urgency_update',
+      payload: {
+        email_id: emailId,
+        urgency_score: result.urgency_score,
+        urgency_reason: result.urgency_reason,
+        requires_response: result.requires_response,
+      },
+    })
+    await supabase.removeChannel(channel)
+
+    return { emailId, urgency_score: result.urgency_score }
+  },
+})
