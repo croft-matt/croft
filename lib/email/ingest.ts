@@ -2,6 +2,17 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { ResendInboundEvent } from '@/lib/validators/email-inbound'
 import type { AttachmentMeta } from '@/lib/types/database'
 
+export interface GmailMessageData {
+  workspaceId: string
+  messageId: string
+  from: string
+  toAddresses: string[]
+  ccAddresses: string[]
+  subject: string | null
+  bodyText: string | null
+  receivedAt: string
+}
+
 // Parses "Display Name <email@example.com>" or "email@example.com" into parts.
 function parseFromAddress(from: string): { name: string | null; address: string } {
   const match = from.match(/^(.+?)\s*<(.+?)>$/)
@@ -74,4 +85,44 @@ export async function storeEmailMetadata(
   }
 
   return { emailId: email.id, workspaceId: workspace.id }
+}
+
+// Stores a single email fetched from the Gmail history API.
+// Does not look up the workspace by receiving_address — workspaceId is already known.
+// Sets urgency_score = 0 so historical emails sort below live inbound in the Tier 3 queue.
+// Safe to call multiple times: unique(workspace_id, message_id) silently skips duplicates.
+export async function storeGmailMessage(
+  data: GmailMessageData
+): Promise<IngestResult | null> {
+  const supabase = createAdminClient()
+
+  const { name: fromName, address: fromAddress } = parseFromAddress(data.from)
+
+  const { data: email, error } = await supabase
+    .from('emails')
+    .insert({
+      workspace_id: data.workspaceId,
+      message_id: data.messageId,
+      from_address: fromAddress,
+      from_name: fromName,
+      to_addresses: data.toAddresses,
+      cc_addresses: data.ccAddresses,
+      subject: data.subject,
+      body_text: data.bodyText,
+      received_at: data.receivedAt,
+      processing_state: 'received',
+      urgency_score: 0,
+      attachments: [],
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      return null
+    }
+    throw new Error(`[ingest] storeGmailMessage failed: ${error.message}`)
+  }
+
+  return { emailId: email.id, workspaceId: data.workspaceId }
 }
