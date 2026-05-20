@@ -27,6 +27,9 @@ export default defineConfig({
   },
   dirs: ["./trigger/jobs"],
   build: {
+    // @huggingface/transformers is only used by voyageai's local offline model path.
+    // We use the Voyage AI API (voyage-3-lite), so this is never called at runtime.
+    external: ["@huggingface/transformers"],
     extensions: [
       esbuildPlugin({
         name: "force-voyageai-cjs",
