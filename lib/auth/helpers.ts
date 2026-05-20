@@ -21,7 +21,7 @@ export async function getCurrentUser() {
 // Validates redirect targets to prevent open redirect attacks.
 // Only allows relative paths starting with / but not //.
 export function safeRelativePath(path: string | null | undefined): string {
-  if (!path) return '/app'
+  if (!path) return '/'
   if (path.startsWith('/') && !path.startsWith('//')) return path
-  return '/app'
+  return '/'
 }
