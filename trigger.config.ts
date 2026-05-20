@@ -5,7 +5,7 @@ import { createRequire } from "module";
 // Resolve to the CJS build of voyageai at config load time.
 // voyageai@0.2.1 has broken ESM directory imports; the CJS build works fine.
 const _require = createRequire(import.meta.url);
-const voyageaiCjsPath = _require.resolve("voyageai/dist/cjs/extended/index.js");
+const voyageaiCjsPath = _require.resolve("voyageai");
 
 export default defineConfig({
   project: "proj_hyrguaodlpvlxcwmwxra",
