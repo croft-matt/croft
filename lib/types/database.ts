@@ -17,7 +17,26 @@ export interface Workspace {
   name: string
   active: boolean
   receiving_address: string | null
+  croft_email_address: string | null
   created_at: string
+}
+
+export type EmailAccountProvider = 'google'
+
+export interface EmailAccount {
+  id: string
+  workspace_id: string
+  user_id: string
+  provider: EmailAccountProvider
+  email_address: string
+  access_token_encrypted: string | null
+  refresh_token_encrypted: string | null
+  token_expires_at: string
+  scopes: string[]
+  forwarding_configured: boolean
+  history_imported: boolean
+  connected_at: string
+  last_used_at: string | null
 }
 
 export interface WorkspaceMember {
@@ -213,6 +232,11 @@ export interface Database {
         Row: Workspace
         Insert: Omit<Workspace, 'id' | 'created_at'> & { id?: string; created_at?: string }
         Update: Partial<Omit<Workspace, 'id'>>
+      }
+      email_accounts: {
+        Row: EmailAccount
+        Insert: Omit<EmailAccount, 'id' | 'connected_at'> & { id?: string; connected_at?: string }
+        Update: Partial<Omit<EmailAccount, 'id'>>
       }
       workspace_members: {
         Row: WorkspaceMember
