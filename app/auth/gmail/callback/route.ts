@@ -1,9 +1,23 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { tasks } from '@trigger.dev/sdk/v3'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@/lib/types/database'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { encryptToken } from '@/lib/crypto/tokens'
 import { redis } from '@/lib/ratelimit'
+
+function createRouteClient(request: NextRequest) {
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll() { /* read-only — session writes handled by middleware */ },
+      },
+    }
+  )
+}
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
@@ -25,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Confirm the user is still authenticated.
-  const supabase = await createClient()
+  const supabase = createRouteClient(request)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.redirect(`${origin}/sign-in`)

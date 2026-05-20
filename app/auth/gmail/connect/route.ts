@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { randomBytes, createHash } from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@/lib/types/database'
 import { redis } from '@/lib/ratelimit'
 
 const GOOGLE_OAUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -11,10 +12,26 @@ const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.settings.sharing',
 ].join(' ')
 
+// Route handlers must read cookies from request.cookies, not from cookies() via
+// next/headers. The middleware updates request.cookies with refreshed tokens before
+// passing the request here — next/headers cookies() reads the original request only.
+function createRouteClient(request: NextRequest) {
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll() { /* read-only — session writes handled by middleware */ },
+      },
+    }
+  )
+}
+
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url)
 
-  const supabase = await createClient()
+  const supabase = createRouteClient(request)
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
