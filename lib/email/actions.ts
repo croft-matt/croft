@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireUser } from '@/lib/auth/helpers'
-import { classifyNowTask } from '@/trigger/jobs/classify-now'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { classifyNowTask } from '@/trigger/jobs/classify-now'
 import type { Email, Job, Asset, ExtractedContact } from '@/lib/types/database'
 
 // Enqueues on-demand Tier 3 for an email if it is queued or urgency_scanned.
@@ -20,7 +21,7 @@ export async function triggerClassifyNow(emailId: string): Promise<void> {
   if (!data) return
   if (!['queued', 'urgency_scanned'].includes(data.processing_state)) return
 
-  await classifyNowTask.trigger({ emailId }).catch((err: unknown) => {
+  await tasks.trigger<typeof classifyNowTask>('classify-now', { emailId }).catch((err: unknown) => {
     console.error(`triggerClassifyNow: trigger failed for ${emailId}:`, err)
   })
 }

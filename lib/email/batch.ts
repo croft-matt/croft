@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runFullClassification } from '@/lib/ai/tier3'
-import { embedTask } from '@/trigger/jobs/embed'
-import { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { embedTask } from '@/trigger/jobs/embed'
+import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { Extraction } from '@/lib/types/database'
 
 // Processes a single queued email through Tier 3.
@@ -46,14 +47,14 @@ export async function classifyEmail(emailId: string): Promise<void> {
     // Enqueue room synthesis for each room the email was filed into.
     // Non-fatal: a synthesis failure must not affect the email's processing state.
     for (const roomId of matchedRoomIds) {
-      synthesiseRoomTask.trigger({ roomId }).catch((err: unknown) => {
+      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId }).catch((err: unknown) => {
         console.error(`classifyEmail: synthesis trigger failed for room ${roomId}:`, err)
       })
     }
 
     // Enqueue embedding generation as a separate low-priority job.
     // Never block Tier 3 completion on this.
-    await embedTask.trigger({ emailId })
+    await tasks.trigger<typeof embedTask>('generate-embedding', { emailId })
   } catch (err) {
     await supabase
       .from('emails')

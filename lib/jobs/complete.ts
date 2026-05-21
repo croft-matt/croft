@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireUser } from '@/lib/auth/helpers'
 import { sendEmail } from '@/lib/email/send'
-import { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 
 export async function completeJob(
   formData: FormData
@@ -127,7 +128,7 @@ export async function completeJob(
     .eq('email_id', job.email_id)
 
   for (const re of roomEmails ?? []) {
-    synthesiseRoomTask.trigger({ roomId: re.room_id }).catch((err: unknown) => {
+    tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId: re.room_id }).catch((err: unknown) => {
       console.error(`completeJob: synthesis trigger failed for room ${re.room_id}:`, err)
     })
   }
