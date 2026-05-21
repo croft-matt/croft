@@ -111,3 +111,49 @@ export async function getEmailsForRoom(roomId: string, limit = 50): Promise<Emai
     .limit(limit)
   return (data ?? []) as Email[]
 }
+
+export interface CrossReference {
+  id: string
+  room_id_a: string
+  room_id_b: string
+  reason: string
+  linked_room_id: string
+  linked_room_name: string
+}
+
+// Returns cross-references for a room. Safe to call before the
+// room_cross_references table exists — returns [] on any error.
+export async function getCrossReferences(roomId: string): Promise<CrossReference[]> {
+  const supabase = await createClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('room_cross_references' as never)
+      .select('id, room_id_a, room_id_b, reason, rooms!room_id_b(id, name)')
+      .or(`room_id_a.eq.${roomId},room_id_b.eq.${roomId}`)
+      .limit(5)
+
+    if (error || !data) return []
+
+    return (data as unknown[]).map((row) => {
+      const r = row as {
+        id: string
+        room_id_a: string
+        room_id_b: string
+        reason: string
+        rooms: { id: string; name: string }
+      }
+      const linkedId = r.room_id_a === roomId ? r.room_id_b : r.room_id_a
+      return {
+        id: r.id,
+        room_id_a: r.room_id_a,
+        room_id_b: r.room_id_b,
+        reason: r.reason,
+        linked_room_id: linkedId,
+        linked_room_name: r.rooms?.name ?? '',
+      }
+    })
+  } catch {
+    return []
+  }
+}
