@@ -5,11 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Room } from '@/lib/types/database'
-
-export interface RoomWithOverdue extends Room {
-  has_overdue: boolean
-}
+import type { RoomWithOverdue } from '@/lib/queries/cockpit'
 
 interface RoomsTreeProps {
   rooms: RoomWithOverdue[]
