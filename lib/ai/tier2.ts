@@ -98,8 +98,8 @@ export async function runUrgencyScan(email: Email): Promise<UrgencyScanResult> {
       model: 'claude-haiku-4-5-20251001',
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,
-      cache_read_tokens: (response.usage as Record<string, unknown>).cache_read_input_tokens as number ?? 0,
-      cache_write_tokens: (response.usage as Record<string, unknown>).cache_creation_input_tokens as number ?? 0,
+      cache_read_tokens: (response.usage as unknown as Record<string, unknown>).cache_read_input_tokens as number ?? 0,
+      cache_write_tokens: (response.usage as unknown as Record<string, unknown>).cache_creation_input_tokens as number ?? 0,
       duration_ms: Date.now() - startedAt,
       error: null,
     })

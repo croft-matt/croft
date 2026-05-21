@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { Tool } from '@anthropic-ai/sdk/resources'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
 import type { Email, Extraction } from '@/lib/types/database'
@@ -47,11 +48,11 @@ export async function runFullClassification(email: Email): Promise<Classificatio
           content: buildEmailContent(email),
         },
       ],
-      tools: [EXTRACTION_TOOL_SCHEMA],
+      tools: [EXTRACTION_TOOL_SCHEMA as unknown as Tool],
       tool_choice: { type: 'tool', name: 'extract_email_data' },
     })
 
-    const usage = response.usage as Record<string, unknown>
+    const usage = response.usage as unknown as Record<string, unknown>
     const cacheReadTokens = (usage.cache_read_input_tokens as number) ?? 0
     const cacheWriteTokens = (usage.cache_creation_input_tokens as number) ?? 0
 

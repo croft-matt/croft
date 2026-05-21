@@ -5,8 +5,6 @@ import { storeEmailMetadata } from '@/lib/email/ingest'
 import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
 import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 // This handler does exactly three things:
 // 1. Verify the Resend webhook signature
 // 2. Store the raw email metadata to the emails table
@@ -17,13 +15,18 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 // Resend retries on non-200 — a slow handler causes duplicate emails.
 
 export async function POST(request: NextRequest) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const rawBody = await request.text()
 
   let event: WebhookEventPayload
   try {
     event = resend.webhooks.verify({
       payload: rawBody,
-      headers: request.headers,
+      headers: {
+        id: request.headers.get('svix-id') ?? '',
+        timestamp: request.headers.get('svix-timestamp') ?? '',
+        signature: request.headers.get('svix-signature') ?? '',
+      },
       webhookSecret: process.env.RESEND_INBOUND_WEBHOOK_SECRET!,
     })
   } catch {

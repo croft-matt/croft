@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
 // Stripe webhook handler.
 // Full billing logic will be implemented in the billing brief.
 export async function POST(request: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
 

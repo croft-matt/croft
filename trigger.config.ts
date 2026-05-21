@@ -30,7 +30,7 @@ export default defineConfig({
     extensions: [
       esbuildPlugin({
         name: "force-voyageai-cjs",
-        setup(build) {
+        setup(build: { onResolve(options: { filter: RegExp }, callback: (args: { path: string }) => { path: string; external?: boolean } | null | undefined): void }) {
           // Redirect voyageai to its CJS build.
           build.onResolve({ filter: /^voyageai$/ }, () => ({ path: voyageaiCjsPath }));
           // @huggingface/transformers is a lazy require inside voyageai's local
