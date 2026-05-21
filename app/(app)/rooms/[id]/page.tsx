@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getWorkspaceId } from '@/lib/auth/helpers'
 import {
   getRoomById,
   getChildRooms,
@@ -8,14 +9,7 @@ import {
   getEmailsForRoom,
   getCrossReferences,
 } from '@/lib/queries/rooms'
-import { RoomHeader } from '@/components/room/room-header'
-import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
-import { OverdueAlert } from '@/components/room/overdue-alert'
-import { RoomTabs } from '@/components/room/room-tabs'
-import { OverviewTab } from '@/components/room/overview-tab'
-import { AssetsTab } from '@/components/room/assets-tab'
-import { ContactsTab } from '@/components/room/contacts-tab'
-import { EmailsTab } from '@/components/room/emails-tab'
+import { RoomRealtimeProvider } from '@/components/room/room-realtime'
 
 type ValidTab = 'overview' | 'assets' | 'contacts' | 'emails'
 const VALID_TABS = new Set<string>(['overview', 'assets', 'contacts', 'emails'])
@@ -34,6 +28,9 @@ export default async function RoomPage({
   const room = await getRoomById(id)
   if (!room) notFound()
 
+  const workspaceId = await getWorkspaceId()
+  if (!workspaceId) notFound()
+
   const [parent, childRooms, jobs, assets, contacts, emails, crossRefs] = await Promise.all([
     room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
     getChildRooms(id),
@@ -44,31 +41,18 @@ export default async function RoomPage({
     getCrossReferences(id),
   ])
 
-  const overdueJobs = jobs.filter((j) => j.status === 'open' && j.due && new Date(j.due) < new Date())
-  const hasOverdue = overdueJobs.length > 0
-
   return (
-    <div className="flex flex-col min-h-full">
-      <RoomHeader
-        room={room}
-        parent={parent ? { id: parent.id, name: parent.name } : null}
-        jobs={jobs}
-        childRooms={childRooms}
-      />
-
-      <CrossReferenceCards crossRefs={crossRefs} />
-
-      {hasOverdue && room.alert_text && (
-        <OverdueAlert alertText={room.alert_text} />
-      )}
-
-      <RoomTabs
-        defaultTab={activeTab}
-        overview={<OverviewTab room={room} childRooms={childRooms} jobs={jobs} />}
-        assets={<AssetsTab assets={assets} />}
-        contacts={<ContactsTab contacts={contacts} />}
-        emails={<EmailsTab emails={emails} roomId={id} />}
-      />
-    </div>
+    <RoomRealtimeProvider
+      workspaceId={workspaceId}
+      defaultTab={activeTab}
+      initialRoom={room}
+      initialChildRooms={childRooms}
+      initialJobs={jobs}
+      initialAssets={assets}
+      initialContacts={contacts}
+      initialEmails={emails}
+      initialCrossRefs={crossRefs}
+      parent={parent ? { id: parent.id, name: parent.name } : null}
+    />
   )
 }
