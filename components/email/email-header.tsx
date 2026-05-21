@@ -1,0 +1,83 @@
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
+import { formatRelativeTime } from '@/lib/utils'
+import type { Email, Job, Room } from '@/lib/types/database'
+
+interface EmailHeaderProps {
+  email: Email
+  jobs: Job[]
+  rooms: Pick<Room, 'id' | 'name'>[]
+}
+
+function hashNeutral(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const options = ['bg-neutral-700', 'bg-neutral-600', 'bg-stone-600', 'bg-zinc-600']
+  return options[Math.abs(hash) % options.length]
+}
+
+function getInitials(name: string | null, email: string): string {
+  if (name) {
+    const parts = name.replace(/['"]/g, '').trim().split(/\s+/)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return name.slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
+export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
+  const openJobCount = jobs.filter((j) => j.status === 'open').length
+  const displayName = email.from_name?.replace(/['"]/g, '').trim() ?? email.from_address
+  const timeStr = formatRelativeTime(email.received_at)
+
+  return (
+    <div className="border-b border-neutral-800 px-6 py-5">
+      <div className="flex items-start gap-4 justify-between">
+        <div className="flex items-start gap-3 min-w-0">
+          <div
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white mt-0.5',
+              hashNeutral(email.from_address)
+            )}
+          >
+            {getInitials(email.from_name, email.from_address)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-base font-medium text-white">{displayName}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{email.from_address}</p>
+            <p className="text-xs text-neutral-600 mt-0.5">{timeStr}</p>
+          </div>
+        </div>
+
+        <div className="shrink-0 flex items-center gap-2">
+          {openJobCount > 0 && (
+            <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-400">
+              {openJobCount} jobs
+            </span>
+          )}
+          {rooms.slice(0, 4).map((room) => (
+            <Link
+              key={room.id}
+              href={`/rooms/${room.id}`}
+              className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 hover:text-white hover:border-neutral-500 transition-colors"
+            >
+              {room.name}
+            </Link>
+          ))}
+          {rooms.length > 4 && (
+            <span className="text-xs text-neutral-600">+{rooms.length - 4} more</span>
+          )}
+        </div>
+      </div>
+
+      {email.subject && (
+        <p className="mt-3 text-sm font-medium text-neutral-200">{email.subject}</p>
+      )}
+      {email.subject_summary && email.subject_summary !== email.subject && (
+        <p className="mt-1 text-xs text-neutral-500">{email.subject_summary}</p>
+      )}
+    </div>
+  )
+}
