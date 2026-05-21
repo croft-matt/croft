@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runFullClassification } from '@/lib/ai/tier3'
-import { embedTask } from '@/trigger/jobs/embed'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { embedTask } from '@/trigger/jobs/embed'
+import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { Extraction } from '@/lib/types/database'
 
 // Processes a single queued email through Tier 3.
@@ -40,11 +42,19 @@ export async function classifyEmail(emailId: string): Promise<void> {
     // Write structured intelligence derived from the extraction.
     // These writes are non-fatal: failure here does not mark the email as failed.
     // The email processed successfully. Write errors are logged and retried separately.
-    await writeExtractionResults(emailId, email.workspace_id, result.extraction)
+    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction)
+
+    // Enqueue room synthesis for each room the email was filed into.
+    // Non-fatal: a synthesis failure must not affect the email's processing state.
+    for (const roomId of matchedRoomIds) {
+      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId }).catch((err: unknown) => {
+        console.error(`classifyEmail: synthesis trigger failed for room ${roomId}:`, err)
+      })
+    }
 
     // Enqueue embedding generation as a separate low-priority job.
     // Never block Tier 3 completion on this.
-    await embedTask.trigger({ emailId })
+    await tasks.trigger<typeof embedTask>('generate-embedding', { emailId })
   } catch (err) {
     await supabase
       .from('emails')
@@ -59,7 +69,7 @@ async function writeExtractionResults(
   emailId: string,
   workspaceId: string,
   extraction: Extraction,
-): Promise<void> {
+): Promise<{ matchedRoomIds: string[] }> {
   const supabase = createAdminClient()
   const now = new Date().toISOString()
 
@@ -113,6 +123,8 @@ async function writeExtractionResults(
   // Match room_suggestions against existing room names (case-insensitive) within the workspace.
   // Insert room_emails with source = 'ai' for any match.
   // Never auto-create a room. Room creation is a user action.
+  let matchedRoomIds: string[] = []
+
   if ((extraction.room_suggestions ?? []).length > 0) {
     const { data: existingRooms, error: roomLookupError } = await supabase
       .from('rooms')
@@ -128,7 +140,7 @@ async function writeExtractionResults(
     } else if (existingRooms && existingRooms.length > 0) {
       const suggestionsLower = (extraction.room_suggestions ?? []).map((s) => s.toLowerCase())
 
-      const matchedRoomIds = existingRooms
+      matchedRoomIds = existingRooms
         .filter((r) => suggestionsLower.includes(r.name.toLowerCase()))
         .map((r) => r.id)
 
@@ -178,4 +190,6 @@ async function writeExtractionResults(
   // Asset rows require a storage_path set at insert time (enforced by the DB not-null constraint).
   // Attachment upload to Supabase Storage is not yet implemented.
   // This will be wired in when the attachment handling brief is executed.
+
+  return { matchedRoomIds }
 }
