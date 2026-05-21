@@ -761,3 +761,52 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// ---------------------------------------------------------------------------
+// Manually maintained types. These live below the auto-generated section so
+// pnpm types:gen never overwrites them. Keep in sync with schema changes.
+// ---------------------------------------------------------------------------
+
+export type Email = Tables<'emails'>
+export type Room = Tables<'rooms'>
+export type Job = Tables<'jobs'>
+export type Asset = Tables<'assets'>
+
+export interface AttachmentMeta {
+  filename: string
+  content_type: string
+  size: number
+}
+
+export interface ExtractedContact {
+  name: string
+  email: string
+  role: string | null
+}
+
+export interface Extraction {
+  subject_summary: string
+  room_suggestions: string[]
+  extraction_complete: boolean
+  confidence: number
+  jobs: Array<{
+    intent: 'REQUEST' | 'DELIVER' | 'CONFIRM' | 'CHASE' | 'QUERY' | 'INTRODUCE'
+    description: string
+    owner: string | null
+    due: string | null
+    confidence: number
+  }>
+  entities: {
+    contacts: ExtractedContact[]
+    assets: Array<{ filename: string; likely_type: string; confidence: number }>
+    dates: Array<{ date: string; context: string }>
+    organisations: string[]
+  }
+  closes_jobs: string[]
+  facts: Array<{
+    category: string
+    key: string
+    value: string
+    confidence: number
+  }>
+}
