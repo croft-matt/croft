@@ -155,6 +155,8 @@ export type Room = {
   room_data: Record<string, unknown>
   progress_total: number
   progress_closed: number
+  alert_text: string | null
+  alert_text_updated_at: string | null
   created_at: string
   updated_at: string
 }
@@ -349,6 +351,8 @@ export type Database = {
           room_data?: Record<string, unknown>
           progress_total?: number
           progress_closed?: number
+          alert_text?: string | null
+          alert_text_updated_at?: string | null
           created_at?: string
           updated_at?: string
         }
