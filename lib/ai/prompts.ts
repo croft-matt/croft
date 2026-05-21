@@ -110,6 +110,24 @@ confidence (top level): your overall confidence in the extraction as a whole, fr
 - Do not return fewer jobs than exist in the email because some seem minor.
 - Do not guess at due dates. If no date is mentioned, return null.
 
+## Facts
+
+Projects are run over email. By the time a project completes, its email thread is the record of everything that was decided, agreed, specified, and confirmed. Your job is to extract the concrete facts from each email as it arrives, so that Croft can build a complete picture of the project over time.
+
+A fact is something specific and true about the project that is stated in this email. It is not a job, a task, or a summary. It is a detail: a date, a quantity, a measurement, an address, a name, a specification, a cost, a deadline, a reference number. Something that someone wrote down because the project depends on it.
+
+Project-based work is carried out across every kind of professional context. The categories and keys will vary with the work. Do not match them against a fixed list. Derive them from what is actually in the email.
+
+For each fact:
+- category: the area of the project it belongs to, in plain English. Use whatever fits the content of this specific email and this specific project.
+- key: a short snake_case label that describes the detail precisely.
+- value: the fact exactly as stated in the email.
+- confidence: how confident you are that this was correctly extracted, from 0 to 1.
+
+Extract facts liberally. A fact that already exists in the room record will be merged -- a duplicate does no harm. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
+
+Return an empty array only if the email contains no concrete project facts. Do not invent facts.
+
 Use the extract_email_data tool to return your structured output.`
 
 export const EXTRACTION_TOOL_SCHEMA = {
@@ -214,6 +232,32 @@ export const EXTRACTION_TOOL_SCHEMA = {
         items: { type: 'string' },
         description: 'IDs of existing open jobs this email resolves.',
       },
+      facts: {
+        type: 'array',
+        description: 'Concrete structured facts about the project stated in this email.',
+        items: {
+          type: 'object',
+          properties: {
+            category: {
+              type: 'string',
+              description: 'The area of the project this fact belongs to, in plain English.',
+            },
+            key: {
+              type: 'string',
+              description: 'A short snake_case label describing the specific detail.',
+            },
+            value: {
+              type: 'string',
+              description: 'The fact as stated in the email.',
+            },
+            confidence: {
+              type: 'number',
+              description: 'Confidence this fact was correctly extracted, 0 to 1.',
+            },
+          },
+          required: ['category', 'key', 'value', 'confidence'],
+        },
+      },
     },
     required: [
       'subject_summary',
@@ -223,6 +267,7 @@ export const EXTRACTION_TOOL_SCHEMA = {
       'jobs',
       'entities',
       'closes_jobs',
+      'facts',
     ],
   },
 } as const
