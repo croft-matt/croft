@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireUser } from '@/lib/auth/helpers'
 import { sendEmail } from '@/lib/email/send'
+import { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 
 export async function completeJob(
   formData: FormData
@@ -116,6 +117,19 @@ export async function completeJob(
 
   if (closeError) {
     return { success: false, error: `Failed to close job: ${closeError.message}` }
+  }
+
+  // Enqueue room synthesis for all rooms the source email belongs to.
+  // Non-fatal: synthesis failure must not prevent the job from being marked closed.
+  const { data: roomEmails } = await adminSupabase
+    .from('room_emails')
+    .select('room_id')
+    .eq('email_id', job.email_id)
+
+  for (const re of roomEmails ?? []) {
+    synthesiseRoomTask.trigger({ roomId: re.room_id }).catch((err: unknown) => {
+      console.error(`completeJob: synthesis trigger failed for room ${re.room_id}:`, err)
+    })
   }
 
   return { success: true }
