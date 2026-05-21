@@ -8,9 +8,11 @@ import { ToField, type Recipient } from '@/components/job-modal/to-field'
 import { AssetField } from '@/components/job-modal/asset-field'
 import { NoteField } from '@/components/job-modal/note-field'
 import { ActionBar } from '@/components/job-modal/action-bar'
+import { AssetSuggestionCard } from '@/components/job-modal/asset-suggestion'
 import { generateNote } from '@/lib/jobs/note-template'
 import { completeJob } from '@/lib/jobs/complete'
 import { getJobContext, type JobContext } from '@/lib/jobs/get-job-context'
+import { suggestAsset, type AssetSuggestion } from '@/lib/jobs/suggest-asset'
 
 export function JobModal() {
   const { job, close } = useJobModal()
@@ -21,6 +23,7 @@ export function JobModal() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [context, setContext] = useState<JobContext | null>(null)
+  const [suggestion, setSuggestion] = useState<AssetSuggestion | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -36,6 +39,11 @@ export function JobModal() {
     }
 
     setContext(null)
+    setSuggestion(null)
+
+    suggestAsset(job.description).then((s) => {
+      setSuggestion(s)
+    })
 
     getJobContext(job.id).then((ctx) => {
       setContext(ctx)
@@ -132,6 +140,22 @@ export function JobModal() {
 
         <div className="flex flex-col gap-5 px-5 py-5 overflow-y-auto max-h-[60vh]">
           <ToField recipients={recipients} onChange={setRecipients} />
+          {suggestion && !file && (
+            <AssetSuggestionCard
+              suggestion={suggestion}
+              onAttach={(s) => {
+                // Convert suggestion to a File-like placeholder so the
+                // existing upload path stays simple. Store the suggestion
+                // ID separately so complete.ts skips re-uploading.
+                setSuggestion(null)
+                // Signal the suggestion was attached via a flag file name
+                const blob = new Blob([], { type: 'application/octet-stream' })
+                const fakeFile = new File([blob], s.filename, { type: 'application/octet-stream' })
+                Object.defineProperty(fakeFile, '__suggestionId', { value: s.id })
+                setFile(fakeFile)
+              }}
+            />
+          )}
           <AssetField file={file} onChange={setFile} />
           <NoteField value={note} onChange={setNote} />
         </div>
