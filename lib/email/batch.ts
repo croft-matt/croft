@@ -45,9 +45,10 @@ export async function classifyEmail(emailId: string): Promise<void> {
     const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction)
 
     // Enqueue room synthesis for each room the email was filed into.
+    // Pass emailId so facts from this email are merged into room_data.
     // Non-fatal: a synthesis failure must not affect the email's processing state.
     for (const roomId of matchedRoomIds) {
-      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId }).catch((err: unknown) => {
+      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId, emailId }).catch((err: unknown) => {
         console.error(`classifyEmail: synthesis trigger failed for room ${roomId}:`, err)
       })
     }

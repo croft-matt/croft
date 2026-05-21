@@ -43,6 +43,11 @@ function formatValue(val: unknown): string {
     return val
   }
   if (Array.isArray(val)) return `${val.length} item${val.length !== 1 ? 's' : ''}`
+  // Stored fact shape: { value: string, confidence: number }
+  if (typeof val === 'object' && val !== null && 'value' in val) {
+    const v = (val as Record<string, unknown>).value
+    if (typeof v === 'string') return formatValue(v)
+  }
   return String(val)
 }
 

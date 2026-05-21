@@ -3,18 +3,20 @@ import { synthesiseRoom } from '@/lib/rooms/synthesise'
 
 export interface SynthesiseRoomPayload {
   roomId: string
+  emailId?: string
 }
 
 // Async room synthesis job. Enqueued after Tier 3 completes and after a job closes.
 // Recalculates progress_total, progress_closed, and alert_text for the room.
+// When emailId is provided, also merges extracted facts into room_data.
 // The resulting rooms table UPDATE fires the Realtime rooms channel, patching
 // room cards in the cockpit and room detail in place.
 export const synthesiseRoomTask = task({
   id: 'synthesise-room',
   maxDuration: 60,
   run: async (payload: SynthesiseRoomPayload) => {
-    const { roomId } = payload
-    await synthesiseRoom(roomId)
+    const { roomId, emailId } = payload
+    await synthesiseRoom(roomId, emailId)
     return { roomId }
   },
 })

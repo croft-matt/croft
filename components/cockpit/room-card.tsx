@@ -17,8 +17,15 @@ function extractFacts(roomData: Record<string, unknown>): string[] {
       for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
         if (found.length >= 2) return
         const lKey = key.toLowerCase()
-        if (FACT_KEYS.some((k) => lKey.includes(k)) && typeof val === 'string' && val.trim()) {
-          found.push(val.trim())
+        // Handle both raw strings and stored fact shape { value, confidence }.
+        const leafVal =
+          typeof val === 'string'
+            ? val
+            : typeof val === 'object' && val !== null && 'value' in val && typeof (val as Record<string, unknown>).value === 'string'
+              ? ((val as Record<string, unknown>).value as string)
+              : null
+        if (FACT_KEYS.some((k) => lKey.includes(k)) && leafVal && leafVal.trim()) {
+          found.push(leafVal.trim())
         } else {
           search(val)
         }
