@@ -2,11 +2,6 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 import { esbuildPlugin } from "@trigger.dev/build/extensions";
 import { createRequire } from "module";
 
-// Resolve to the CJS build of voyageai at config load time.
-// voyageai@0.2.1 has broken ESM directory imports; the CJS build works fine.
-const _require = createRequire(import.meta.url);
-const voyageaiCjsPath = _require.resolve("voyageai");
-
 export default defineConfig({
   project: "proj_hyrguaodlpvlxcwmwxra",
   runtime: "node",
@@ -31,8 +26,14 @@ export default defineConfig({
       esbuildPlugin({
         name: "force-voyageai-cjs",
         setup(build: { onResolve(options: { filter: RegExp }, callback: (args: { path: string }) => { path: string; external?: boolean } | null | undefined): void }) {
-          // Redirect voyageai to its CJS build.
-          build.onResolve({ filter: /^voyageai$/ }, () => ({ path: voyageaiCjsPath }));
+          // Resolve to the CJS build of voyageai lazily inside the bundle step.
+          // voyageai@0.2.1 has broken ESM directory imports; the CJS build works fine.
+          // Resolving eagerly at config load time fails in the Trigger.dev cloud build
+          // environment where the module is not yet available when the config is parsed.
+          build.onResolve({ filter: /^voyageai$/ }, () => {
+            const _require = createRequire(import.meta.url);
+            return { path: _require.resolve("voyageai") };
+          });
           // @huggingface/transformers is a lazy require inside voyageai's local
           // tokenizer — only used for offline models. We use the API so mark it
           // external to prevent esbuild failing on an unresolvable optional dep.

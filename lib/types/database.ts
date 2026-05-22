@@ -29,7 +29,9 @@ export interface ExtractedContact {
 
 export interface Extraction {
   subject_summary: string
-  room_suggestions: string[]
+  // Each entry is an ordered path from root to leaf, e.g. ["TesseracT", "EU Tour 2026"].
+  // A single-element path is a root-level room. The email is filed at the leaf.
+  room_suggestions: string[][]
   extraction_complete: boolean
   confidence: number
   jobs: Array<{

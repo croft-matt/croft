@@ -92,7 +92,7 @@ For entities:
 - dates: every specific date mentioned, with the context (what is happening on that date)
 - organisations: every company, venue, promoter, or organisation mentioned by name
 
-For room_suggestions: suggest names of project rooms this email likely belongs in, based on the content. Use names that match how a professional would label a project (e.g. "TesseracT European Tour 2026", "Graspop 2026"). If no obvious project is identifiable, return an empty array.
+For room_suggestions: the existing room structure is shown as an indented tree in the user message. Suggest where this email belongs as one or more paths from root to leaf. Each path is an ordered array of strings. Examples: ["TesseracT", "EU Tour 2026", "Hellfest"] or ["Annual Tax Return 2026"]. Rules: reuse exact existing names where they match; do not create new nodes for things that already exist under a slightly different name. Only create new path segments when the email clearly introduces a new project or sub-project not in the tree. If no project is identifiable, return an empty array.
 
 For closes_jobs: if this email appears to resolve or close a previously open request, include the job IDs here. Only use ids that appear in the open jobs list you were given. Do not invent ids. If none, return an empty array.
 
@@ -184,8 +184,13 @@ export const EXTRACTION_TOOL_SCHEMA = {
       },
       room_suggestions: {
         type: 'array',
-        items: { type: 'string' },
-        description: 'Names of project rooms this email likely belongs in.',
+        description: 'Paths describing where this email belongs in the room hierarchy. Each path is an ordered array of strings from the most general (root) to the most specific (leaf). The email is filed at the leaf. A single-item path is a root-level room. Use exact names from the existing room tree where they match. Follow the naming conventions of the existing tree for any new nodes.',
+        items: {
+          type: 'array',
+          description: 'A single path from root to leaf, e.g. ["TesseracT", "EU Tour 2026", "Hellfest"] or ["Annual Tax Return 2026"].',
+          items: { type: 'string' },
+          minItems: 1,
+        },
       },
       extraction_complete: {
         type: 'boolean',

@@ -3,9 +3,29 @@ import type { Tool } from '@anthropic-ai/sdk/resources'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
 import { type ReconciliationContext } from '@/lib/ai/reconciliation-context'
+import { buildRoomTree, type RoomRecord, type RoomTreeNode } from '@/lib/rooms/tree'
 import type { Email, Extraction } from '@/lib/types/database'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// Converts a flat list of rooms (with parent IDs) into an indented string
+// for the model to read as a tree. Two spaces per depth level.
+export function formatRoomTree(rooms: RoomRecord[]): string {
+  if (rooms.length === 0) return 'No rooms created yet.'
+
+  const nodes = buildRoomTree(rooms)
+
+  function renderNode(node: RoomTreeNode, depth: number): string {
+    const indent = '  '.repeat(depth)
+    const lines: string[] = [`${indent}${node.name}`]
+    for (const child of node.children) {
+      lines.push(renderNode(child, depth + 1))
+    }
+    return lines.join('\n')
+  }
+
+  return nodes.map((n) => renderNode(n, 0)).join('\n')
+}
 
 export interface ClassificationResult {
   extraction: Extraction
@@ -71,6 +91,9 @@ ${body}`,
   if (context.connectedAddress) {
     parts.push(`## User's connected address\n\n${context.connectedAddress}`)
   }
+
+  // Room hierarchy: model uses this to suggest paths and reuse existing names.
+  parts.push(`## Existing rooms in this workspace\n\n${formatRoomTree(context.rooms)}`)
 
   return parts.join('\n\n---\n\n')
 }

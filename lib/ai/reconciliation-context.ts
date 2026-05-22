@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Email } from '@/lib/types/database'
+import type { RoomRecord } from '@/lib/rooms/tree'
 
 const MAX_OPEN_JOBS = 30
 
@@ -19,7 +20,8 @@ export interface ReconciliationContext {
     subject: string | null
     body_text: string | null
   }>
-  rooms: string[]
+  // Full room records (id, name, parent_room_id) so tier3 can render the hierarchy tree.
+  rooms: RoomRecord[]
   facts: Record<string, unknown>
   openJobs: ContextJob[]
   connectedAddress: string | null
@@ -131,14 +133,18 @@ export async function getReconciliationContext(
     }
   }
 
-  // Workspace room names: used by the model for room_suggestions.
+  // Full room records: used by tier3 to render the hierarchy tree for room_suggestions.
   const { data: allRooms } = await supabase
     .from('rooms')
-    .select('name')
+    .select('id, name, parent_room_id')
     .eq('workspace_id', workspaceId)
     .is('archived_at', null)
 
-  const allRoomNames = (allRooms ?? []).map((r) => r.name)
+  const allRoomRecords: RoomRecord[] = (allRooms ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    parent_room_id: r.parent_room_id,
+  }))
 
   // Layer 3: Semantic. Top open jobs from emails nearest to this one by embedding.
   // Skipped without error if no embedding is available.
@@ -205,7 +211,7 @@ export async function getReconciliationContext(
 
   return {
     thread: threadEmails,
-    rooms: allRoomNames,
+    rooms: allRoomRecords,
     facts: mergedFacts,
     openJobs,
     connectedAddress,

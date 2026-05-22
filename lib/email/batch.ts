@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { runFullClassification } from '@/lib/ai/tier3'
 import { getReconciliationContext } from '@/lib/ai/reconciliation-context'
 import { generateEmbedding } from '@/lib/ai/embeddings'
+import { fileEmailToRooms } from '@/lib/rooms/file'
 import { tasks } from '@trigger.dev/sdk/v3'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { Extraction } from '@/lib/types/database'
@@ -212,51 +213,14 @@ async function writeExtractionResults(
     }
   }
 
-  // 3. Room auto-filing.
-  // Match room_suggestions against existing room names (case-insensitive) within the workspace.
-  // Insert room_emails with source = 'ai' for any match.
-  // Never auto-create a room. Room creation is a user action.
-  let matchedRoomIds: string[] = []
-
-  if ((extraction.room_suggestions ?? []).length > 0) {
-    const { data: existingRooms, error: roomLookupError } = await supabase
-      .from('rooms')
-      .select('id, name')
-      .eq('workspace_id', workspaceId)
-      .is('archived_at', null)
-
-    if (roomLookupError) {
-      console.error(
-        `writeExtractionResults: room lookup failed for ${emailId}:`,
-        roomLookupError.message,
-      )
-    } else if (existingRooms && existingRooms.length > 0) {
-      const suggestionsLower = (extraction.room_suggestions ?? []).map((s) => s.toLowerCase())
-
-      matchedRoomIds = existingRooms
-        .filter((r) => suggestionsLower.includes(r.name.toLowerCase()))
-        .map((r) => r.id)
-
-      if (matchedRoomIds.length > 0) {
-        const roomEmailRows = matchedRoomIds.map((roomId) => ({
-          room_id: roomId,
-          email_id: emailId,
-          source: 'ai' as const,
-        }))
-
-        const { error: filingError } = await supabase
-          .from('room_emails')
-          .upsert(roomEmailRows, { onConflict: 'room_id,email_id', ignoreDuplicates: true })
-
-        if (filingError) {
-          console.error(
-            `writeExtractionResults: room filing failed for ${emailId}:`,
-            filingError.message,
-          )
-        }
-      }
-    }
-  }
+  // 3. Room filing.
+  // Path-based: each suggestion is an ordered array from root to leaf.
+  // Exact and fuzzy matching against existing rooms. Auto-creates missing nodes.
+  const { matchedRoomIds } = await fileEmailToRooms(
+    emailId,
+    workspaceId,
+    extraction.room_suggestions ?? [],
+  )
 
   // 4. Close resolved jobs.
   // Validate each id against candidateJobIds before acting to prevent hallucinated
