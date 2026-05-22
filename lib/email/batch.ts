@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runFullClassification } from '@/lib/ai/tier3'
+import { getReconciliationContext } from '@/lib/ai/reconciliation-context'
+import { generateEmbedding } from '@/lib/ai/embeddings'
 import { tasks } from '@trigger.dev/sdk/v3'
-import type { embedTask } from '@/trigger/jobs/embed'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { Extraction } from '@/lib/types/database'
 
@@ -26,7 +27,19 @@ export async function classifyEmail(emailId: string): Promise<void> {
 
     if (!email) throw new Error(`classify: email ${emailId} not found`)
 
-    const result = await runFullClassification(email)
+    // Generate and store the embedding before classification so the semantic layer
+    // in getReconciliationContext has a vector to search with.
+    // Non-fatal: if embedding fails, proceed with thread and room layers only.
+    let embedding: number[] | undefined
+    try {
+      embedding = await generateEmbedding(email)
+      await supabase.from('emails').update({ embedding }).eq('id', emailId)
+    } catch (err) {
+      console.error(`classifyEmail: embedding failed for ${emailId}:`, err)
+    }
+
+    const context = await getReconciliationContext(email, embedding)
+    const result = await runFullClassification(email, context)
 
     await supabase
       .from('emails')
@@ -53,9 +66,7 @@ export async function classifyEmail(emailId: string): Promise<void> {
       })
     }
 
-    // Enqueue embedding generation as a separate low-priority job.
-    // Never block Tier 3 completion on this.
-    await tasks.trigger<typeof embedTask>('generate-embedding', { emailId })
+    // Embedding is stored above before classification. No separate background job needed.
   } catch (err) {
     await supabase
       .from('emails')

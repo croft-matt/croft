@@ -262,12 +262,14 @@ export type Database = {
           body_text: string | null
           cc_addresses: Json
           created_at: string
+          email_references: string | null
           embedding: string | null
           extraction: Json | null
           extraction_complete: boolean | null
           from_address: string
           from_name: string | null
           id: string
+          in_reply_to: string | null
           message_id: string
           processed_at: string | null
           processing_state: string
@@ -277,6 +279,7 @@ export type Database = {
           response_by: string | null
           subject: string | null
           subject_summary: string | null
+          thread_id: string | null
           to_addresses: Json
           urgency_reason: string | null
           urgency_score: number | null
@@ -288,12 +291,14 @@ export type Database = {
           body_text?: string | null
           cc_addresses?: Json
           created_at?: string
+          email_references?: string | null
           embedding?: string | null
           extraction?: Json | null
           extraction_complete?: boolean | null
           from_address: string
           from_name?: string | null
           id?: string
+          in_reply_to?: string | null
           message_id: string
           processed_at?: string | null
           processing_state?: string
@@ -303,6 +308,7 @@ export type Database = {
           response_by?: string | null
           subject?: string | null
           subject_summary?: string | null
+          thread_id?: string | null
           to_addresses?: Json
           urgency_reason?: string | null
           urgency_score?: number | null
@@ -314,12 +320,14 @@ export type Database = {
           body_text?: string | null
           cc_addresses?: Json
           created_at?: string
+          email_references?: string | null
           embedding?: string | null
           extraction?: Json | null
           extraction_complete?: boolean | null
           from_address?: string
           from_name?: string | null
           id?: string
+          in_reply_to?: string | null
           message_id?: string
           processed_at?: string | null
           processing_state?: string
@@ -329,6 +337,7 @@ export type Database = {
           response_by?: string | null
           subject?: string | null
           subject_summary?: string | null
+          thread_id?: string | null
           to_addresses?: Json
           urgency_reason?: string | null
           urgency_score?: number | null
@@ -625,7 +634,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_emails_for_context: {
+        Args: {
+          match_count?: number
+          p_exclude_email_id: string
+          p_workspace_id: string
+          query_embedding: string
+        }
+        Returns: {
+          distance: number
+          email_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -761,52 +781,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// ---------------------------------------------------------------------------
-// Manually maintained types. These live below the auto-generated section so
-// pnpm types:gen never overwrites them. Keep in sync with schema changes.
-// ---------------------------------------------------------------------------
-
-export type Email = Tables<'emails'>
-export type Room = Tables<'rooms'>
-export type Job = Tables<'jobs'>
-export type Asset = Tables<'assets'>
-
-export interface AttachmentMeta {
-  filename: string
-  content_type: string
-  size: number
-}
-
-export interface ExtractedContact {
-  name: string
-  email: string
-  role: string | null
-}
-
-export interface Extraction {
-  subject_summary: string
-  room_suggestions: string[]
-  extraction_complete: boolean
-  confidence: number
-  jobs: Array<{
-    intent: 'REQUEST' | 'DELIVER' | 'CONFIRM' | 'CHASE' | 'QUERY' | 'INTRODUCE'
-    description: string
-    owner: string | null
-    due: string | null
-    confidence: number
-  }>
-  entities: {
-    contacts: ExtractedContact[]
-    assets: Array<{ filename: string; likely_type: string; confidence: number }>
-    dates: Array<{ date: string; context: string }>
-    organisations: string[]
-  }
-  closes_jobs: string[]
-  facts: Array<{
-    category: string
-    key: string
-    value: string
-    confidence: number
-  }>
-}

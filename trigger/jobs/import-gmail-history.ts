@@ -111,6 +111,8 @@ export const importGmailHistoryTask = task({
           const dateStr = header('Date')
           const receivedAt = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString()
           const bodyText = extractPlainText(full.payload ?? null)
+          const inReplyTo = header('In-Reply-To')
+          const references = header('References')
 
           const result = await storeGmailMessage({
             workspaceId: account.workspace_id,
@@ -121,6 +123,9 @@ export const importGmailHistoryTask = task({
             subject,
             bodyText,
             receivedAt,
+            inReplyTo,
+            references,
+            providerThreadId: msg.threadId,
           })
 
           if (result) {
