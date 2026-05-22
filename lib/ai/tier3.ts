@@ -66,6 +66,12 @@ ${body}`,
     `## Open jobs you may be acting on\n\n${jobLines.length > 0 ? jobLines.join('\n') : 'No open jobs.'}`,
   )
 
+  // Tell the model which address belongs to the workspace user so it can
+  // attribute user commitments to the right owner.
+  if (context.connectedAddress) {
+    parts.push(`## User's connected address\n\n${context.connectedAddress}`)
+  }
+
   return parts.join('\n\n---\n\n')
 }
 

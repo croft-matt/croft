@@ -71,6 +71,36 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
   let alertText: string | null = null
 
   if (emailIds.length > 0) {
+    // Fetch the workspace's connected account address so overdue counts only
+    // jobs the user themselves is responsible for, not supplier-owned work.
+    const { data: room } = await supabase
+      .from('rooms')
+      .select('workspace_id')
+      .eq('id', roomId)
+      .single()
+
+    let connectedAddress: string | null = null
+    if (room?.workspace_id) {
+      const { data: account } = await supabase
+        .from('email_accounts')
+        .select('email_address')
+        .eq('workspace_id', room.workspace_id)
+        .limit(1)
+        .maybeSingle()
+      connectedAddress = account?.email_address ?? null
+    }
+
+    let overdueQuery = supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .in('email_id', emailIds)
+      .eq('status', 'open')
+      .lt('due', now)
+
+    if (connectedAddress) {
+      overdueQuery = overdueQuery.eq('owner', connectedAddress)
+    }
+
     const [{ count: total }, { count: closed }, { count: overdue }] = await Promise.all([
       supabase
         .from('jobs')
@@ -81,12 +111,7 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
         .select('*', { count: 'exact', head: true })
         .in('email_id', emailIds)
         .eq('status', 'closed'),
-      supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .in('email_id', emailIds)
-        .eq('status', 'open')
-        .lt('due', now),
+      overdueQuery,
     ])
 
     progressTotal = total ?? 0

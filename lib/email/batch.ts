@@ -106,6 +106,11 @@ async function writeExtractionResults(
   const touchNeeded: string[] = []
 
   for (const j of extraction.jobs ?? []) {
+    // DELIVER and CONFIRM are events, not standing actions. They never create
+    // open jobs regardless of what the model returns. Their role is to close
+    // resolved jobs via closes_jobs and contribute facts.
+    if (j.intent === 'DELIVER' || j.intent === 'CONFIRM') continue
+
     const relation = j.relation ?? 'new'
     const relatesTo =
       j.relates_to_job_id && candidateJobIds.has(j.relates_to_job_id)

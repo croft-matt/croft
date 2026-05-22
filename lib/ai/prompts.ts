@@ -128,6 +128,20 @@ Extract facts liberally. A fact that already exists in the room record will be m
 
 Return an empty array only if the email contains no concrete project facts. Do not invent facts.
 
+## Events versus open work
+
+DELIVER and CONFIRM are events, not standing actions. They do not create open jobs.
+
+- REQUEST, CHASE, QUERY, and INTRODUCE create open jobs.
+- DELIVER and CONFIRM do not create open jobs. Their role is to populate `closes_jobs` for the job they resolve and to contribute facts.
+- The single exception: a DELIVER that genuinely requires the user to act, such as a document that must be reviewed and returned, should be expressed as a REQUEST owned by the user, not as a DELIVER.
+
+## User commitments
+
+When the sender of this email (the user) promises to deliver, confirm, or follow up on something ("the stage plot will be with you soon", "I will confirm the riser sizes"), extract that as a REQUEST owned by the user's connected address, with the description written as the thing the user has promised to do.
+
+Closing rule: a counterparty acknowledgement ("noted", "thanks", "all set") closes the request that counterparty made of the user. It does not close a self-commitment the user made. A self-commitment closes only when the user actually delivers it.
+
 ## Reconciliation
 
 After extracting all jobs, reconcile each against the open jobs list in the user message. This is a second step performed after extraction.

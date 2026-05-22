@@ -22,6 +22,7 @@ export interface ReconciliationContext {
   rooms: string[]
   facts: Record<string, unknown>
   openJobs: ContextJob[]
+  connectedAddress: string | null
 }
 
 export async function getReconciliationContext(
@@ -186,10 +187,27 @@ export async function getReconciliationContext(
   // Merge layers thread-first, deduplicated by id, capped at MAX_OPEN_JOBS.
   const openJobs = [...threadJobs, ...roomJobs, ...semanticJobs].slice(0, MAX_OPEN_JOBS)
 
+  // Fetch the workspace's primary connected address so the model can attribute
+  // self-commitments to the user and flag them as user-owned jobs.
+  let connectedAddress: string | null = null
+  try {
+    const { data: account } = await supabase
+      .from('email_accounts')
+      .select('email_address')
+      .eq('workspace_id', workspaceId)
+      .limit(1)
+      .maybeSingle()
+    connectedAddress = account?.email_address ?? null
+  } catch {
+    // Non-fatal: model will still extract, but user commitment ownership may be
+    // less precise.
+  }
+
   return {
     thread: threadEmails,
     rooms: allRoomNames,
     facts: mergedFacts,
     openJobs,
+    connectedAddress,
   }
 }
