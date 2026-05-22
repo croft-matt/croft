@@ -71,7 +71,7 @@ Examples: "Meet Sarah, she will be handling your accommodation", "I would like t
 
 ## CHASE handling
 
-A CHASE is a special case of REQUEST. It is not a new request: it is a follow-up on an existing unanswered one. When you detect a CHASE, note it clearly in the description so the system can attempt to link it to an existing open REQUEST job.
+A CHASE is a follow-up on an existing unanswered REQUEST. When you detect a CHASE, set `relation` to `chase_of` and `relates_to_job_id` to the open REQUEST job id from the open jobs list. If you cannot identify the specific REQUEST in the list, set `relation` to `new` and describe the chase clearly.
 
 ## Object types
 
@@ -94,7 +94,7 @@ For entities:
 
 For room_suggestions: suggest names of project rooms this email likely belongs in, based on the content. Use names that match how a professional would label a project (e.g. "TesseracT European Tour 2026", "Graspop 2026"). If no obvious project is identifiable, return an empty array.
 
-For closes_jobs: if this email appears to resolve or close a previously open request, include the job IDs here. If none, return an empty array.
+For closes_jobs: if this email appears to resolve or close a previously open request, include the job IDs here. Only use ids that appear in the open jobs list you were given. Do not invent ids. If none, return an empty array.
 
 ## Confidence and self-assessment
 
@@ -127,6 +127,23 @@ For each fact:
 Extract facts liberally. A fact that already exists in the room record will be merged -- a duplicate does no harm. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
 
 Return an empty array only if the email contains no concrete project facts. Do not invent facts.
+
+## Reconciliation
+
+After extracting all jobs, reconcile each against the open jobs list in the user message. This is a second step performed after extraction.
+
+For every extracted job, set `relation` to one of:
+
+- `new`: this item does not match any open job. Most items are new.
+- `duplicate`: this is the same outstanding action as an open job already in the list, restated in this email. Set `relates_to_job_id` to that job. Do not invent a second copy.
+- `update`: this is the same item as an open job but a detail has changed, most often a date or scope. Set `relates_to_job_id` to that job. Write the description as the current state.
+- `chase_of`: this is a follow-up on an open REQUEST that has not been delivered. Set `relates_to_job_id` to that REQUEST.
+
+Closing is separate and additive. When this email resolves an open job, add that job id to \`closes_jobs\` as well. A DELIVER that fulfils a REQUEST is both a \`new\` DELIVER and closes the REQUEST in \`closes_jobs\`.
+
+When uncertain whether two items are the same, choose \`new\`. A false merge hides real work. A false split is visible and correctable.
+
+Set \`relates_to_job_id\` to null when \`relation\` is \`new\`.
 
 Use the extract_email_data tool to return your structured output.`
 
@@ -178,8 +195,17 @@ export const EXTRACTION_TOOL_SCHEMA = {
               type: 'number',
               description: 'Confidence this specific job was correctly extracted, 0 to 1.',
             },
+            relation: {
+              type: 'string',
+              enum: ['new', 'duplicate', 'update', 'chase_of'],
+              description: 'Relation of this item to the open jobs list. Default new.',
+            },
+            relates_to_job_id: {
+              type: ['string', 'null'],
+              description: 'The open job id this item duplicates, updates, or chases. Null when relation is new.',
+            },
           },
-          required: ['intent', 'description', 'owner', 'due', 'confidence'],
+          required: ['intent', 'description', 'owner', 'due', 'confidence', 'relation', 'relates_to_job_id'],
         },
       },
       entities: {

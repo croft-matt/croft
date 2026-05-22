@@ -39,6 +39,7 @@ export async function classifyEmail(emailId: string): Promise<void> {
     }
 
     const context = await getReconciliationContext(email, embedding)
+    const candidateJobIds = new Set(context.openJobs.map((j) => j.id))
     const result = await runFullClassification(email, context)
 
     await supabase
@@ -55,7 +56,7 @@ export async function classifyEmail(emailId: string): Promise<void> {
     // Write structured intelligence derived from the extraction.
     // These writes are non-fatal: failure here does not mark the email as failed.
     // The email processed successfully. Write errors are logged and retried separately.
-    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction)
+    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds)
 
     // Enqueue room synthesis for each room the email was filed into.
     // Pass emailId so facts from this email are merged into room_data.
@@ -81,13 +82,37 @@ async function writeExtractionResults(
   emailId: string,
   workspaceId: string,
   extraction: Extraction,
+  candidateJobIds: Set<string>,
 ): Promise<{ matchedRoomIds: string[] }> {
   const supabase = createAdminClient()
   const now = new Date().toISOString()
 
-  // 1. Insert jobs.
-  if ((extraction.jobs ?? []).length > 0) {
-    const jobRows = (extraction.jobs ?? []).map((j) => ({
+  // 1. Process jobs by reconciliation verdict.
+  // Each extracted job is routed by its relation field rather than blindly inserted.
+  // relates_to_job_id and closes_jobs ids are validated against candidateJobIds
+  // to prevent a hallucinated id from touching an unrelated job.
+  const jobsToInsert: Array<{
+    workspace_id: string
+    email_id: string
+    intent: string
+    description: string
+    owner: string | null
+    due: string | null
+    confidence: number
+    status: 'open'
+    parent_job_id: string | null
+  }> = []
+  const updatesNeeded: Array<{ id: string; description: string; due: string | null }> = []
+  const touchNeeded: string[] = []
+
+  for (const j of extraction.jobs ?? []) {
+    const relation = j.relation ?? 'new'
+    const relatesTo =
+      j.relates_to_job_id && candidateJobIds.has(j.relates_to_job_id)
+        ? j.relates_to_job_id
+        : null
+
+    const baseRow = {
       workspace_id: workspaceId,
       email_id: emailId,
       intent: j.intent,
@@ -96,11 +121,62 @@ async function writeExtractionResults(
       due: j.due ?? null,
       confidence: j.confidence,
       status: 'open' as const,
-    }))
+    }
 
-    const { error } = await supabase.from('jobs').insert(jobRows)
+    switch (relation) {
+      case 'duplicate':
+        // Do not insert. Touch the target's updated_at to reflect fresh activity.
+        if (relatesTo) touchNeeded.push(relatesTo)
+        // If relatesTo is invalid, discard silently — we cannot identify the target.
+        break
+
+      case 'update':
+        if (relatesTo) {
+          // Patch description and due on the target. Conservative: only open jobs.
+          updatesNeeded.push({ id: relatesTo, description: j.description, due: j.due ?? null })
+        } else {
+          // Cannot identify target; insert as new to avoid losing the information.
+          jobsToInsert.push({ ...baseRow, parent_job_id: null })
+        }
+        break
+
+      case 'chase_of':
+        // Insert as a CHASE with parent_job_id pointing to the original REQUEST.
+        jobsToInsert.push({ ...baseRow, parent_job_id: relatesTo })
+        break
+
+      case 'new':
+      default:
+        jobsToInsert.push({ ...baseRow, parent_job_id: null })
+        break
+    }
+  }
+
+  if (jobsToInsert.length > 0) {
+    const { error } = await supabase.from('jobs').insert(jobsToInsert)
     if (error) {
       console.error(`writeExtractionResults: jobs insert failed for ${emailId}:`, error.message)
+    }
+  }
+
+  for (const upd of updatesNeeded) {
+    const { error } = await supabase
+      .from('jobs')
+      .update({ description: upd.description, due: upd.due, updated_at: now })
+      .eq('id', upd.id)
+      .eq('status', 'open')
+    if (error) {
+      console.error(`writeExtractionResults: job update failed for ${upd.id}:`, error.message)
+    }
+  }
+
+  if (touchNeeded.length > 0) {
+    const { error } = await supabase
+      .from('jobs')
+      .update({ updated_at: now })
+      .in('id', touchNeeded)
+    if (error) {
+      console.error(`writeExtractionResults: jobs touch failed:`, error.message)
     }
   }
 
@@ -178,8 +254,11 @@ async function writeExtractionResults(
   }
 
   // 4. Close resolved jobs.
-  // closes_jobs contains IDs of existing open jobs this email resolves.
-  if ((extraction.closes_jobs ?? []).length > 0) {
+  // Validate each id against candidateJobIds before acting to prevent hallucinated
+  // ids from closing unrelated jobs.
+  const validClosesJobs = (extraction.closes_jobs ?? []).filter((id) => candidateJobIds.has(id))
+
+  if (validClosesJobs.length > 0) {
     const { error } = await supabase
       .from('jobs')
       .update({
@@ -187,7 +266,7 @@ async function writeExtractionResults(
         closed_at: now,
         closed_by_email_id: emailId,
       })
-      .in('id', extraction.closes_jobs ?? [])
+      .in('id', validClosesJobs)
       .eq('status', 'open')
 
     if (error) {
