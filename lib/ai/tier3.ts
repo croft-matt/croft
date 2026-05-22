@@ -51,10 +51,12 @@ Date: ${email.received_at}${attachmentList}
 ${body}`,
   )
 
-  // Prior emails in the thread, oldest first
+  // Prior emails in the thread, most recent 5 only, oldest first.
+  // Capping at 5 keeps context useful without runaway token cost on long threads.
   if (context.thread.length > 0) {
-    const entries = context.thread.map((prior) => {
-      const snippet = (prior.body_text ?? '').split(/\s+/).slice(0, 200).join(' ')
+    const recent = context.thread.slice(-5)
+    const entries = recent.map((prior) => {
+      const snippet = (prior.body_text ?? '').split(/\s+/).slice(0, 150).join(' ')
       return `From: ${prior.from}\nDate: ${prior.received_at}\nSubject: ${prior.subject ?? '(no subject)'}\n\n${snippet}`
     })
     parts.push(`## Prior emails in this thread\n\n${entries.join('\n\n---\n\n')}`)
@@ -93,7 +95,10 @@ ${body}`,
   }
 
   // Room hierarchy: model uses this to suggest paths and reuse existing names.
-  parts.push(`## Existing rooms in this workspace\n\n${formatRoomTree(context.rooms)}`)
+  // formatRoomTree returns an indented string. Truncate at 3000 chars to cap token cost
+  // on large workspaces — the model only needs enough context to match and name rooms.
+  const roomTreeText = formatRoomTree(context.rooms)
+  parts.push(`## Existing rooms in this workspace\n\n${roomTreeText.slice(0, 3000)}`)
 
   return parts.join('\n\n---\n\n')
 }
