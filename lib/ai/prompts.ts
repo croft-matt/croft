@@ -71,7 +71,7 @@ Examples: "Meet Sarah, she will be handling your accommodation", "I would like t
 
 ## CHASE handling
 
-A CHASE is a follow-up on an existing unanswered REQUEST. When you detect a CHASE, set `relation` to `chase_of` and `relates_to_job_id` to the open REQUEST job id from the open jobs list. If you cannot identify the specific REQUEST in the list, set `relation` to `new` and describe the chase clearly.
+A CHASE is a follow-up on an existing unanswered REQUEST. When you detect a CHASE, set \`relation\` to \`chase_of\` and \`relates_to_job_id\` to the open REQUEST job id from the open jobs list. If you cannot identify the specific REQUEST in the list, set \`relation\` to \`new\` and describe the chase clearly.
 
 ## Object types
 
@@ -144,7 +144,7 @@ A stale value must not persist beside its correction. Using the exact same categ
 DELIVER and CONFIRM are events, not standing actions. They do not create open jobs.
 
 - REQUEST, CHASE, QUERY, and INTRODUCE create open jobs.
-- DELIVER and CONFIRM do not create open jobs. Their role is to populate `closes_jobs` for the job they resolve and to contribute facts.
+- DELIVER and CONFIRM do not create open jobs. Their role is to populate \`closes_jobs\` for the job they resolve and to contribute facts.
 - The single exception: a DELIVER that genuinely requires the user to act, such as a document that must be reviewed and returned, should be expressed as a REQUEST owned by the user, not as a DELIVER.
 
 ## User commitments
@@ -157,12 +157,12 @@ Closing rule: a counterparty acknowledgement ("noted", "thanks", "all set") clos
 
 After extracting all jobs, reconcile each against the open jobs list in the user message. This is a second step performed after extraction.
 
-For every extracted job, set `relation` to one of:
+For every extracted job, set \`relation\` to one of:
 
-- `new`: this item does not match any open job. Most items are new.
-- `duplicate`: this is the same outstanding action as an open job already in the list, restated in this email. Set `relates_to_job_id` to that job. Do not invent a second copy.
-- `update`: this is the same item as an open job but a detail has changed, most often a date or scope. Set `relates_to_job_id` to that job. Write the description as the current state.
-- `chase_of`: this is a follow-up on an open REQUEST that has not been delivered. Set `relates_to_job_id` to that REQUEST.
+- \`new\`: this item does not match any open job. Most items are new.
+- \`duplicate\`: this is the same outstanding action as an open job already in the list, restated in this email. Set \`relates_to_job_id\` to that job. Do not invent a second copy.
+- \`update\`: this is the same item as an open job but a detail has changed, most often a date or scope. Set \`relates_to_job_id\` to that job. Write the description as the current state.
+- \`chase_of\`: this is a follow-up on an open REQUEST that has not been delivered. Set \`relates_to_job_id\` to that REQUEST.
 
 Closing is separate and additive. When this email resolves an open job, add that job id to \`closes_jobs\` as well. A DELIVER that fulfils a REQUEST is both a \`new\` DELIVER and closes the REQUEST in \`closes_jobs\`.
 
