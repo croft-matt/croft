@@ -32,8 +32,7 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
     (account.access_token_encrypted === null || account.refresh_token_encrypted === null)
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-6 py-16">
-      <div className="mx-auto max-w-lg space-y-10">
+    <div className="mx-auto max-w-lg space-y-10">
 
         <div className="space-y-1">
           <h1 className="text-xl font-semibold text-white">Email connection</h1>
@@ -85,7 +84,6 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
           </ol>
         </div>
 
-      </div>
     </div>
   )
 }
