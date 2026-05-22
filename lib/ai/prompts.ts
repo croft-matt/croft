@@ -124,9 +124,20 @@ For each fact:
 - value: the fact exactly as stated in the email.
 - confidence: how confident you are that this was correctly extracted, from 0 to 1.
 
-Extract facts liberally. A fact that already exists in the room record will be merged -- a duplicate does no harm. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
+Extract facts liberally. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
 
 Return an empty array only if the email contains no concrete project facts. Do not invent facts.
+
+## Fact reconciliation
+
+The known facts section in the user message shows what is already on the record, formatted as "category / key: value". After extracting facts from this email, reconcile each against that list.
+
+- When a fact restates or corrects something already in the known facts, reuse the exact same category and key from the known list. Do not create a new key for a changed value.
+- Set relation to correction when the value has changed or was wrong, even if your confidence is lower than the original. Recency wins.
+- Set relation to restatement when the value is the same as what is already stored.
+- Set relation to new for any fact that does not correspond to an entry in the known facts list.
+
+A stale value must not persist beside its correction. Using the exact same category and key is what replaces the old value.
 
 ## Events versus open work
 
@@ -294,8 +305,14 @@ export const EXTRACTION_TOOL_SCHEMA = {
               type: 'number',
               description: 'Confidence this fact was correctly extracted, 0 to 1.',
             },
+            relation: {
+              type: 'string',
+              enum: ['new', 'restatement', 'correction'],
+              description:
+                'new: a fact not seen before. restatement: a known fact repeated. correction: this replaces a known fact whose value changed or was wrong.',
+            },
           },
-          required: ['category', 'key', 'value', 'confidence'],
+          required: ['category', 'key', 'value', 'confidence', 'relation'],
         },
       },
     },

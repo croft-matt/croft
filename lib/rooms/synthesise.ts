@@ -2,23 +2,30 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { Extraction } from '@/lib/types/database'
 
 // Stored shape for a single fact value inside room_data.
-// Confidence is kept so future merges can compare and overwrite only when
-// a newer extraction has higher confidence.
+// prior holds superseded values newest last, kept for drift display.
 interface StoredFact {
   value: string
   confidence: number
+  updated_at: string
+  prior?: Array<{ value: string; at: string }>
 }
 
 // Merges extracted facts into the existing room_data object.
 // room_data is keyed by category, then by snake_case key.
-// A fact is written on first encounter. On subsequent encounters it is
-// overwritten only when the new confidence exceeds the stored confidence.
-// Never checks for specific category or key strings -- iterates over
-// whatever the model returned.
+//
+// Merge rules per incoming fact:
+// - new key: write it.
+// - relation correction: overwrite regardless of confidence; push old value
+//   onto prior. Recency wins over confidence.
+// - relation restatement with same value: refresh updated_at only.
+// - relation new but key already holds a different value: silent correction.
+//   Prefer newer value and push previous onto prior.
+// - confidence is only a tiebreaker for same-extraction conflicts.
 function mergeFacts(
   existing: Record<string, unknown>,
   facts: Extraction['facts'],
 ): Record<string, unknown> {
+  const now = new Date().toISOString()
   const merged: Record<string, Record<string, StoredFact>> = {}
 
   // Copy existing structure into a typed working object.
@@ -29,7 +36,7 @@ function mergeFacts(
   }
 
   for (const fact of facts) {
-    const { category, key, value, confidence } = fact
+    const { category, key, value, confidence, relation } = fact
 
     if (!merged[category]) {
       merged[category] = {}
@@ -37,9 +44,28 @@ function mergeFacts(
 
     const current = merged[category][key]
 
-    if (!current || confidence > current.confidence) {
-      merged[category][key] = { value, confidence }
+    if (!current) {
+      // First time seeing this fact.
+      merged[category][key] = { value, confidence, updated_at: now }
+      continue
     }
+
+    if (relation === 'restatement' && current.value === value) {
+      // Same value restated: refresh timestamp, keep everything else.
+      merged[category][key] = { ...current, updated_at: now }
+      continue
+    }
+
+    if (relation === 'correction' || current.value !== value) {
+      // Correction or implicit change: recency wins regardless of confidence.
+      const prior = current.prior ? [...current.prior] : []
+      prior.push({ value: current.value, at: current.updated_at ?? now })
+      merged[category][key] = { value, confidence, updated_at: now, prior }
+      continue
+    }
+
+    // relation new, same value already stored: just refresh timestamp.
+    merged[category][key] = { ...current, updated_at: now }
   }
 
   return merged as Record<string, unknown>

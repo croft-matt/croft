@@ -53,5 +53,6 @@ export interface Extraction {
     key: string
     value: string
     confidence: number
+    relation: 'new' | 'restatement' | 'correction'
   }>
 }
