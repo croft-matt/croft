@@ -6,6 +6,7 @@ import type { AttachmentMeta } from '@/lib/types/database'
 export interface GmailMessageData {
   workspaceId: string
   messageId: string
+  gmailMessageId?: string | null
   from: string
   toAddresses: string[]
   ccAddresses: string[]
@@ -15,6 +16,7 @@ export interface GmailMessageData {
   inReplyTo?: string | null
   references?: string | null
   providerThreadId?: string | null
+  attachments?: AttachmentMeta[]
 }
 
 // Parses "Display Name <email@example.com>" or "email@example.com" into parts.
@@ -203,6 +205,7 @@ export async function storeGmailMessage(
     .insert({
       workspace_id: data.workspaceId,
       message_id: data.messageId,
+      gmail_message_id: data.gmailMessageId ?? null,
       from_address: fromAddress,
       from_name: fromName,
       to_addresses: data.toAddresses,
@@ -212,7 +215,7 @@ export async function storeGmailMessage(
       received_at: data.receivedAt,
       processing_state: 'received',
       urgency_score: 0,
-      attachments: [],
+      attachments: data.attachments ?? [],
       thread_id: threadId,
       in_reply_to: data.inReplyTo ?? null,
       email_references: data.references ?? null,
@@ -222,6 +225,19 @@ export async function storeGmailMessage(
 
   if (error) {
     if (error.code === '23505') {
+      // Duplicate email. Patch gmail_message_id and attachments on the existing row
+      // if they are not yet populated — this handles re-imports after the migration.
+      if (data.gmailMessageId || (data.attachments && data.attachments.length > 0)) {
+        await supabase
+          .from('emails')
+          .update({
+            ...(data.gmailMessageId ? { gmail_message_id: data.gmailMessageId } : {}),
+            ...(data.attachments && data.attachments.length > 0 ? { attachments: data.attachments } : {}),
+          })
+          .eq('workspace_id', data.workspaceId)
+          .eq('message_id', data.messageId)
+          .is('gmail_message_id', null)
+      }
       return null
     }
     throw new Error(`[ingest] storeGmailMessage failed: ${error.message}`)

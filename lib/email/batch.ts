@@ -5,7 +5,9 @@ import { generateEmbedding } from '@/lib/ai/embeddings'
 import { fileEmailToRooms } from '@/lib/rooms/file'
 import { tasks } from '@trigger.dev/sdk/v3'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
-import type { Extraction } from '@/lib/types/database'
+import type { fetchAttachmentsTask } from '@/trigger/jobs/fetch-attachments'
+import type { fetchGmailAttachmentsTask } from '@/trigger/jobs/fetch-gmail-attachments'
+import type { AttachmentMeta, Extraction } from '@/lib/types/database'
 
 // Processes a single queued email through Tier 3.
 // Used by both the batch scheduled job and the on-demand job.
@@ -57,7 +59,7 @@ export async function classifyEmail(emailId: string): Promise<void> {
     // Write structured intelligence derived from the extraction.
     // These writes are non-fatal: failure here does not mark the email as failed.
     // The email processed successfully. Write errors are logged and retried separately.
-    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds)
+    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as AttachmentMeta[])
 
     // Enqueue room synthesis for each room the email was filed into.
     // Pass emailId so facts from this email are merged into room_data.
@@ -66,6 +68,33 @@ export async function classifyEmail(emailId: string): Promise<void> {
       tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId, emailId }).catch((err: unknown) => {
         console.error(`classifyEmail: synthesis trigger failed for room ${roomId}:`, err)
       })
+    }
+
+    // Download attachment bytes and upload to Storage.
+    // Non-fatal: attachment fetch failure must not affect the email's processing state.
+    const storedAttachments = email.attachments as AttachmentMeta[]
+    if (storedAttachments.length > 0) {
+      if (email.resend_email_id) {
+        tasks
+          .trigger<typeof fetchAttachmentsTask>('fetch-attachments', {
+            emailId,
+            workspaceId: email.workspace_id,
+            resendEmailId: email.resend_email_id,
+          })
+          .catch((err: unknown) => {
+            console.error(`classifyEmail: fetch-attachments trigger failed for ${emailId}:`, err)
+          })
+      } else if (email.gmail_message_id) {
+        tasks
+          .trigger<typeof fetchGmailAttachmentsTask>('fetch-gmail-attachments', {
+            emailId,
+            workspaceId: email.workspace_id,
+            gmailMessageId: email.gmail_message_id,
+          })
+          .catch((err: unknown) => {
+            console.error(`classifyEmail: fetch-gmail-attachments trigger failed for ${emailId}:`, err)
+          })
+      }
     }
 
     // Embedding is stored above before classification. No separate background job needed.
@@ -84,6 +113,7 @@ async function writeExtractionResults(
   workspaceId: string,
   extraction: Extraction,
   candidateJobIds: Set<string>,
+  attachments: AttachmentMeta[],
 ): Promise<{ matchedRoomIds: string[] }> {
   const supabase = createAdminClient()
   const now = new Date().toISOString()
@@ -246,10 +276,34 @@ async function writeExtractionResults(
     }
   }
 
-  // 5. Asset insertion is deferred.
-  // Asset rows require a storage_path set at insert time (enforced by the DB not-null constraint).
-  // Attachment upload to Supabase Storage is not yet implemented.
-  // This will be wired in when the attachment handling brief is executed.
+  // 5. Insert asset rows from extraction.
+  // One row per asset mention. Actual file bytes are not available at this point —
+  // storage_path is left null and populated later when attachment bytes are fetched.
+  // Cross-reference by filename against the email's attachment metadata to pick up
+  // mime_type and size_bytes when a real attachment exists.
+  const extractedAssets = extraction.entities?.assets ?? []
+  if (extractedAssets.length > 0) {
+    const attachmentByFilename = new Map(attachments.map((a) => [a.filename, a]))
+
+    const assetRows = extractedAssets.map((a) => {
+      const meta = attachmentByFilename.get(a.filename)
+      return {
+        workspace_id: workspaceId,
+        email_id: emailId,
+        filename: a.filename,
+        likely_type: a.likely_type,
+        confidence: a.confidence,
+        mime_type: meta?.mime_type ?? null,
+        size_bytes: meta?.size ?? null,
+        status: 'received',
+      }
+    })
+
+    const { error } = await supabase.from('assets').insert(assetRows)
+    if (error) {
+      console.error(`writeExtractionResults: assets insert failed for ${emailId}:`, error.message)
+    }
+  }
 
   return { matchedRoomIds }
 }

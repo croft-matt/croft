@@ -17,8 +17,9 @@ export type Asset = Tables<'assets'>
 
 export interface AttachmentMeta {
   filename: string
-  content_type: string
+  mime_type: string
   size: number
+  gmail_attachment_id?: string
 }
 
 export interface ExtractedContact {

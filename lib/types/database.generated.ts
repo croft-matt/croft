@@ -51,7 +51,7 @@ export type Database = {
           size_bytes: number | null
           status: string
           status_updated_at: string | null
-          storage_path: string
+          storage_path: string | null
           workspace_id: string
         }
         Insert: {
@@ -65,7 +65,7 @@ export type Database = {
           size_bytes?: number | null
           status?: string
           status_updated_at?: string | null
-          storage_path: string
+          storage_path?: string | null
           workspace_id: string
         }
         Update: {
@@ -79,7 +79,7 @@ export type Database = {
           size_bytes?: number | null
           status?: string
           status_updated_at?: string | null
-          storage_path?: string
+          storage_path?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -268,6 +268,7 @@ export type Database = {
           extraction_complete: boolean | null
           from_address: string
           from_name: string | null
+          gmail_message_id: string | null
           id: string
           in_reply_to: string | null
           message_id: string
@@ -297,6 +298,7 @@ export type Database = {
           extraction_complete?: boolean | null
           from_address: string
           from_name?: string | null
+          gmail_message_id?: string | null
           id?: string
           in_reply_to?: string | null
           message_id: string
@@ -326,6 +328,7 @@ export type Database = {
           extraction_complete?: boolean | null
           from_address?: string
           from_name?: string | null
+          gmail_message_id?: string | null
           id?: string
           in_reply_to?: string | null
           message_id?: string
