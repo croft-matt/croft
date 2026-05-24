@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
-import type { RoomReadModel, Fact } from './types'
+import type { RoomReadModel, RoomJob, Fact } from './types'
 import { getConnectedAddresses, buildOpenLoops } from '@/lib/jobs/open-loops'
 
 export async function assembleReadModel(
@@ -26,6 +26,24 @@ export async function assembleReadModel(
   )
 
   const openLoops = buildOpenLoops(jobs, fromNameMap, connectedSet)
+
+  // All non-cancelled jobs enriched with from_name. openLoops is the ranked open subset.
+  const roomJobs: RoomJob[] = jobs
+    .filter((j) => j.status !== 'cancelled')
+    .map((j) => ({
+      id: j.id,
+      intent: j.intent as RoomJob['intent'],
+      description: j.description,
+      owner: j.owner,
+      due: j.due,
+      status: j.status as RoomJob['status'],
+      closed_at: j.closed_at,
+      closed_by_email_id: j.closed_by_email_id,
+      parent_job_id: j.parent_job_id,
+      email_id: j.email_id,
+      from_name: fromNameMap.get(j.email_id) ?? null,
+      created_at: j.created_at,
+    }))
 
   // Flatten room_data facts into a typed array.
   // kind defaults to 'other' for facts written before Part 2 deploys.
@@ -56,7 +74,7 @@ export async function assembleReadModel(
     facts,
     assets,
     contacts,
-    jobs,
+    jobs: roomJobs,
     connectedAddresses,
   }
 }

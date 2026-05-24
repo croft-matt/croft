@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
-import type { RoomBlockRow, RoomReadModel, Fact } from '@/lib/blocks/types'
+import type { RoomBlockRow, RoomReadModel, RoomJob, Fact } from '@/lib/blocks/types'
 import type { OpenLoop, OpenLoops } from '@/lib/jobs/open-loops'
 import { resolveStack, resolveSuggestions } from '@/lib/blocks/registry'
 import { RoomHeader } from '@/components/room/room-header'
@@ -107,8 +107,26 @@ export function RoomRealtimeProvider({
   // emails, or roomBlocks change, useMemo recomputes the affected values.
   const readModel = useMemo((): RoomReadModel => {
     const roomData = (room.room_data ?? {}) as Record<string, unknown>
+    const fromNameMap = new Map(emails.map((e) => [e.id, e.from_name ?? null]))
     const openLoops = buildOpenLoopsLocal(jobs, emails, initialConnectedAddresses)
     const facts = flattenFacts(roomData)
+
+    const roomJobs: RoomJob[] = jobs
+      .filter((j) => j.status !== 'cancelled')
+      .map((j) => ({
+        id: j.id,
+        intent: j.intent as RoomJob['intent'],
+        description: j.description,
+        owner: j.owner,
+        due: j.due,
+        status: j.status as RoomJob['status'],
+        closed_at: j.closed_at,
+        closed_by_email_id: j.closed_by_email_id,
+        parent_job_id: j.parent_job_id,
+        email_id: j.email_id,
+        from_name: fromNameMap.get(j.email_id) ?? null,
+        created_at: j.created_at,
+      }))
 
     return {
       workspaceId,
@@ -118,7 +136,7 @@ export function RoomRealtimeProvider({
       facts,
       assets: initialAssets,
       contacts: initialContacts,
-      jobs,
+      jobs: roomJobs,
       connectedAddresses: initialConnectedAddresses,
     }
   }, [room.room_data, jobs, emails, initialConnectedAddresses, workspaceId, initialRoom.id, initialAssets, initialContacts])

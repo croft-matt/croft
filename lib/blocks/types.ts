@@ -1,4 +1,4 @@
-import type { Asset, Contact, Job, Tables } from '@/lib/types/database'
+import type { Asset, Contact, Tables } from '@/lib/types/database'
 import type { OpenLoops } from '@/lib/jobs/open-loops'
 
 export type RoomBlockRow = Tables<'room_blocks'>
@@ -12,6 +12,23 @@ export interface Fact {
   kind: string
 }
 
+// All non-cancelled jobs for the room, enriched with the sender name from the source email.
+// intent and status are narrowed from the database string type.
+export interface RoomJob {
+  id: string
+  intent: 'REQUEST' | 'DELIVER' | 'CONFIRM' | 'CHASE' | 'QUERY' | 'INTRODUCE'
+  description: string
+  owner: string | null
+  due: string | null
+  status: 'open' | 'closed' | 'cancelled'
+  closed_at: string | null
+  closed_by_email_id: string | null
+  parent_job_id: string | null
+  email_id: string
+  from_name: string | null
+  created_at: string
+}
+
 export interface RoomReadModel {
   workspaceId: string
   roomId: string
@@ -20,8 +37,9 @@ export interface RoomReadModel {
   facts: Fact[]
   assets: Asset[]
   contacts: Contact[]
-  // All jobs for the room (open + closed). Needed by blocks that open the job modal.
-  jobs: Job[]
+  // All non-cancelled jobs for the room (open + closed), with from_name from source email.
+  // openLoops is the ranked open subset; both are derived from the same source.
+  jobs: RoomJob[]
   connectedAddresses: string[]
 }
 
