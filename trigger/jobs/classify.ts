@@ -1,5 +1,5 @@
-import { schedules } from '@trigger.dev/sdk/v3'
-import { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
+import { schedules, tasks } from '@trigger.dev/sdk/v3'
+import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 
 // Fallback cron: runs every 15 minutes and pokes the shared processor.
 // Normal processing is event-driven via urgency-scan and import-gmail-history.
@@ -10,7 +10,7 @@ export const classifyBatchTask = schedules.task({
   cron: '*/15 * * * *',
   maxDuration: 60,
   run: async () => {
-    await processQueuedEmailsTask.trigger({})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
     return { triggered: true }
   },
 })

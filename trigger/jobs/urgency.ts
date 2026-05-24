@@ -1,7 +1,7 @@
-import { task } from '@trigger.dev/sdk/v3'
+import { task, tasks } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runUrgencyScan } from '@/lib/ai/tier2'
-import { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
+import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 
 export interface UrgencyPayload {
   emailId: string
@@ -52,7 +52,7 @@ export const urgencyTask = task({
 
     // Poke the processor so classification starts within seconds rather than
     // waiting for the next 15-minute cron tick.
-    await processQueuedEmailsTask.trigger({})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
 
     return { emailId, urgency_score: result.urgency_score }
   },

@@ -1,9 +1,9 @@
-import { task } from '@trigger.dev/sdk/v3'
+import { task, tasks } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getValidAccessToken } from '@/lib/email/google-client'
 import { storeGmailMessage } from '@/lib/email/ingest'
 import { noiseGateTask } from './noise-gate'
-import { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
+import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 import type { AttachmentMeta } from '@/lib/types/database'
 
 export interface ImportGmailHistoryPayload {
@@ -164,7 +164,7 @@ export const importGmailHistoryTask = task({
     // Final kick after the import loop completes. The per-email pokes from
     // urgency-scan cover most of the import; this guarantees a pass after the
     // last email clears Tier 2. The import does not wait for Tier 3 to finish.
-    await processQueuedEmailsTask.trigger({})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
 
     return { accountId, total: messages.length, stored, skipped }
   },
