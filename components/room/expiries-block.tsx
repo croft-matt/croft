@@ -24,13 +24,13 @@ function formatCountdown(days: number): string {
 function urgencyDot(urgency: Expiry['urgency']): string {
   if (urgency === 'expired') return 'bg-red-500'
   if (urgency === 'soon') return 'bg-amber-500'
-  return 'bg-neutral-500'
+  return 'bg-muted-foreground'
 }
 
 function urgencyLabel(urgency: Expiry['urgency']): string {
   if (urgency === 'expired') return 'text-red-400'
   if (urgency === 'soon') return 'text-amber-400'
-  return 'text-neutral-500'
+  return 'text-muted-foreground'
 }
 
 function formatLabel(str: string): string {
@@ -44,29 +44,29 @@ interface ExpiriesBlockProps {
 export function ExpiriesBlock({ data }: ExpiriesBlockProps) {
   if (data.isEmpty) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Expiries
         </p>
-        <p className="text-sm text-neutral-600">No expiring credentials in this room.</p>
+        <p className="text-sm text-muted-foreground">No expiring credentials in this room.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Expiries
       </p>
 
-      <div className="divide-y divide-neutral-800">
+      <div className="divide-y divide-border">
         {data.expiries.map((expiry) => {
           const row = (
             <div className="flex items-start gap-3 py-3 first:pt-0 w-full">
               <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', urgencyDot(expiry.urgency))} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-neutral-100 capitalize">{formatLabel(expiry.label)}</p>
-                <p className="text-xs text-neutral-500 mt-0.5">{formatDate(expiry.expires_at)}</p>
+                <p className="text-sm text-foreground capitalize">{formatLabel(expiry.label)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{formatDate(expiry.expires_at)}</p>
               </div>
               <span className={cn('text-xs font-medium shrink-0 text-right', urgencyLabel(expiry.urgency))}>
                 {formatCountdown(expiry.days_remaining)}

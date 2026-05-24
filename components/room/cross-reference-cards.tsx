@@ -14,7 +14,7 @@ export function CrossReferenceCards({ crossRefs }: CrossReferenceCardsProps) {
   const remaining = crossRefs.length - MAX_SHOWN
 
   return (
-    <div className="border-b border-neutral-800 px-6 py-4 space-y-2">
+    <div className="border-b border-border px-6 py-4 space-y-2">
       {shown.map((ref) => (
         <div
           key={ref.id}
@@ -24,7 +24,7 @@ export function CrossReferenceCards({ crossRefs }: CrossReferenceCardsProps) {
             <p className="text-xs text-amber-400 leading-snug">{ref.reason}</p>
             <Link
               href={`/rooms/${ref.linked_room_id}`}
-              className="mt-0.5 text-xs text-neutral-400 hover:text-white transition-colors"
+              className="mt-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {ref.linked_room_name}
             </Link>
@@ -32,7 +32,7 @@ export function CrossReferenceCards({ crossRefs }: CrossReferenceCardsProps) {
         </div>
       ))}
       {remaining > 0 && (
-        <p className="text-xs text-neutral-600 pl-1">and {remaining} more</p>
+        <p className="text-xs text-muted-foreground pl-1">and {remaining} more</p>
       )}
     </div>
   )

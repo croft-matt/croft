@@ -9,19 +9,19 @@ import type { OwnerGroup, OpenLoop } from '@/lib/jobs/open-loops'
 const intentConfig: Record<JobIntent, { label: string; className: string }> = {
   REQUEST: { label: 'REQUEST', className: 'bg-amber-500/10 text-amber-400' },
   DELIVER: { label: 'DELIVER', className: 'bg-blue-500/10 text-blue-400' },
-  CONFIRM: { label: 'CONFIRM', className: 'bg-neutral-500/10 text-neutral-300' },
+    CONFIRM: { label: 'CONFIRM', className: 'bg-muted text-foreground' },
   CHASE: { label: 'CHASE', className: 'bg-red-500/10 text-red-400' },
-  QUERY: { label: 'QUERY', className: 'bg-neutral-500/10 text-neutral-400' },
+    QUERY: { label: 'QUERY', className: 'bg-muted text-muted-foreground' },
   INTRODUCE: { label: 'INTRODUCE', className: 'bg-purple-500/10 text-purple-400' },
 }
 
 function getStatusDot(due: string | null): string {
-  if (!due) return 'bg-neutral-600'
+  if (!due) return 'bg-muted-foreground'
   const d = new Date(due)
   const now = new Date()
   if (d < now) return 'bg-red-500'
   if (d < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)) return 'bg-amber-500'
-  return 'bg-neutral-500'
+  return 'bg-muted-foreground'
 }
 
 function formatDue(due: string): string {
@@ -44,9 +44,9 @@ function LoopRow({ loop, showOwner }: { loop: OpenLoop; showOwner: boolean }) {
           <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
             {intent.label}
           </span>
-          <span className="text-sm font-medium text-neutral-100 leading-snug">{loop.description}</span>
+          <span className="text-sm font-medium text-foreground leading-snug">{loop.description}</span>
         </div>
-        <p className="text-xs text-neutral-500 mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           {[
             showOwner ? loop.owner : null,
             loop.due ? formatDue(loop.due) : null,
@@ -64,9 +64,9 @@ function LoopRow({ loop, showOwner }: { loop: OpenLoop; showOwner: boolean }) {
 // Used by the realtime client path where person grouping is not available.
 function AwaitingOthersFlat({ loops }: { loops: OpenLoop[] }) {
   return (
-    <div className="divide-y divide-neutral-800">
-      {loops.map((loop) => (
-        <LoopRow key={loop.id} loop={loop} showOwner />
+          <div className="divide-y divide-border">
+            {loops.map((loop) => (
+              <LoopRow key={loop.id} loop={loop} showOwner />
       ))}
     </div>
   )
@@ -84,8 +84,8 @@ function AwaitingOthersGrouped({ groups }: { groups: OwnerGroup[] }) {
             : (group.name ?? group.displayAddress ?? group.personKey)
         return (
           <div key={group.personKey}>
-            <p className="text-[10px] font-medium text-neutral-500 mb-1 truncate">{heading}</p>
-            <div className="divide-y divide-neutral-800">
+            <p className="text-[10px] font-medium text-muted-foreground mb-1 truncate">{heading}</p>
+            <div className="divide-y divide-border">
               {group.loops.map((loop) => (
                 <LoopRow key={loop.id} loop={loop} showOwner={false} />
               ))}
@@ -106,21 +106,21 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
 
   if (data.isEmpty) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1">Open loops</p>
-        <p className="text-sm text-neutral-600">No open loops in this room.</p>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Open loops</p>
+        <p className="text-sm text-muted-foreground">No open loops in this room.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">Open loops</p>
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Open loops</p>
 
       {data.yourCourt.length > 0 && (
         <div className="mb-4">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-600 mb-2">Your court</p>
-          <div className="divide-y divide-neutral-800">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Your court</p>
+          <div className="divide-y divide-border">
             {data.yourCourt.map((loop) => {
               const intent = intentConfig[loop.intent as JobIntent]
               return (
@@ -135,9 +135,9 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
                       <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
                         {intent.label}
                       </span>
-                      <span className="text-sm font-medium text-neutral-100 leading-snug">{loop.description}</span>
+                      <span className="text-sm font-medium text-foreground leading-snug">{loop.description}</span>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {[loop.due ? formatDue(loop.due) : null, formatAge(loop.age_days)].filter(Boolean).join(' · ')}
                     </p>
                   </div>
@@ -149,8 +149,8 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
       )}
 
       {data.theirCourt.length > 0 && (
-        <div className={cn(data.yourCourt.length > 0 && 'border-t border-neutral-800 pt-4')}>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-600 mb-2">Awaiting others</p>
+        <div className={cn(data.yourCourt.length > 0 && 'border-t border-border pt-4')}>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Awaiting others</p>
           {data.theirCourtByPerson && data.theirCourtByPerson.length > 0 ? (
             <AwaitingOthersGrouped groups={data.theirCourtByPerson} />
           ) : (

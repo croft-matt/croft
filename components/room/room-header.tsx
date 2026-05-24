@@ -18,22 +18,22 @@ export function RoomHeader({ room, parent, jobs, childRooms }: RoomHeaderProps) 
   const isLeaf = !childRooms || childRooms.length === 0
 
   return (
-    <div className="border-b border-neutral-800 px-6 py-5">
+    <div className="border-b border-border px-6 py-5">
       {parent && (
-        <div className="mb-2 flex items-center gap-1 text-xs text-neutral-500">
-          <Link href={`/rooms/${parent.id}`} className="hover:text-neutral-300 transition-colors">
+        <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
+          <Link href={`/rooms/${parent.id}`} className="hover:text-foreground transition-colors">
             {parent.name}
           </Link>
           <span>/</span>
-          <span className="text-neutral-400">{room.name}</span>
+          <span className="text-muted-foreground">{room.name}</span>
         </div>
       )}
 
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-lg font-medium text-white">{room.name}</h1>
+        <h1 className="text-lg font-medium text-foreground">{room.name}</h1>
         <div className="flex shrink-0 items-center gap-2">
           {closedJobs.length > 0 && (
-            <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-300">
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
               {closedJobs.length} closed
             </span>
           )}
@@ -46,14 +46,14 @@ export function RoomHeader({ room, parent, jobs, childRooms }: RoomHeaderProps) 
       </div>
 
       {hasProgress && isLeaf && (
-        <div className="mt-3 flex items-center gap-3">
-          <div className="flex-1 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+          <div className="mt-3 flex items-center gap-3">
+          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-neutral-400 transition-all"
+              className="h-full rounded-full bg-muted-foreground transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <span className="shrink-0 text-xs text-neutral-500">{progressPct}%</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{progressPct}%</span>
         </div>
       )}
     </div>

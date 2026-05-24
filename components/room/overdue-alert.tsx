@@ -14,7 +14,7 @@ export function OverdueAlert({ alertText }: OverdueAlertProps) {
       <button
         type="button"
         disabled
-        className="shrink-0 rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-600 cursor-not-allowed"
+        className="shrink-0 rounded-md border border-border px-3 py-1 text-xs text-muted-foreground cursor-not-allowed"
         title="Draft reply coming soon"
       >
         Draft reply

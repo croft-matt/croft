@@ -22,21 +22,21 @@ interface LogisticsBlockProps {
 export function LogisticsBlock({ data }: LogisticsBlockProps) {
   if (data.isEmpty) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Logistics
         </p>
-        <p className="text-sm text-neutral-600">No locations in this room yet.</p>
+        <p className="text-sm text-muted-foreground">No locations in this room yet.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Logistics
       </p>
-      <div className="divide-y divide-neutral-800">
+      <div className="divide-y divide-border">
         {data.places.map((place, i) => (
           <PlaceRow key={i} place={place} />
         ))}
@@ -59,12 +59,12 @@ function PlaceRow({ place }: { place: Place }) {
   return (
     <div className="flex items-start justify-between gap-3 py-3 first:pt-0">
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-600 mb-0.5">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
           {formatLabel(place.label)}
         </p>
-        <p className="text-sm text-neutral-100">{place.value}</p>
+        <p className="text-sm text-foreground">{place.value}</p>
         {place.when && (
-          <p className="text-xs text-neutral-500 mt-0.5">{place.when}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{place.when}</p>
         )}
       </div>
       {showCopy && (
@@ -73,8 +73,8 @@ function PlaceRow({ place }: { place: Place }) {
           className={cn(
             'mt-0.5 shrink-0 rounded-md p-1.5 transition-colors',
             copied
-              ? 'text-neutral-300'
-              : 'text-neutral-600 hover:bg-neutral-800 hover:text-neutral-400',
+              ? 'text-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
           aria-label="Copy address"
         >
