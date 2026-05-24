@@ -7,6 +7,7 @@ import { tasks } from '@trigger.dev/sdk/v3'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { fetchAttachmentsTask } from '@/trigger/jobs/fetch-attachments'
 import type { fetchGmailAttachmentsTask } from '@/trigger/jobs/fetch-gmail-attachments'
+import type { matchContactTask } from '@/trigger/jobs/match-contact'
 import type { AttachmentMeta, Extraction } from '@/lib/types/database'
 import type { Json } from '@/lib/types/database'
 
@@ -226,29 +227,54 @@ async function writeExtractionResults(
 
   // 2. Upsert contacts.
   // on conflict: update last_seen_at always; fill null fields only, never overwrite existing values.
+  // Collect upserted IDs so we can enqueue match-contact for each after the loop.
+  const upsertedContactIds: { contactId: string; workspaceId: string }[] = []
+
   for (const c of extraction.entities?.contacts ?? []) {
     if (!c.email) continue
 
-    const { error } = await supabase.from('contacts').upsert(
-      {
-        workspace_id: workspaceId,
-        email_address: c.email,
-        name: c.name || null,
-        role: c.role || null,
-        last_seen_at: now,
-      },
-      {
-        onConflict: 'workspace_id,email_address',
-        ignoreDuplicates: false,
-      },
-    )
+    const { data: upserted, error } = await supabase
+      .from('contacts')
+      .upsert(
+        {
+          workspace_id: workspaceId,
+          email_address: c.email,
+          name: c.name || null,
+          role: c.role || null,
+          last_seen_at: now,
+        },
+        {
+          onConflict: 'workspace_id,email_address',
+          ignoreDuplicates: false,
+        },
+      )
+      .select('id')
+      .single()
 
     if (error) {
       console.error(
         `writeExtractionResults: contact upsert failed for ${c.email}:`,
         error.message,
       )
+      continue
     }
+
+    if (upserted) {
+      upsertedContactIds.push({ contactId: upserted.id, workspaceId })
+    }
+  }
+
+  // Enqueue incremental matcher for each upserted contact.
+  // Fire-and-forget: a failed enqueue must not affect the email's processing state.
+  for (const payload of upsertedContactIds) {
+    tasks
+      .trigger<typeof matchContactTask>('match-contact', payload)
+      .catch((err: unknown) => {
+        console.error(
+          `writeExtractionResults: match-contact trigger failed for ${payload.contactId}:`,
+          err,
+        )
+      })
   }
 
   // 3. Room filing.
