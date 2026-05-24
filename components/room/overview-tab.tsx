@@ -55,9 +55,9 @@ export function OverviewTab({ roomId, childRooms, stack, suggestions }: Overview
         </div>
       )}
 
-      <BlockStack stack={stack} />
-
       <SuggestionsRail suggestions={suggestions} roomId={roomId} />
+
+      <BlockStack stack={stack} />
     </div>
   )
 }
