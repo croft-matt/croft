@@ -4,9 +4,11 @@ import { unansweredQuestionsBlock } from './unanswered-questions'
 import { logisticsBlock } from './logistics'
 import { documentsBlock } from './documents'
 import { decisionsBlock } from './decisions'
+import { specSheetBlock } from './spec-sheet'
 
 export const BLOCK_REGISTRY: BlockDefinition[] = [
   openLoopsBlock,
+  specSheetBlock,
   unansweredQuestionsBlock,
   logisticsBlock,
   documentsBlock,

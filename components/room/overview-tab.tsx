@@ -3,11 +3,9 @@ import type { Room } from '@/lib/types/database'
 import type { StackEntry, SuggestionEntry } from '@/lib/blocks/registry'
 import { BlockStack } from '@/components/room/block-stack'
 import { SuggestionsRail } from '@/components/room/suggestions-rail'
-import { FactCard } from '@/components/room/fact-card'
 
 interface OverviewTabProps {
   roomId: string
-  roomData: Record<string, unknown>
   childRooms: Room[]
   stack: StackEntry[]
   suggestions: SuggestionEntry[]
@@ -39,15 +37,8 @@ function ChildRoomCard({ room }: { room: Room }) {
   )
 }
 
-export function OverviewTab({ roomId, roomData, childRooms, stack, suggestions }: OverviewTabProps) {
+export function OverviewTab({ roomId, childRooms, stack, suggestions }: OverviewTabProps) {
   const isParent = childRooms.length > 0
-
-  // Interim: render fact cards directly until the spec sheet block (Brief 26) ships.
-  // Brief 26 registers a defaultActive spec sheet block and retires this rendering
-  // in the same change so facts are never shown twice and never disappear.
-  const factCategories = Object.entries(roomData).filter(
-    ([, val]) => typeof val === 'object' && val !== null,
-  ) as [string, Record<string, unknown>][]
 
   return (
     <div className="space-y-6">
@@ -65,14 +56,6 @@ export function OverviewTab({ roomId, roomData, childRooms, stack, suggestions }
       )}
 
       <BlockStack stack={stack} />
-
-      {factCategories.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {factCategories.map(([cat, data]) => (
-            <FactCard key={cat} category={cat} data={data} />
-          ))}
-        </div>
-      )}
 
       <SuggestionsRail suggestions={suggestions} roomId={roomId} />
     </div>
