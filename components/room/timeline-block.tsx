@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { TimelineData, TimelineItem } from '@/lib/blocks/timeline'
+import type { TimelineAnchor, TimelineData, TimelineItem } from '@/lib/blocks/timeline'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -70,6 +70,18 @@ function ItemRow({ item }: { item: TimelineItem }) {
   return <div className="flex items-start py-3 first:pt-0">{inner}</div>
 }
 
+function TimelineHero({ anchor }: { anchor: TimelineAnchor }) {
+  const countdownText = anchor.daysRemaining === 0 ? 'today' : `${anchor.daysRemaining} days to go`
+  return (
+    <div className="mb-4 pb-4 border-b border-neutral-800">
+      <p className="text-2xl font-semibold text-neutral-100 leading-tight">{countdownText}</p>
+      <p className="text-sm text-neutral-500 mt-0.5">
+        {anchor.label}, {formatDate(anchor.date)}
+      </p>
+    </div>
+  )
+}
+
 interface TimelineBlockProps {
   data: TimelineData
 }
@@ -94,6 +106,8 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
         Timeline
       </p>
+
+      {data.anchor && <TimelineHero anchor={data.anchor} />}
 
       <div className="divide-y divide-neutral-800">
         {past.map((item) => (
