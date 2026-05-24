@@ -2,11 +2,13 @@ import type { BlockDefinition, BlockData, RoomReadModel, RoomBlockRow } from './
 import { openLoopsBlock } from './open-loops'
 import { unansweredQuestionsBlock } from './unanswered-questions'
 import { logisticsBlock } from './logistics'
+import { documentsBlock } from './documents'
 
 export const BLOCK_REGISTRY: BlockDefinition[] = [
   openLoopsBlock,
   unansweredQuestionsBlock,
   logisticsBlock,
+  documentsBlock,
 ]
 
 export interface StackEntry {

@@ -5,9 +5,11 @@ import type { BlockData } from '@/lib/blocks/types'
 import type { OpenLoopsData } from '@/lib/blocks/open-loops'
 import type { UnansweredQuestionsData } from '@/lib/blocks/unanswered-questions'
 import type { LogisticsData } from '@/lib/blocks/logistics'
+import type { DocumentsData } from '@/lib/blocks/documents'
 import { OpenLoopsBlock } from './open-loops-block'
 import { UnansweredQuestionsBlock } from './unanswered-questions-block'
 import { LogisticsBlock } from './logistics-block'
+import { DocumentsBlock } from './documents-block'
 
 interface BlockStackProps {
   stack: StackEntry[]
@@ -21,6 +23,8 @@ function renderBlock(type: string, data: BlockData) {
       return <UnansweredQuestionsBlock data={data as UnansweredQuestionsData} />
     case 'logistics':
       return <LogisticsBlock data={data as LogisticsData} />
+    case 'documents':
+      return <DocumentsBlock data={data as DocumentsData} />
     default:
       return null
   }
