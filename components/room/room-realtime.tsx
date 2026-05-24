@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
-import type { RoomBlockRow } from '@/lib/blocks/types'
-import type { StackEntry, SuggestionEntry } from '@/lib/blocks/registry'
+import type { RoomBlockRow, RoomReadModel, Fact } from '@/lib/blocks/types'
+import type { OpenLoop, OpenLoops } from '@/lib/jobs/open-loops'
+import { resolveStack, resolveSuggestions } from '@/lib/blocks/registry'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { OverdueAlert } from '@/components/room/overdue-alert'
@@ -28,9 +29,56 @@ interface RoomRealtimeProps {
   initialEmails: Email[]
   initialCrossRefs: CrossReference[]
   initialRoomBlocks: RoomBlockRow[]
-  initialStack: StackEntry[]
-  initialSuggestions: SuggestionEntry[]
+  initialConnectedAddresses: string[]
   parent: { id: string; name: string } | null
+}
+
+// Pure helper: builds OpenLoops from already-fetched data.
+// Inlined here so this client component has no runtime dependency on
+// lib/jobs/open-loops.ts (which imports createClient from next/headers context).
+function buildOpenLoopsLocal(
+  jobs: Job[],
+  emails: Email[],
+  connectedAddresses: string[],
+): OpenLoops {
+  const fromNameMap = new Map(emails.map((e) => [e.id, e.from_name ?? null]))
+  const connectedSet = new Set(connectedAddresses)
+  const now = new Date()
+
+  const openLoops: OpenLoop[] = jobs
+    .filter((j) => j.status === 'open')
+    .map((job) => {
+      const createdAt = new Date(job.created_at)
+      const age_days = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      return { ...job, age_days, from_name: fromNameMap.get(job.email_id) ?? null }
+    })
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  return {
+    yourCourt: openLoops.filter((l) => l.owner != null && connectedSet.has(l.owner)),
+    theirCourt: openLoops.filter((l) => l.owner == null || !connectedSet.has(l.owner)),
+  }
+}
+
+// Pure helper: flattens room_data JSONB into a typed Fact array.
+function flattenFacts(roomData: Record<string, unknown>): Fact[] {
+  const facts: Fact[] = []
+  for (const [category, keys] of Object.entries(roomData)) {
+    if (typeof keys !== 'object' || keys === null || Array.isArray(keys)) continue
+    for (const [key, stored] of Object.entries(keys as Record<string, unknown>)) {
+      if (typeof stored !== 'object' || stored === null || !('value' in (stored as object))) continue
+      const sf = stored as { value: unknown; confidence?: number; kind?: string }
+      if (typeof sf.value !== 'string') continue
+      facts.push({
+        category,
+        key,
+        value: sf.value,
+        confidence: typeof sf.confidence === 'number' ? sf.confidence : 0,
+        kind: typeof sf.kind === 'string' ? sf.kind : 'other',
+      })
+    }
+  }
+  return facts
 }
 
 export function RoomRealtimeProvider({
@@ -44,19 +92,39 @@ export function RoomRealtimeProvider({
   initialEmails,
   initialCrossRefs,
   initialRoomBlocks,
-  initialStack,
-  initialSuggestions,
+  initialConnectedAddresses,
   parent,
 }: RoomRealtimeProps) {
   const [room, setRoom] = useState(initialRoom)
   const [jobs, setJobs] = useState(initialJobs)
   const [emails, setEmails] = useState(initialEmails)
-  // Stack and suggestions are server-computed for SSR. Commit E wires live re-resolution.
-  const [stack] = useState(initialStack)
-  const [suggestions] = useState(initialSuggestions)
+  const [roomBlocks, setRoomBlocks] = useState(initialRoomBlocks)
 
   // Track email IDs in this room so we can filter incoming job events.
   const emailIdSet = useRef(new Set(initialEmails.map((e) => e.id)))
+
+  // Derive the read model reactively from live state. When room_data, jobs,
+  // emails, or roomBlocks change, useMemo recomputes the affected values.
+  const readModel = useMemo((): RoomReadModel => {
+    const roomData = (room.room_data ?? {}) as Record<string, unknown>
+    const openLoops = buildOpenLoopsLocal(jobs, emails, initialConnectedAddresses)
+    const facts = flattenFacts(roomData)
+
+    return {
+      workspaceId,
+      roomId: initialRoom.id,
+      openLoops,
+      roomData,
+      facts,
+      assets: initialAssets,
+      contacts: initialContacts,
+      jobs,
+      connectedAddresses: initialConnectedAddresses,
+    }
+  }, [room.room_data, jobs, emails, initialConnectedAddresses, workspaceId, initialRoom.id, initialAssets, initialContacts])
+
+  const stack = useMemo(() => resolveStack(readModel, roomBlocks), [readModel, roomBlocks])
+  const suggestions = useMemo(() => resolveSuggestions(readModel, roomBlocks), [readModel, roomBlocks])
 
   useEffect(() => {
     const supabase = createClient()
@@ -87,7 +155,7 @@ export function RoomRealtimeProvider({
       )
       .subscribe()
 
-    // Channel 2: jobs — patch job status, update progress bar in place.
+    // Channel 2: jobs — patch job status, update derived state.
     const jobChannel = supabase
       .channel(`room:${roomId}:jobs`)
       .on(
@@ -100,7 +168,6 @@ export function RoomRealtimeProvider({
         },
         (payload) => {
           const updated = payload.new as Job
-          // Only process jobs that belong to emails in this room.
           if (!emailIdSet.current.has(updated.email_id)) return
 
           setJobs((prev) => {
@@ -112,8 +179,7 @@ export function RoomRealtimeProvider({
       )
       .subscribe()
 
-    // Channel 3: room_emails INSERT — add new email IDs to our tracking set,
-    // then fetch and prepend the email to the emails list.
+    // Channel 3: room_emails INSERT — add new email IDs and prepend the email.
     const roomEmailsChannel = supabase
       .channel(`room:${roomId}:room_emails`)
       .on(
@@ -130,7 +196,6 @@ export function RoomRealtimeProvider({
 
           emailIdSet.current.add(row.email_id)
 
-          // Fetch the full email to prepend to the list.
           const { data } = await supabase
             .from('emails')
             .select('*')
@@ -144,10 +209,34 @@ export function RoomRealtimeProvider({
       )
       .subscribe()
 
+    // Channel 4: room_blocks — accept/dismiss decisions update the stack and
+    // suggestions rail live, including changes from other devices/tabs.
+    const roomBlocksChannel = supabase
+      .channel(`room:${roomId}:room_blocks`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_blocks',
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const updated = payload.new as RoomBlockRow
+          setRoomBlocks((prev) => {
+            const exists = prev.some((r) => r.id === updated.id)
+            if (exists) return prev.map((r) => (r.id === updated.id ? updated : r))
+            return [...prev, updated]
+          })
+        }
+      )
+      .subscribe()
+
     return () => {
       void supabase.removeChannel(roomChannel)
       void supabase.removeChannel(jobChannel)
       void supabase.removeChannel(roomEmailsChannel)
+      void supabase.removeChannel(roomBlocksChannel)
     }
   }, [initialRoom.id, workspaceId])
 

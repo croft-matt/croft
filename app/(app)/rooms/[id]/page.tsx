@@ -10,7 +10,6 @@ import {
   getCrossReferences,
 } from '@/lib/queries/rooms'
 import { assembleReadModel, getRoomBlocks } from '@/lib/blocks/read-model'
-import { resolveStack, resolveSuggestions } from '@/lib/blocks/registry'
 import { RoomRealtimeProvider } from '@/components/room/room-realtime'
 
 type ValidTab = 'overview' | 'assets' | 'contacts' | 'emails'
@@ -45,6 +44,8 @@ export default async function RoomPage({
       getRoomBlocks(id),
     ])
 
+  // assembleReadModel fetches connected addresses and builds the full read model.
+  // connectedAddresses is passed to the client so it can re-resolve blocks live.
   const readModel = await assembleReadModel(id, workspaceId, {
     room,
     jobs,
@@ -52,9 +53,6 @@ export default async function RoomPage({
     contacts,
     emails,
   })
-
-  const initialStack = resolveStack(readModel, roomBlocks)
-  const initialSuggestions = resolveSuggestions(readModel, roomBlocks)
 
   return (
     <RoomRealtimeProvider
@@ -68,8 +66,7 @@ export default async function RoomPage({
       initialEmails={emails}
       initialCrossRefs={crossRefs}
       initialRoomBlocks={roomBlocks}
-      initialStack={initialStack}
-      initialSuggestions={initialSuggestions}
+      initialConnectedAddresses={readModel.connectedAddresses}
       parent={parent ? { id: parent.id, name: parent.name } : null}
     />
   )
