@@ -42,7 +42,10 @@ export function RoomCard({ room }: RoomCardProps) {
   const pct = hasProg
     ? Math.round((room.progress_closed / room.progress_total) * 100)
     : 0
-  const facts = extractFacts(room.room_data ?? {})
+  const roomData = typeof room.room_data === 'object' && room.room_data !== null && !Array.isArray(room.room_data)
+    ? (room.room_data as Record<string, unknown>)
+    : {}
+  const facts = extractFacts(roomData)
 
   return (
     <Link
