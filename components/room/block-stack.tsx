@@ -9,6 +9,7 @@ import type { DocumentsData } from '@/lib/blocks/documents'
 import type { DecisionsData } from '@/lib/blocks/decisions'
 import type { SpecSheetData } from '@/lib/blocks/spec-sheet'
 import type { MoneyData } from '@/lib/blocks/money'
+import type { TimelineData } from '@/lib/blocks/timeline'
 import { OpenLoopsBlock } from './open-loops-block'
 import { UnansweredQuestionsBlock } from './unanswered-questions-block'
 import { LogisticsBlock } from './logistics-block'
@@ -16,6 +17,7 @@ import { DocumentsBlock } from './documents-block'
 import { DecisionsBlock } from './decisions-block'
 import { SpecSheetBlock } from './spec-sheet-block'
 import { MoneyBlock } from './money-block'
+import { TimelineBlock } from './timeline-block'
 
 interface BlockStackProps {
   stack: StackEntry[]
@@ -37,6 +39,8 @@ function renderBlock(type: string, data: BlockData) {
       return <SpecSheetBlock data={data as SpecSheetData} />
     case 'money':
       return <MoneyBlock data={data as MoneyData} />
+    case 'timeline':
+      return <TimelineBlock data={data as TimelineData} />
     default:
       return null
   }
