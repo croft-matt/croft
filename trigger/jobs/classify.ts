@@ -10,7 +10,7 @@ export const classifyBatchTask = schedules.task({
   cron: '*/15 * * * *',
   maxDuration: 60,
   run: async () => {
-    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', undefined)
     return { triggered: true }
   },
 })

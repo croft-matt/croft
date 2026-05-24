@@ -57,7 +57,7 @@ export function JobsList({ jobs }: JobsListProps) {
 
       <div className="divide-y divide-neutral-800">
         {openJobs.map((job) => {
-          const intent = intentConfig[job.intent]
+          const intent = intentConfig[job.intent as JobIntent]
           return (
             <button
               key={job.id}

@@ -8,6 +8,7 @@ import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { fetchAttachmentsTask } from '@/trigger/jobs/fetch-attachments'
 import type { fetchGmailAttachmentsTask } from '@/trigger/jobs/fetch-gmail-attachments'
 import type { AttachmentMeta, Extraction } from '@/lib/types/database'
+import type { Json } from '@/lib/types/database'
 
 // Processes a single queued email through Tier 3.
 // Used by both the batch scheduled job and the on-demand job.
@@ -40,7 +41,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
     let embedding: number[] | undefined
     try {
       embedding = await generateEmbedding(email)
-      await supabase.from('emails').update({ embedding }).eq('id', emailId)
+      await supabase.from('emails').update({ embedding: embedding as unknown as string }).eq('id', emailId)
     } catch (err) {
       console.error(`classifyEmail: embedding failed for ${emailId}:`, err)
     }
@@ -54,7 +55,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
       .update({
         processing_state: 'processed',
         subject_summary: result.subject_summary,
-        extraction: result.extraction,
+        extraction: result.extraction as unknown as Json,
         extraction_complete: result.extraction_complete,
         processed_at: new Date().toISOString(),
       })
@@ -65,7 +66,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
     // Write structured intelligence derived from the extraction.
     // These writes are non-fatal: failure here does not mark the email as failed.
     // The email processed successfully. Write errors are logged and retried separately.
-    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as AttachmentMeta[])
+    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as unknown as AttachmentMeta[])
 
     // Enqueue room synthesis for each room the email was filed into.
     // Pass emailId so facts from this email are merged into room_data.
@@ -78,7 +79,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
 
     // Download attachment bytes and upload to Storage.
     // Non-fatal: attachment fetch failure must not affect the email's processing state.
-    const storedAttachments = email.attachments as AttachmentMeta[]
+    const storedAttachments = email.attachments as unknown as AttachmentMeta[]
     if (storedAttachments.length > 0) {
       if (email.resend_email_id) {
         tasks

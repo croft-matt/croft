@@ -25,7 +25,7 @@ export const embedTask = task({
 
     await supabase
       .from('emails')
-      .update({ embedding })
+      .update({ embedding: embedding as unknown as string })
       .eq('id', emailId)
 
     return { emailId }

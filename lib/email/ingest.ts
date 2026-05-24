@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ResendInboundEvent } from '@/lib/validators/email-inbound'
 import type { AttachmentMeta } from '@/lib/types/database'
+import type { Json } from '@/lib/types/database'
 
 export interface GmailMessageData {
   workspaceId: string
@@ -162,7 +163,7 @@ export async function storeEmailMetadata(
       subject: data.subject,
       received_at: data.created_at,
       processing_state: 'received',
-      attachments,
+      attachments: attachments as unknown as Json,
     })
     .select('id')
     .single()
@@ -215,7 +216,7 @@ export async function storeGmailMessage(
       received_at: data.receivedAt,
       processing_state: 'received',
       urgency_score: 0,
-      attachments: data.attachments ?? [],
+      attachments: (data.attachments ?? []) as unknown as Json,
       thread_id: threadId,
       in_reply_to: data.inReplyTo ?? null,
       email_references: data.references ?? null,
@@ -232,7 +233,7 @@ export async function storeGmailMessage(
           .from('emails')
           .update({
             ...(data.gmailMessageId ? { gmail_message_id: data.gmailMessageId } : {}),
-            ...(data.attachments && data.attachments.length > 0 ? { attachments: data.attachments } : {}),
+            ...(data.attachments && data.attachments.length > 0 ? { attachments: data.attachments as unknown as Json } : {}),
           })
           .eq('workspace_id', data.workspaceId)
           .eq('message_id', data.messageId)

@@ -164,7 +164,7 @@ export const importGmailHistoryTask = task({
     // Final kick after the import loop completes. The per-email pokes from
     // urgency-scan cover most of the import; this guarantees a pass after the
     // last email clears Tier 2. The import does not wait for Tier 3 to finish.
-    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', undefined)
 
     return { accountId, total: messages.length, stored, skipped }
   },

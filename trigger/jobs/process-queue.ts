@@ -14,7 +14,7 @@ export const processQueuedEmailsTask = task({
     const result = await processQueuedEmails()
 
     if (result.remaining > 0) {
-      await processQueuedEmailsTask.trigger({})
+      await processQueuedEmailsTask.trigger(undefined)
     }
 
     return result

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
 import { type ReconciliationContext } from '@/lib/ai/reconciliation-context'
 import { buildRoomTree, type RoomRecord, type RoomTreeNode } from '@/lib/rooms/tree'
-import type { Email, Extraction } from '@/lib/types/database'
+import type { Email, Extraction, AttachmentMeta } from '@/lib/types/database'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -42,8 +42,9 @@ export interface ClassificationResult {
 
 function buildEmailContent(email: Email, context: ReconciliationContext): string {
   const body = (email.body_text ?? '').split(/\s+/).slice(0, 2000).join(' ')
-  const attachmentList = email.attachments.length > 0
-    ? `\nAttachments: ${email.attachments.map((a) => a.filename).join(', ')}`
+  const attachments = (email.attachments as unknown as AttachmentMeta[] | null) ?? []
+  const attachmentList = attachments.length > 0
+    ? `\nAttachments: ${attachments.map((a) => a.filename).join(', ')}`
     : ''
 
   const parts: string[] = []

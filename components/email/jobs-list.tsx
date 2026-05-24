@@ -55,7 +55,7 @@ export function JobsList({ jobs }: JobsListProps) {
       ) : (
         <div className="divide-y divide-neutral-800">
           {[...openJobs, ...closedJobs].map((job) => {
-            const intent = intentConfig[job.intent]
+            const intent = intentConfig[job.intent as JobIntent]
             const dotClass = getStatusDot(job)
             const isClosed = job.status !== 'open'
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Extraction } from '@/lib/types/database'
+import type { Json } from '@/lib/types/database'
 
 // Stored shape for a single fact value inside room_data.
 // prior holds superseded values newest last, kept for drift display.
@@ -173,7 +174,7 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
       alert_text: alertText,
       alert_text_updated_at: alertText ? now : null,
       updated_at: now,
-      ...(roomData !== undefined ? { room_data: roomData } : {}),
+      ...(roomData !== undefined ? { room_data: roomData as unknown as Json } : {}),
     })
     .eq('id', roomId)
 }

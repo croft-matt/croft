@@ -52,7 +52,7 @@ export const urgencyTask = task({
 
     // Poke the processor so classification starts within seconds rather than
     // waiting for the next 15-minute cron tick.
-    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', {})
+    await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', undefined)
 
     return { emailId, urgency_score: result.urgency_score }
   },

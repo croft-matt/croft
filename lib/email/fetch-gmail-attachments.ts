@@ -36,7 +36,7 @@ export async function fetchAndStoreGmailAttachments(
     .eq('id', emailId)
     .single()
 
-  const attachments = (email?.attachments ?? []) as AttachmentMeta[]
+  const attachments = (email?.attachments as unknown as AttachmentMeta[]) ?? []
   const downloadable = attachments.filter((a) => a.gmail_attachment_id)
 
   if (downloadable.length === 0) return

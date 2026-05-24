@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Loader2, Flag } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/utils'
-import type { Email } from '@/lib/types/database'
+import type { Email, Extraction } from '@/lib/types/database'
 
 interface EmailsTabProps {
   emails: Email[]
@@ -20,8 +20,8 @@ export function EmailsTab({ emails, roomId }: EmailsTabProps) {
       {emails.map((email) => {
         const isProcessing = PROCESSING_STATES.has(email.processing_state)
         const isIncomplete = email.processing_state === 'processed' && email.extraction_complete === false
-        const openJobCount = (email.extraction?.jobs ?? []).filter(
-          (j: { confidence: number }) => j.confidence > 0
+        const openJobCount = ((email.extraction as Extraction | null)?.jobs ?? []).filter(
+          (j) => j.confidence > 0
         ).length
 
         return (
@@ -39,7 +39,7 @@ export function EmailsTab({ emails, roomId }: EmailsTabProps) {
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-neutral-600" />
                 )}
                 {isIncomplete && (
-                  <Flag className="h-3.5 w-3.5 shrink-0 text-neutral-600" title="May have missed something" />
+                  <Flag className="h-3.5 w-3.5 shrink-0 text-neutral-600" />
                 )}
               </div>
               <p className="text-xs text-neutral-500 truncate">

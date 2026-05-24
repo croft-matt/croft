@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireUser } from '@/lib/auth/helpers'
 import { tasks } from '@trigger.dev/sdk/v3'
 import type { classifyNowTask } from '@/trigger/jobs/classify-now'
-import type { Email, Job, Asset, ExtractedContact } from '@/lib/types/database'
+import type { Email, Job, Asset, ExtractedContact, Extraction } from '@/lib/types/database'
 
 // Enqueues on-demand Tier 3 for an email if it is queued or urgency_scanned.
 // Safe to call multiple times: if already processing or processed, does nothing.
@@ -48,7 +48,7 @@ export async function getEmailExtractionData(emailId: string): Promise<EmailExtr
 
   if (!email) return null
 
-  const extractedContacts = (email.extraction?.entities?.contacts ?? []) as ExtractedContact[]
+  const extractedContacts = ((email.extraction as Extraction | null)?.entities?.contacts ?? []) as ExtractedContact[]
 
   return {
     email: email as Email,

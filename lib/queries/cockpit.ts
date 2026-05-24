@@ -61,7 +61,7 @@ export async function getOverdueJobs(workspaceId: string): Promise<OverdueJobRow
 
   const { data: jobs } = await supabase
     .from('jobs')
-    .select('*, emails(from_name)')
+    .select('*, emails!email_id(from_name)')
     .eq('workspace_id', workspaceId)
     .eq('status', 'open')
     .lt('due', now)

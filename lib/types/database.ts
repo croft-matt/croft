@@ -14,6 +14,8 @@ export type Email = Tables<'emails'>
 export type Room = Tables<'rooms'>
 export type Job = Tables<'jobs'>
 export type Asset = Tables<'assets'>
+export type Contact = Tables<'contacts'>
+export type JobIntent = 'REQUEST' | 'DELIVER' | 'CONFIRM' | 'CHASE' | 'QUERY' | 'INTRODUCE'
 
 export interface AttachmentMeta {
   filename: string
