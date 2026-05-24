@@ -1,6 +1,17 @@
 import { requireUser, getWorkspaceId } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { backfillContactMatchingTask } from '@/trigger/jobs/backfill-contact-matching'
 import { MergeReview, type MergeCandidate, type MergedIdentity } from '@/components/contacts/merge-review'
+import { BackfillButton } from '@/components/contacts/backfill-button'
+
+async function triggerBackfill(workspaceId: string): Promise<void> {
+  'use server'
+  await requireUser()
+  await tasks.trigger<typeof backfillContactMatchingTask>('backfill-contact-matching', {
+    workspaceId,
+  })
+}
 
 export default async function DuplicatesPage() {
   await requireUser()
@@ -97,13 +108,18 @@ export default async function DuplicatesPage() {
     })),
   }))
 
+  const backfillAction = triggerBackfill.bind(null, workspaceId)
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-lg font-semibold text-neutral-100">Duplicate contacts</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Review contacts that look like the same person. Every merge requires your approval.
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold text-neutral-100">Duplicate contacts</h1>
+          <p className="text-sm text-neutral-500 mt-1">
+            Review contacts that look like the same person. Every merge requires your approval.
+          </p>
+        </div>
+        <BackfillButton action={backfillAction} />
       </div>
       <MergeReview candidates={candidates} identities={identities} />
     </div>
