@@ -1,0 +1,5 @@
+-- Adds the kind discriminator to facts stored in rooms.room_data.
+-- No schema change is required: room_data is already JSONB.
+-- This migration records the intent for the audit trail.
+-- New emails processed after this deploy will have kind set by the model.
+-- Existing facts without kind are treated as 'other' at read time.

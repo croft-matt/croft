@@ -1,12 +1,14 @@
 import Link from 'next/link'
-import { FactCard } from '@/components/room/fact-card'
-import { JobsList } from '@/components/room/jobs-list'
-import type { Room, Job } from '@/lib/types/database'
+import type { Room } from '@/lib/types/database'
+import type { StackEntry, SuggestionEntry } from '@/lib/blocks/registry'
+import { BlockStack } from '@/components/room/block-stack'
+import { SuggestionsRail } from '@/components/room/suggestions-rail'
 
 interface OverviewTabProps {
-  room: Room
+  roomId: string
   childRooms: Room[]
-  jobs: Job[]
+  stack: StackEntry[]
+  suggestions: SuggestionEntry[]
 }
 
 function ChildRoomCard({ room }: { room: Room }) {
@@ -35,12 +37,8 @@ function ChildRoomCard({ room }: { room: Room }) {
   )
 }
 
-export function OverviewTab({ room, childRooms, jobs }: OverviewTabProps) {
+export function OverviewTab({ roomId, childRooms, stack, suggestions }: OverviewTabProps) {
   const isParent = childRooms.length > 0
-  const roomData = (room.room_data ?? {}) as Record<string, unknown>
-  const factCategories = Object.entries(roomData).filter(
-    ([, val]) => typeof val === 'object' && val !== null
-  ) as [string, Record<string, unknown>][]
 
   return (
     <div className="space-y-6">
@@ -57,15 +55,9 @@ export function OverviewTab({ room, childRooms, jobs }: OverviewTabProps) {
         </div>
       )}
 
-      {factCategories.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {factCategories.map(([cat, data]) => (
-            <FactCard key={cat} category={cat} data={data} />
-          ))}
-        </div>
-      )}
+      <BlockStack stack={stack} />
 
-      <JobsList jobs={jobs} />
+      <SuggestionsRail suggestions={suggestions} roomId={roomId} />
     </div>
   )
 }

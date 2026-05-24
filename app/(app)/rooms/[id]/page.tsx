@@ -9,6 +9,8 @@ import {
   getEmailsForRoom,
   getCrossReferences,
 } from '@/lib/queries/rooms'
+import { assembleReadModel, getRoomBlocks } from '@/lib/blocks/read-model'
+import { resolveStack, resolveSuggestions } from '@/lib/blocks/registry'
 import { RoomRealtimeProvider } from '@/components/room/room-realtime'
 
 type ValidTab = 'overview' | 'assets' | 'contacts' | 'emails'
@@ -31,15 +33,28 @@ export default async function RoomPage({
   const workspaceId = await getWorkspaceId()
   if (!workspaceId) notFound()
 
-  const [parent, childRooms, jobs, assets, contacts, emails, crossRefs] = await Promise.all([
-    room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
-    getChildRooms(id),
-    getJobsForRoom(id),
-    getAssetsForRoom(id),
-    getContactsForRoom(id),
-    getEmailsForRoom(id, 50),
-    getCrossReferences(id),
-  ])
+  const [parent, childRooms, jobs, assets, contacts, emails, crossRefs, roomBlocks] =
+    await Promise.all([
+      room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
+      getChildRooms(id),
+      getJobsForRoom(id),
+      getAssetsForRoom(id),
+      getContactsForRoom(id),
+      getEmailsForRoom(id, 50),
+      getCrossReferences(id),
+      getRoomBlocks(id),
+    ])
+
+  const readModel = await assembleReadModel(id, workspaceId, {
+    room,
+    jobs,
+    assets,
+    contacts,
+    emails,
+  })
+
+  const initialStack = resolveStack(readModel, roomBlocks)
+  const initialSuggestions = resolveSuggestions(readModel, roomBlocks)
 
   return (
     <RoomRealtimeProvider
@@ -52,6 +67,9 @@ export default async function RoomPage({
       initialContacts={contacts}
       initialEmails={emails}
       initialCrossRefs={crossRefs}
+      initialRoomBlocks={roomBlocks}
+      initialStack={initialStack}
+      initialSuggestions={initialSuggestions}
       parent={parent ? { id: parent.id, name: parent.name } : null}
     />
   )

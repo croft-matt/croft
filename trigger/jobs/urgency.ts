@@ -37,8 +37,10 @@ export const urgencyTask = task({
 
     // Broadcast urgency data to the UI via Supabase Realtime.
     // The cockpit subscribes to this channel per workspace.
+    // httpSend() is used explicitly because this runs in a background job with no
+    // WebSocket connection. send() would silently fall back to REST and log a deprecation warning.
     const channel = supabase.channel(`workspace:${email.workspace_id}`)
-    await channel.send({
+    await channel.httpSend({
       type: 'broadcast',
       event: 'urgency_update',
       payload: {

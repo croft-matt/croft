@@ -436,6 +436,54 @@ export type Database = {
           },
         ]
       }
+      room_blocks: {
+        Row: {
+          block_type: string
+          created_at: string
+          id: string
+          position: number
+          room_id: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          block_type: string
+          created_at?: string
+          id?: string
+          position?: number
+          room_id: string
+          status: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          block_type?: string
+          created_at?: string
+          id?: string
+          position?: number
+          room_id?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_blocks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_blocks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_emails: {
         Row: {
           created_at: string

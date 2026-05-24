@@ -8,6 +8,7 @@ interface StoredFact {
   value: string
   confidence: number
   updated_at: string
+  kind?: string
   prior?: Array<{ value: string; at: string }>
 }
 
@@ -37,7 +38,7 @@ function mergeFacts(
   }
 
   for (const fact of facts) {
-    const { category, key, value, confidence, relation } = fact
+    const { category, key, value, confidence, relation, kind } = fact
 
     if (!merged[category]) {
       merged[category] = {}
@@ -47,7 +48,7 @@ function mergeFacts(
 
     if (!current) {
       // First time seeing this fact.
-      merged[category][key] = { value, confidence, updated_at: now }
+      merged[category][key] = { value, confidence, updated_at: now, kind }
       continue
     }
 
@@ -61,7 +62,7 @@ function mergeFacts(
       // Correction or implicit change: recency wins regardless of confidence.
       const prior = current.prior ? [...current.prior] : []
       prior.push({ value: current.value, at: current.updated_at ?? now })
-      merged[category][key] = { value, confidence, updated_at: now, prior }
+      merged[category][key] = { value, confidence, updated_at: now, kind, prior }
       continue
     }
 

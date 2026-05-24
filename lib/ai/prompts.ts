@@ -123,6 +123,7 @@ For each fact:
 - key: a short snake_case label that describes the detail precisely.
 - value: the fact exactly as stated in the email.
 - confidence: how confident you are that this was correctly extracted, from 0 to 1.
+- kind: the structural shape of this fact. place: a location or address. time: a date, deadline, or window. money: an amount, fee, or price stated in the email. credential: a document or permission with an expiry, such as a passport, visa, insurance, or permit. spec: a measurable property or specification. other: anything that does not fit. Choose the closest. Do not invent values.
 
 Extract facts liberally. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
 
@@ -310,6 +311,12 @@ export const EXTRACTION_TOOL_SCHEMA = {
               type: 'number',
               description: 'Confidence this fact was correctly extracted, 0 to 1.',
             },
+            kind: {
+              type: 'string',
+              enum: ['place', 'time', 'money', 'credential', 'spec', 'other'],
+              description:
+                'The structural shape of this fact. place: a location or address. time: a date, deadline, or window. money: an amount, fee, or price stated in the email. credential: a document or permission with an expiry, such as a passport, visa, insurance, or permit. spec: a measurable property or specification. other: anything that does not fit. Choose the closest. Do not invent values.',
+            },
             relation: {
               type: 'string',
               enum: ['new', 'restatement', 'correction'],
@@ -317,7 +324,7 @@ export const EXTRACTION_TOOL_SCHEMA = {
                 'new: a fact not seen before. restatement: a known fact repeated. correction: this replaces a known fact whose value changed or was wrong.',
             },
           },
-          required: ['category', 'key', 'value', 'confidence', 'relation'],
+          required: ['category', 'key', 'value', 'confidence', 'kind', 'relation'],
         },
       },
     },

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
+import type { RoomBlockRow } from '@/lib/blocks/types'
+import type { StackEntry, SuggestionEntry } from '@/lib/blocks/registry'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { OverdueAlert } from '@/components/room/overdue-alert'
@@ -25,6 +27,9 @@ interface RoomRealtimeProps {
   initialContacts: Contact[]
   initialEmails: Email[]
   initialCrossRefs: CrossReference[]
+  initialRoomBlocks: RoomBlockRow[]
+  initialStack: StackEntry[]
+  initialSuggestions: SuggestionEntry[]
   parent: { id: string; name: string } | null
 }
 
@@ -38,11 +43,17 @@ export function RoomRealtimeProvider({
   initialContacts,
   initialEmails,
   initialCrossRefs,
+  initialRoomBlocks,
+  initialStack,
+  initialSuggestions,
   parent,
 }: RoomRealtimeProps) {
   const [room, setRoom] = useState(initialRoom)
   const [jobs, setJobs] = useState(initialJobs)
   const [emails, setEmails] = useState(initialEmails)
+  // Stack and suggestions are server-computed for SSR. Commit E wires live re-resolution.
+  const [stack] = useState(initialStack)
+  const [suggestions] = useState(initialSuggestions)
 
   // Track email IDs in this room so we can filter incoming job events.
   const emailIdSet = useRef(new Set(initialEmails.map((e) => e.id)))
@@ -162,7 +173,14 @@ export function RoomRealtimeProvider({
 
       <RoomTabs
         defaultTab={defaultTab}
-        overview={<OverviewTab room={room} childRooms={initialChildRooms} jobs={jobs} />}
+        overview={
+          <OverviewTab
+            roomId={initialRoom.id}
+            childRooms={initialChildRooms}
+            stack={stack}
+            suggestions={suggestions}
+          />
+        }
         assets={<AssetsTab assets={initialAssets} />}
         contacts={<ContactsTab contacts={initialContacts} />}
         emails={<EmailsTab emails={emails} roomId={initialRoom.id} />}
