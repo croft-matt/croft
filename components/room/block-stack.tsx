@@ -4,8 +4,10 @@ import type { StackEntry } from '@/lib/blocks/registry'
 import type { BlockData } from '@/lib/blocks/types'
 import type { OpenLoopsData } from '@/lib/blocks/open-loops'
 import type { UnansweredQuestionsData } from '@/lib/blocks/unanswered-questions'
+import type { LogisticsData } from '@/lib/blocks/logistics'
 import { OpenLoopsBlock } from './open-loops-block'
 import { UnansweredQuestionsBlock } from './unanswered-questions-block'
+import { LogisticsBlock } from './logistics-block'
 
 interface BlockStackProps {
   stack: StackEntry[]
@@ -17,7 +19,8 @@ function renderBlock(type: string, data: BlockData) {
       return <OpenLoopsBlock data={data as OpenLoopsData} />
     case 'unanswered-questions':
       return <UnansweredQuestionsBlock data={data as UnansweredQuestionsData} />
-    // Commit D: logistics
+    case 'logistics':
+      return <LogisticsBlock data={data as LogisticsData} />
     default:
       return null
   }
