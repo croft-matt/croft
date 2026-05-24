@@ -1,5 +1,5 @@
 import type { Asset, Contact, Tables } from '@/lib/types/database'
-import type { OpenLoops } from '@/lib/jobs/open-loops'
+import type { OpenLoops, OwnerGroup } from '@/lib/jobs/open-loops'
 
 export type RoomBlockRow = Tables<'room_blocks'>
 
@@ -33,6 +33,11 @@ export interface RoomReadModel {
   workspaceId: string
   roomId: string
   openLoops: OpenLoops
+  // Person-grouped awaiting-others. Only populated on the server render path
+  // (assembleReadModel). The realtime client path cannot make async DB calls
+  // so this field is absent there; open-loops-block falls back to the flat
+  // openLoops.theirCourt in that case.
+  theirCourtByPerson?: OwnerGroup[]
   roomData: Record<string, unknown>
   facts: Fact[]
   assets: Asset[]

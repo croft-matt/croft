@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
 import type { RoomReadModel, RoomJob, Fact } from './types'
-import { getConnectedAddresses, buildOpenLoops } from '@/lib/jobs/open-loops'
+import { getConnectedAddresses, buildOpenLoops, groupTheirCourtByPerson } from '@/lib/jobs/open-loops'
 
 export async function assembleReadModel(
   roomId: string,
@@ -26,6 +26,7 @@ export async function assembleReadModel(
   )
 
   const openLoops = buildOpenLoops(jobs, fromNameMap, connectedSet)
+  const theirCourtByPerson = await groupTheirCourtByPerson(workspaceId, openLoops.theirCourt)
 
   // All non-cancelled jobs enriched with from_name. openLoops is the ranked open subset.
   const roomJobs: RoomJob[] = jobs
@@ -70,6 +71,7 @@ export async function assembleReadModel(
     workspaceId,
     roomId,
     openLoops,
+    theirCourtByPerson,
     roomData,
     facts,
     assets,

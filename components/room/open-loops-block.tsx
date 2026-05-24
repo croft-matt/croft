@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useJobModal } from '@/stores/job-modal-store'
 import type { JobIntent } from '@/lib/types/database'
 import type { OpenLoopsData } from '@/lib/blocks/open-loops'
+import type { OwnerGroup, OpenLoop } from '@/lib/jobs/open-loops'
 
 const intentConfig: Record<JobIntent, { label: string; className: string }> = {
   REQUEST: { label: 'REQUEST', className: 'bg-amber-500/10 text-amber-400' },
@@ -31,6 +32,69 @@ function formatAge(days: number): string {
   if (days === 0) return 'today'
   if (days === 1) return '1 day ago'
   return `${days} days ago`
+}
+
+function LoopRow({ loop, showOwner }: { loop: OpenLoop; showOwner: boolean }) {
+  const intent = intentConfig[loop.intent as JobIntent]
+  return (
+    <div className="flex items-start gap-3 py-3 first:pt-0">
+      <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(loop.due))} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start gap-2 mb-0.5">
+          <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
+            {intent.label}
+          </span>
+          <span className="text-sm font-medium text-neutral-100 leading-snug">{loop.description}</span>
+        </div>
+        <p className="text-xs text-neutral-500 mt-0.5">
+          {[
+            showOwner ? loop.owner : null,
+            loop.due ? formatDue(loop.due) : null,
+            formatAge(loop.age_days),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// Flat fallback: renders theirCourt as a plain list with the owner address inline.
+// Used by the realtime client path where person grouping is not available.
+function AwaitingOthersFlat({ loops }: { loops: OpenLoop[] }) {
+  return (
+    <div className="divide-y divide-neutral-800">
+      {loops.map((loop) => (
+        <LoopRow key={loop.id} loop={loop} showOwner />
+      ))}
+    </div>
+  )
+}
+
+// Grouped render: one section per person, headed by their canonical name or address.
+// Used on SSR where groupTheirCourtByPerson has resolved identities.
+function AwaitingOthersGrouped({ groups }: { groups: OwnerGroup[] }) {
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => {
+        const heading =
+          group.personKey === '__unassigned__'
+            ? 'Unassigned'
+            : (group.name ?? group.displayAddress ?? group.personKey)
+        return (
+          <div key={group.personKey}>
+            <p className="text-[10px] font-medium text-neutral-500 mb-1 truncate">{heading}</p>
+            <div className="divide-y divide-neutral-800">
+              {group.loops.map((loop) => (
+                <LoopRow key={loop.id} loop={loop} showOwner={false} />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 interface OpenLoopsBlockProps {
@@ -87,30 +151,11 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
       {data.theirCourt.length > 0 && (
         <div className={cn(data.yourCourt.length > 0 && 'border-t border-neutral-800 pt-4')}>
           <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-600 mb-2">Awaiting others</p>
-          <div className="divide-y divide-neutral-800">
-            {data.theirCourt.map((loop) => {
-              const intent = intentConfig[loop.intent as JobIntent]
-              return (
-                <div
-                  key={loop.id}
-                  className="flex items-start gap-3 py-3 first:pt-0"
-                >
-                  <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(loop.due))} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start gap-2 mb-0.5">
-                      <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
-                        {intent.label}
-                      </span>
-                      <span className="text-sm font-medium text-neutral-100 leading-snug">{loop.description}</span>
-                    </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {[loop.owner, loop.due ? formatDue(loop.due) : null, formatAge(loop.age_days)].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          {data.theirCourtByPerson && data.theirCourtByPerson.length > 0 ? (
+            <AwaitingOthersGrouped groups={data.theirCourtByPerson} />
+          ) : (
+            <AwaitingOthersFlat loops={data.theirCourt} />
+          )}
         </div>
       )}
     </div>

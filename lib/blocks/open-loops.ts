@@ -1,9 +1,12 @@
 import type { BlockDefinition, BlockData, RoomReadModel } from './types'
-import type { OpenLoop } from '@/lib/jobs/open-loops'
+import type { OpenLoop, OwnerGroup } from '@/lib/jobs/open-loops'
 
 export interface OpenLoopsData extends BlockData {
   yourCourt: OpenLoop[]
   theirCourt: OpenLoop[]
+  // Person-grouped version of theirCourt. Present on the server render path only.
+  // The block renders from this when available, falling back to the flat theirCourt.
+  theirCourtByPerson?: OwnerGroup[]
 }
 
 export const openLoopsBlock: BlockDefinition<OpenLoopsData> = {
@@ -18,6 +21,7 @@ export const openLoopsBlock: BlockDefinition<OpenLoopsData> = {
     return {
       yourCourt,
       theirCourt,
+      theirCourtByPerson: model.theirCourtByPerson,
       isEmpty: yourCourt.length === 0 && theirCourt.length === 0,
     }
   },
