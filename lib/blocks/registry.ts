@@ -3,12 +3,14 @@ import { openLoopsBlock } from './open-loops'
 import { unansweredQuestionsBlock } from './unanswered-questions'
 import { logisticsBlock } from './logistics'
 import { documentsBlock } from './documents'
+import { decisionsBlock } from './decisions'
 
 export const BLOCK_REGISTRY: BlockDefinition[] = [
   openLoopsBlock,
   unansweredQuestionsBlock,
   logisticsBlock,
   documentsBlock,
+  decisionsBlock,
 ]
 
 export interface StackEntry {
