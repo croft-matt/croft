@@ -27,10 +27,17 @@ export function formatRoomTree(rooms: RoomRecord[]): string {
   return nodes.map((n) => renderNode(n, 0)).join('\n')
 }
 
+export interface RateLimitHeaders {
+  tokensRemaining: number | null
+  tokensReset: string | null
+  retryAfter: number | null
+}
+
 export interface ClassificationResult {
   extraction: Extraction
   extraction_complete: boolean
   subject_summary: string
+  rateLimitHeaders: RateLimitHeaders
 }
 
 function buildEmailContent(email: Email, context: ReconciliationContext): string {
@@ -103,6 +110,12 @@ ${body}`,
   return parts.join('\n\n---\n\n')
 }
 
+function parseIntHeader(value: string | null): number | null {
+  if (value === null) return null
+  const n = parseInt(value, 10)
+  return isNaN(n) ? null : n
+}
+
 export async function runFullClassification(
   email: Email,
   context: ReconciliationContext,
@@ -111,7 +124,7 @@ export async function runFullClassification(
   const supabase = createAdminClient()
 
   try {
-    const response = await client.messages.create({
+    const { data: response, response: raw } = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       system: [
@@ -129,7 +142,13 @@ export async function runFullClassification(
       ],
       tools: [EXTRACTION_TOOL_SCHEMA as unknown as Tool],
       tool_choice: { type: 'tool', name: 'extract_email_data' },
-    })
+    }).withResponse()
+
+    const rateLimitHeaders: RateLimitHeaders = {
+      tokensRemaining: parseIntHeader(raw.headers.get('anthropic-ratelimit-input-tokens-remaining')),
+      tokensReset: raw.headers.get('anthropic-ratelimit-input-tokens-reset'),
+      retryAfter: parseIntHeader(raw.headers.get('retry-after')),
+    }
 
     const usage = response.usage as unknown as Record<string, unknown>
     const cacheReadTokens = (usage.cache_read_input_tokens as number) ?? 0
@@ -158,6 +177,7 @@ export async function runFullClassification(
       extraction,
       extraction_complete: extraction.extraction_complete,
       subject_summary: extraction.subject_summary,
+      rateLimitHeaders,
     }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)

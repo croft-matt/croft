@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { runFullClassification } from '@/lib/ai/tier3'
+import { runFullClassification, type RateLimitHeaders } from '@/lib/ai/tier3'
 import { getReconciliationContext } from '@/lib/ai/reconciliation-context'
 import { generateEmbedding } from '@/lib/ai/embeddings'
 import { fileEmailToRooms } from '@/lib/rooms/file'
@@ -13,7 +13,11 @@ import type { AttachmentMeta, Extraction } from '@/lib/types/database'
 // Used by both the batch scheduled job and the on-demand job.
 // Sequential processing is intentional: each call reuses the cached Tier 3 system prompt.
 // Do not parallelise within a workspace.
-export async function classifyEmail(emailId: string): Promise<void> {
+export interface ClassifyEmailResult {
+  rateLimitHeaders?: RateLimitHeaders
+}
+
+export async function classifyEmail(emailId: string): Promise<ClassifyEmailResult> {
   const supabase = createAdminClient()
 
   await supabase
@@ -55,6 +59,8 @@ export async function classifyEmail(emailId: string): Promise<void> {
         processed_at: new Date().toISOString(),
       })
       .eq('id', emailId)
+
+    const rateLimitHeaders = result.rateLimitHeaders
 
     // Write structured intelligence derived from the extraction.
     // These writes are non-fatal: failure here does not mark the email as failed.
@@ -98,6 +104,7 @@ export async function classifyEmail(emailId: string): Promise<void> {
     }
 
     // Embedding is stored above before classification. No separate background job needed.
+    return { rateLimitHeaders }
   } catch (err) {
     await supabase
       .from('emails')
