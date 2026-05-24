@@ -1,5 +1,7 @@
 import type { BlockDefinition, BlockData, RoomReadModel } from './types'
 
+export const ANCHOR_MIN_CONFIDENCE = 0.5
+
 export interface TimelineItem {
   date: string
   label: string
@@ -10,9 +12,18 @@ export interface TimelineItem {
   past: boolean
 }
 
+export interface TimelineAnchor {
+  date: string
+  label: string
+  daysRemaining: number
+  source: 'fact' | 'job'
+  ref_id: string
+}
+
 export interface TimelineData extends BlockData {
   items: TimelineItem[]
   nowIndex: number
+  anchor: TimelineAnchor | null
 }
 
 function parseDate(value: string): Date | null {
@@ -97,9 +108,50 @@ export const timelineBlock: BlockDefinition<TimelineData> = {
     const nowIndex = items.findIndex((item) => item.date >= today)
     const resolvedNowIndex = nowIndex === -1 ? items.length : nowIndex
 
+    // Derive the anchor: the latest future open item, preferring a scheduled fact
+    // over a deadline on an equal date. Fact candidates are gated on confidence.
+    const candidates = items.filter(
+      (it) => !it.past && (it.kind === 'scheduled' || it.kind === 'deadline'),
+    )
+
+    const qualifiedCandidates = candidates.filter((it) => {
+      if (it.kind === 'deadline') return true
+      // scheduled items come from facts; look up confidence by ref_id (category:key)
+      const colonIdx = it.ref_id.indexOf(':')
+      const category = it.ref_id.slice(0, colonIdx)
+      const key = it.ref_id.slice(colonIdx + 1)
+      const fact = model.facts.find((f) => f.category === category && f.key === key)
+      return fact !== undefined && fact.confidence >= ANCHOR_MIN_CONFIDENCE
+    })
+
+    // Sort descending by date; on equal dates prefer scheduled over deadline.
+    qualifiedCandidates.sort((a, b) => {
+      if (b.date !== a.date) return b.date.localeCompare(a.date)
+      if (a.kind === 'scheduled' && b.kind !== 'scheduled') return -1
+      if (b.kind === 'scheduled' && a.kind !== 'scheduled') return 1
+      return 0
+    })
+
+    const anchorItem = qualifiedCandidates[0] ?? null
+
+    let anchor: TimelineAnchor | null = null
+    if (anchorItem) {
+      const daysRemaining = Math.round(
+        (new Date(anchorItem.date).getTime() - new Date(today).getTime()) / 86_400_000,
+      )
+      anchor = {
+        date: anchorItem.date,
+        label: anchorItem.label,
+        daysRemaining,
+        source: anchorItem.source,
+        ref_id: anchorItem.ref_id,
+      }
+    }
+
     return {
       items,
       nowIndex: resolvedNowIndex,
+      anchor,
       isEmpty: items.length === 0,
     }
   },
