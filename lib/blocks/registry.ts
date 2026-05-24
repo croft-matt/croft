@@ -7,6 +7,7 @@ import { decisionsBlock } from './decisions'
 import { specSheetBlock } from './spec-sheet'
 import { moneyBlock } from './money'
 import { timelineBlock } from './timeline'
+import { expiriesBlock } from './expiries'
 
 export const BLOCK_REGISTRY: BlockDefinition[] = [
   openLoopsBlock,
@@ -17,6 +18,7 @@ export const BLOCK_REGISTRY: BlockDefinition[] = [
   decisionsBlock,
   moneyBlock,
   timelineBlock,
+  expiriesBlock,
 ]
 
 export interface StackEntry {

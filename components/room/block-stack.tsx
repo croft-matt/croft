@@ -10,6 +10,7 @@ import type { DecisionsData } from '@/lib/blocks/decisions'
 import type { SpecSheetData } from '@/lib/blocks/spec-sheet'
 import type { MoneyData } from '@/lib/blocks/money'
 import type { TimelineData } from '@/lib/blocks/timeline'
+import type { ExpiriesData } from '@/lib/blocks/expiries'
 import { OpenLoopsBlock } from './open-loops-block'
 import { UnansweredQuestionsBlock } from './unanswered-questions-block'
 import { LogisticsBlock } from './logistics-block'
@@ -18,6 +19,7 @@ import { DecisionsBlock } from './decisions-block'
 import { SpecSheetBlock } from './spec-sheet-block'
 import { MoneyBlock } from './money-block'
 import { TimelineBlock } from './timeline-block'
+import { ExpiriesBlock } from './expiries-block'
 
 interface BlockStackProps {
   stack: StackEntry[]
@@ -41,6 +43,8 @@ function renderBlock(type: string, data: BlockData) {
       return <MoneyBlock data={data as MoneyData} />
     case 'timeline':
       return <TimelineBlock data={data as TimelineData} />
+    case 'expiries':
+      return <ExpiriesBlock data={data as ExpiriesData} />
     default:
       return null
   }
