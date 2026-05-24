@@ -16,7 +16,7 @@ export default async function CockpitPage() {
   if (!workspaceId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">No workspace found.</p>
+        <p className="text-sm text-muted-foreground">No workspace found.</p>
       </div>
     )
   }

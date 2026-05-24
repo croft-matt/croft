@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const rooms = workspaceId ? await getRoomsTree(workspaceId) : []
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#111111]">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar
         workspaceName={workspaceName}
         userName={user.email ?? ''}

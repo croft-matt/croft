@@ -20,7 +20,7 @@ export default async function DuplicatesPage() {
   if (!workspaceId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">No workspace found.</p>
+        <p className="text-sm text-muted-foreground">No workspace found.</p>
       </div>
     )
   }
@@ -114,8 +114,8 @@ export default async function DuplicatesPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-neutral-100">Duplicate contacts</h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <h1 className="text-lg font-semibold text-foreground">Duplicate contacts</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Review contacts that look like the same person. Every merge requires your approval.
           </p>
         </div>
