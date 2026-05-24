@@ -180,7 +180,7 @@ export function CockpitRealtimeProvider({
         {/* Left column: urgent + overdue */}
         <div className="w-[42%] shrink-0 space-y-6">
           <div>
-            <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+            <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Urgent
             </p>
             <UrgentList emails={urgentEmails} roomNames={roomNames} />
@@ -190,12 +190,12 @@ export function CockpitRealtimeProvider({
 
         {/* Right column: rooms */}
         <div className="flex-1 min-w-0">
-          <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+          <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Rooms
           </p>
           {rooms.length === 0 ? (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-5">
-              <p className="text-sm text-neutral-600">
+            <div className="rounded-xl border border-border bg-card px-4 py-5">
+              <p className="text-sm text-muted-foreground">
                 No rooms yet. Rooms are created when emails arrive or you create one manually.
               </p>
             </div>

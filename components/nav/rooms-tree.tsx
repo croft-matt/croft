@@ -40,7 +40,7 @@ function getStatusDot(room: RoomWithOverdue): 'red' | 'amber' | 'white' | null {
 const dotClass = {
   red: 'bg-red-500',
   amber: 'bg-amber-500',
-  white: 'bg-white',
+  white: 'bg-foreground',
 }
 
 interface RoomRowProps {
@@ -63,14 +63,14 @@ function RoomRow({ node, depth, expandedIds, onToggle, pathname }: RoomRowProps)
         className={cn(
           'flex items-center gap-1 rounded-md py-1 text-sm transition-colors group',
           depth === 0 ? 'px-1' : 'px-1',
-          isActive ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-white'
+          isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
         )}
         style={{ paddingLeft: `${(depth * 12) + 4}px` }}
       >
         {hasChildren ? (
           <button
             onClick={() => onToggle(node.id)}
-            className="flex h-5 w-5 shrink-0 items-center justify-center text-neutral-500 hover:text-white transition-colors"
+            className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-sidebar-foreground transition-colors"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             {isExpanded ? (
@@ -152,7 +152,7 @@ export function RoomsTree({ rooms }: RoomsTreeProps) {
 
   if (tree.length === 0) {
     return (
-      <p className="px-2 text-xs text-neutral-600">No rooms yet.</p>
+      <p className="px-2 text-xs text-muted-foreground">No rooms yet.</p>
     )
   }
 
