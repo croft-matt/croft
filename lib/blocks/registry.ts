@@ -37,13 +37,17 @@ export function resolveStack(
     if (row?.status === 'dismissed') continue
 
     if (block.defaultActive && !row) {
+      const data = block.resolve(model)
+      if (block.hideWhenEmpty && data.isEmpty) continue
       // Pin before all accepted blocks using a large negative sort key.
-      entries.push({ type: block.type, data: block.resolve(model), sortKey: -10000 + i })
+      entries.push({ type: block.type, data, sortKey: -10000 + i })
       continue
     }
 
     if (row?.status === 'active') {
-      entries.push({ type: block.type, data: block.resolve(model), sortKey: row.position })
+      const data = block.resolve(model)
+      if (block.hideWhenEmpty && data.isEmpty) continue
+      entries.push({ type: block.type, data, sortKey: row.position })
     }
   }
 

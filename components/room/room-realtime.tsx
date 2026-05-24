@@ -265,6 +265,7 @@ export function RoomRealtimeProvider({
         overview={
           <OverviewTab
             roomId={initialRoom.id}
+            roomData={(room.room_data ?? {}) as Record<string, unknown>}
             childRooms={initialChildRooms}
             stack={stack}
             suggestions={suggestions}

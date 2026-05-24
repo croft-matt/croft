@@ -33,6 +33,10 @@ export interface BlockDefinition<TData extends BlockData = BlockData> {
   type: string
   title: string
   defaultActive: boolean
+  // When true, a block whose resolved data has isEmpty: true is omitted from
+  // the stack entirely rather than rendering a quiet-line placeholder.
+  // Use for catch-all blocks (e.g. spec sheet) where an empty state adds no value.
+  hideWhenEmpty?: boolean
   hasEvidence(model: RoomReadModel): boolean
   resolve(model: RoomReadModel): TData
   preview(data: TData): string
