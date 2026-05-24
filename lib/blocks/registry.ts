@@ -5,6 +5,7 @@ import { logisticsBlock } from './logistics'
 import { documentsBlock } from './documents'
 import { decisionsBlock } from './decisions'
 import { specSheetBlock } from './spec-sheet'
+import { moneyBlock } from './money'
 
 export const BLOCK_REGISTRY: BlockDefinition[] = [
   openLoopsBlock,
@@ -13,6 +14,7 @@ export const BLOCK_REGISTRY: BlockDefinition[] = [
   logisticsBlock,
   documentsBlock,
   decisionsBlock,
+  moneyBlock,
 ]
 
 export interface StackEntry {

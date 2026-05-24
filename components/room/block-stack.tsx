@@ -8,12 +8,14 @@ import type { LogisticsData } from '@/lib/blocks/logistics'
 import type { DocumentsData } from '@/lib/blocks/documents'
 import type { DecisionsData } from '@/lib/blocks/decisions'
 import type { SpecSheetData } from '@/lib/blocks/spec-sheet'
+import type { MoneyData } from '@/lib/blocks/money'
 import { OpenLoopsBlock } from './open-loops-block'
 import { UnansweredQuestionsBlock } from './unanswered-questions-block'
 import { LogisticsBlock } from './logistics-block'
 import { DocumentsBlock } from './documents-block'
 import { DecisionsBlock } from './decisions-block'
 import { SpecSheetBlock } from './spec-sheet-block'
+import { MoneyBlock } from './money-block'
 
 interface BlockStackProps {
   stack: StackEntry[]
@@ -33,6 +35,8 @@ function renderBlock(type: string, data: BlockData) {
       return <DecisionsBlock data={data as DecisionsData} />
     case 'spec-sheet':
       return <SpecSheetBlock data={data as SpecSheetData} />
+    case 'money':
+      return <MoneyBlock data={data as MoneyData} />
     default:
       return null
   }
