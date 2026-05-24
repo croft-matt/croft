@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { triggerClassifyNow, getEmailExtractionData } from '@/lib/email/actions'
-import type { Email, Job, Asset, ExtractedContact, Room } from '@/lib/types/database'
+import type { Email, Job, Asset, ExtractedContact, Room, Extraction } from '@/lib/types/database'
 import { EmailHeader } from '@/components/email/email-header'
 import { ExtractionFlag } from '@/components/email/extraction-flag'
 import { AssetsList } from '@/components/email/assets-list'
@@ -34,6 +34,7 @@ export function EmailProcessingProvider({
   const [extractedContacts, setExtractedContacts] = useState(initialExtractedContacts)
 
   const isProcessed = email.processing_state === 'processed'
+  const extraction = email.extraction as Extraction | null
 
   useEffect(() => {
     // Fire on-demand Tier 3 if the email is not yet processed.
@@ -79,9 +80,9 @@ export function EmailProcessingProvider({
   const showFlag =
     isProcessed &&
     (email.extraction_complete === false ||
-      (email.extraction?.confidence != null && email.extraction.confidence < 0.7))
+      (extraction?.confidence != null && extraction.confidence < 0.7))
 
-  const keyDates = email.extraction?.entities?.dates ?? []
+  const keyDates = extraction?.entities?.dates ?? []
 
   return (
     <>
