@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireUser } from '@/lib/auth/helpers'
 
@@ -44,6 +45,7 @@ export async function acceptBlock(roomId: string, blockType: string): Promise<Ac
   )
 
   if (error) return { success: false, error: error.message }
+  revalidatePath(`/rooms/${roomId}`)
   return { success: true }
 }
 
@@ -72,6 +74,7 @@ export async function dismissBlock(roomId: string, blockType: string): Promise<A
   )
 
   if (error) return { success: false, error: error.message }
+  revalidatePath(`/rooms/${roomId}`)
   return { success: true }
 }
 
