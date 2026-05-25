@@ -49,7 +49,7 @@ export function RoomHeader({ room, parent, jobs, childRooms }: RoomHeaderProps) 
           <div className="mt-3 flex items-center gap-3">
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-muted-foreground transition-all"
+              className="h-full rounded-full bg-primary transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>
