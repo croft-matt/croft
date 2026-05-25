@@ -389,6 +389,7 @@ export type Database = {
           in_reply_to: string | null
           message_id: string
           processed_at: string | null
+          processing_attempts: number
           processing_state: string
           received_at: string
           requires_response: boolean | null
@@ -419,6 +420,7 @@ export type Database = {
           in_reply_to?: string | null
           message_id: string
           processed_at?: string | null
+          processing_attempts?: number
           processing_state?: string
           received_at?: string
           requires_response?: boolean | null
@@ -449,6 +451,7 @@ export type Database = {
           in_reply_to?: string | null
           message_id?: string
           processed_at?: string | null
+          processing_attempts?: number
           processing_state?: string
           received_at?: string
           requires_response?: boolean | null
@@ -804,6 +807,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_workspace_with_owner: {
+        Args: {
+          p_croft_email_address: string
+          p_name: string
+          p_receiving_address: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
       match_emails_for_context: {
         Args: {
           match_count?: number
