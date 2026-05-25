@@ -782,6 +782,7 @@ export type Database = {
           croft_email_address: string | null
           id: string
           name: string
+          onboarding_complete: boolean
           receiving_address: string | null
         }
         Insert: {
@@ -790,6 +791,7 @@ export type Database = {
           croft_email_address?: string | null
           id?: string
           name: string
+          onboarding_complete?: boolean
           receiving_address?: string | null
         }
         Update: {
@@ -798,6 +800,7 @@ export type Database = {
           croft_email_address?: string | null
           id?: string
           name?: string
+          onboarding_complete?: boolean
           receiving_address?: string | null
         }
         Relationships: []
