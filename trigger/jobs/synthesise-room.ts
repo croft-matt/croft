@@ -1,7 +1,8 @@
-import { task } from '@trigger.dev/sdk/v3'
+import { task, tasks } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { synthesiseRoom } from '@/lib/rooms/synthesise'
 import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
+import type { generateRoomSummaryTask } from '@/trigger/jobs/generate-room-summary'
 
 export interface SynthesiseRoomPayload {
   roomId: string
@@ -23,6 +24,12 @@ export const synthesiseRoomTask = task({
   run: async (payload: SynthesiseRoomPayload) => {
     const { roomId, emailId } = payload
     await synthesiseRoom(roomId, emailId)
+
+    // Re-generate the room summary when a new email was processed into the room.
+    // Not triggered on job-close path (emailId absent) to avoid redundant generation.
+    if (emailId) {
+      await tasks.trigger<typeof generateRoomSummaryTask>('generate-room-summary', { roomId })
+    }
 
     // Broadcast the current total room count so the onboarding processing gate
     // can tick its rooms counter live. We look up workspace_id from the room

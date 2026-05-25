@@ -173,6 +173,14 @@ Set \`relates_to_job_id\` to null when \`relation\` is \`new\`.
 
 Use the extract_email_data tool to return your structured output.`
 
+export const ROOM_SUMMARY_SYSTEM_PROMPT = `You are summarising a project email room for a professional.
+Write 2 to 3 sentences only.
+State: what the project is, who the key contact is, the current status.
+Be specific: use names, dates, and numbers where available.
+Do not use lists. Do not use dashes in place of conjunctions.
+Do not begin with "This is", "The room", or "This room".
+Start from the substance.`
+
 export const EXTRACTION_TOOL_SCHEMA = {
   name: 'extract_email_data',
   description: 'Return the structured extraction of all jobs, entities, and metadata from the email.',
