@@ -4,23 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
-import type { RoomBlockRow, RoomReadModel, RoomJob, Fact } from '@/lib/blocks/types'
+import type { RoomReadModel, RoomJob, Fact } from '@/lib/blocks/types'
 import type { OpenLoop, OpenLoops } from '@/lib/jobs/open-loops'
-import { resolveStack, resolveSuggestions } from '@/lib/blocks/registry'
-import { RoomHeader } from '@/components/room/room-header'
-import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
-import { OverdueAlert } from '@/components/room/overdue-alert'
-import { RoomTabs } from '@/components/room/room-tabs'
-import { OverviewTab } from '@/components/room/overview-tab'
-import { AssetsTab } from '@/components/room/assets-tab'
-import { ContactsTab } from '@/components/room/contacts-tab'
-import { EmailsTab } from '@/components/room/emails-tab'
-
-type ValidTab = 'overview' | 'assets' | 'contacts' | 'emails'
+import { RoomShell } from '@/components/room/room-shell'
 
 interface RoomRealtimeProps {
   workspaceId: string
-  defaultTab: ValidTab
   initialRoom: Room
   initialChildRooms: Room[]
   initialJobs: Job[]
@@ -28,9 +17,8 @@ interface RoomRealtimeProps {
   initialContacts: Contact[]
   initialEmails: Email[]
   initialCrossRefs: CrossReference[]
-  initialRoomBlocks: RoomBlockRow[]
   initialConnectedAddresses: string[]
-  parent: { id: string; name: string } | null
+  parent: Pick<Room, 'id' | 'name'> | null
 }
 
 // Pure helper: builds OpenLoops from already-fetched data.
@@ -83,7 +71,6 @@ function flattenFacts(roomData: Record<string, unknown>): Fact[] {
 
 export function RoomRealtimeProvider({
   workspaceId,
-  defaultTab,
   initialRoom,
   initialChildRooms,
   initialJobs,
@@ -91,20 +78,15 @@ export function RoomRealtimeProvider({
   initialContacts,
   initialEmails,
   initialCrossRefs,
-  initialRoomBlocks,
   initialConnectedAddresses,
   parent,
 }: RoomRealtimeProps) {
   const [room, setRoom] = useState(initialRoom)
   const [jobs, setJobs] = useState(initialJobs)
   const [emails, setEmails] = useState(initialEmails)
-  const [roomBlocks, setRoomBlocks] = useState(initialRoomBlocks)
 
-  // Track email IDs in this room so we can filter incoming job events.
   const emailIdSet = useRef(new Set(initialEmails.map((e) => e.id)))
 
-  // Derive the read model reactively from live state. When room_data, jobs,
-  // emails, or roomBlocks change, useMemo recomputes the affected values.
   const readModel = useMemo((): RoomReadModel => {
     const roomData = (room.room_data ?? {}) as Record<string, unknown>
     const fromNameMap = new Map(emails.map((e) => [e.id, e.from_name ?? null]))
@@ -141,14 +123,11 @@ export function RoomRealtimeProvider({
     }
   }, [room.room_data, jobs, emails, initialConnectedAddresses, workspaceId, initialRoom.id, initialAssets, initialContacts])
 
-  const stack = useMemo(() => resolveStack(readModel, roomBlocks), [readModel, roomBlocks])
-  const suggestions = useMemo(() => resolveSuggestions(readModel, roomBlocks), [readModel, roomBlocks])
-
   useEffect(() => {
     const supabase = createClient()
     const roomId = initialRoom.id
 
-    // Channel 1: rooms — patch room_data, progress counters, alert_text.
+    // Channel 1: rooms -- patch room_data, progress counters, alert_text, room_summary.
     const roomChannel = supabase
       .channel(`room:${roomId}:rooms`)
       .on(
@@ -168,12 +147,14 @@ export function RoomRealtimeProvider({
             room_data: updated.room_data,
             alert_text: updated.alert_text,
             alert_text_updated_at: updated.alert_text_updated_at,
+            room_summary: updated.room_summary,
+            room_summary_updated_at: updated.room_summary_updated_at,
           }))
-        }
+        },
       )
       .subscribe()
 
-    // Channel 2: jobs — patch job status, update derived state.
+    // Channel 2: jobs -- patch job status, update derived state.
     const jobChannel = supabase
       .channel(`room:${roomId}:jobs`)
       .on(
@@ -193,11 +174,11 @@ export function RoomRealtimeProvider({
             if (exists) return prev.map((j) => (j.id === updated.id ? updated : j))
             return [...prev, updated]
           })
-        }
+        },
       )
       .subscribe()
 
-    // Channel 3: room_emails INSERT — add new email IDs and prepend the email.
+    // Channel 3: room_emails INSERT -- add new email IDs and prepend the email.
     const roomEmailsChannel = supabase
       .channel(`room:${roomId}:room_emails`)
       .on(
@@ -223,30 +204,7 @@ export function RoomRealtimeProvider({
           if (data) {
             setEmails((prev) => [data as Email, ...prev])
           }
-        }
-      )
-      .subscribe()
-
-    // Channel 4: room_blocks — accept/dismiss decisions update the stack and
-    // suggestions rail live, including changes from other devices/tabs.
-    const roomBlocksChannel = supabase
-      .channel(`room:${roomId}:room_blocks`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_blocks',
-          filter: `room_id=eq.${roomId}`,
         },
-        (payload) => {
-          const updated = payload.new as RoomBlockRow
-          setRoomBlocks((prev) => {
-            const exists = prev.some((r) => r.id === updated.id)
-            if (exists) return prev.map((r) => (r.id === updated.id ? updated : r))
-            return [...prev, updated]
-          })
-        }
       )
       .subscribe()
 
@@ -254,44 +212,17 @@ export function RoomRealtimeProvider({
       void supabase.removeChannel(roomChannel)
       void supabase.removeChannel(jobChannel)
       void supabase.removeChannel(roomEmailsChannel)
-      void supabase.removeChannel(roomBlocksChannel)
     }
   }, [initialRoom.id, workspaceId])
 
-  const overdueJobs = jobs.filter(
-    (j) => j.status === 'open' && j.due && new Date(j.due) < new Date()
-  )
-  const hasOverdue = overdueJobs.length > 0
-
   return (
-    <div className="flex flex-col min-h-full">
-      <RoomHeader
-        room={room}
-        parent={parent}
-        jobs={jobs}
-        childRooms={initialChildRooms}
-      />
-
-      <CrossReferenceCards crossRefs={initialCrossRefs} />
-
-      {hasOverdue && room.alert_text && (
-        <OverdueAlert alertText={room.alert_text} />
-      )}
-
-      <RoomTabs
-        defaultTab={defaultTab}
-        overview={
-          <OverviewTab
-            roomId={initialRoom.id}
-            childRooms={initialChildRooms}
-            stack={stack}
-            suggestions={suggestions}
-          />
-        }
-        assets={<AssetsTab assets={initialAssets} />}
-        contacts={<ContactsTab contacts={initialContacts} />}
-        emails={<EmailsTab emails={emails} roomId={initialRoom.id} />}
-      />
-    </div>
+    <RoomShell
+      room={room}
+      readModel={readModel}
+      jobs={jobs}
+      childRooms={initialChildRooms}
+      crossRefs={initialCrossRefs}
+      parent={parent}
+    />
   )
 }
