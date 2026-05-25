@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import type { Room, Job } from '@/lib/types/database'
 import type { RoomReadModel } from '@/lib/blocks/types'
@@ -18,6 +18,8 @@ import { assembleDates } from '@/lib/rooms/dates'
 import type { RoomAssets } from '@/lib/rooms/assets'
 import type { RoomPeople } from '@/lib/rooms/people'
 import { PeopleTab } from '@/components/room/people-tab'
+import { RecordTab } from '@/components/room/record-tab'
+import { assembleRecord } from '@/lib/rooms/record'
 
 type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
@@ -41,11 +43,6 @@ interface RoomShellProps {
   roomPeople: RoomPeople
 }
 
-function RecordTab({ readModel }: { readModel: RoomReadModel }) {
-  void readModel
-  return <div />
-}
-
 export function RoomShell({
   room,
   readModel,
@@ -58,8 +55,19 @@ export function RoomShell({
   roomPeople,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
-  const { emailId: panelEmailId } = useEmailSidePanel()
-  const panelOpen = panelEmailId !== null
+  const { isOpen } = useEmailSidePanel()
+  // showPanel stays true for 200ms after isOpen goes false so the exit
+  // animation completes before the panel is removed from the DOM.
+  const [showPanel, setShowPanel] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowPanel(true)
+    } else {
+      const timer = setTimeout(() => setShowPanel(false), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen])
 
   const overdueJobs = jobs.filter(
     (j) => j.status === 'open' && j.due && new Date(j.due) < new Date(),
@@ -82,17 +90,18 @@ export function RoomShell({
       case 'people':
         return <PeopleTab people={roomPeople} />
       case 'record':
-        return <RecordTab readModel={readModel} />
+        return <RecordTab record={assembleRecord(readModel)} />
     }
   }
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Room content column: full width normally, 50% when side panel is open. */}
+      {/* Room content column: full width normally, 50% when side panel is open.
+          On narrow viewports the column is hidden while the panel is open. */}
       <div
         className={cn(
-          'flex flex-col min-h-full overflow-y-auto',
-          panelOpen ? 'w-1/2' : 'w-full',
+          'flex flex-col min-h-full overflow-y-auto transition-[width] duration-200 ease-out',
+          isOpen ? 'lg:w-1/2 w-0 overflow-hidden' : 'w-full',
         )}
       >
         <RoomHeader room={room} parent={parent} jobs={jobs} childRooms={childRooms} />
@@ -136,8 +145,27 @@ export function RoomShell({
         </div>
       </div>
 
-      {/* Side panel: renders alongside room content when an email citation is clicked. */}
-      {panelOpen && <EmailSidePanel />}
+      {/* Side panel: slides in from the right when an email citation is clicked.
+          Kept in the DOM for 200ms after close so the exit animation plays.
+          Outer div transitions width (acts as a clip so translate stays meaningful).
+          Inner div translates independently so the slide-in effect is clean. */}
+      {showPanel && (
+        <div
+          className={cn(
+            'flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out',
+            isOpen ? 'lg:w-1/2 w-full' : 'w-0',
+          )}
+        >
+          <div
+            className={cn(
+              'h-full transition-transform duration-200 ease-out',
+              isOpen ? 'translate-x-0' : 'translate-x-full',
+            )}
+          >
+            <EmailSidePanel />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
