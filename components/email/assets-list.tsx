@@ -1,7 +1,5 @@
 import type { Asset } from '@/lib/types/database'
 import { FileText, FileSpreadsheet, Link as LinkIcon, File } from 'lucide-react'
-import { getAssetUrl } from '@/lib/storage'
-
 interface AssetsListProps {
   assets: Asset[]
 }
@@ -48,7 +46,7 @@ export function AssetsList({ assets }: AssetsListProps) {
             <div className="shrink-0">
               {asset.storage_path ? (
                 <a
-                  href={getAssetUrl(asset.storage_path)}
+                  href={`/api/assets/${asset.id}/url`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-medium text-foreground hover:text-muted-foreground transition-colors"

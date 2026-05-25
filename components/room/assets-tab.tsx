@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { FileText, FileSpreadsheet, File } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Asset } from '@/lib/types/database'
-import { getAssetUrl } from '@/lib/storage'
 
 interface AssetsTabProps {
   assets: Asset[]
@@ -77,7 +76,7 @@ export function AssetsTab({ assets }: AssetsTabProps) {
             <div className="shrink-0">
               {asset.storage_path ? (
                 <a
-                  href={getAssetUrl(asset.storage_path)}
+                  href={`/api/assets/${asset.id}/url`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-medium text-foreground hover:text-muted-foreground transition-colors"
