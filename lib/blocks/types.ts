@@ -10,6 +10,8 @@ export interface Fact {
   confidence: number
   // Defaults to 'other' when absent in stored data. Part 2 populates this from the model.
   kind: string
+  // Source email for citation. Absent on facts written before this field was added.
+  email_id?: string | null
 }
 
 // All non-cancelled jobs for the room, enriched with the sender name from the source email.

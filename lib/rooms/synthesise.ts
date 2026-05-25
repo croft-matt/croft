@@ -9,6 +9,7 @@ interface StoredFact {
   confidence: number
   updated_at: string
   kind?: string
+  email_id?: string
   prior?: Array<{ value: string; at: string }>
 }
 
@@ -26,6 +27,7 @@ interface StoredFact {
 function mergeFacts(
   existing: Record<string, unknown>,
   facts: Extraction['facts'],
+  sourceEmailId?: string,
 ): Record<string, unknown> {
   const now = new Date().toISOString()
   const merged: Record<string, Record<string, StoredFact>> = {}
@@ -48,7 +50,7 @@ function mergeFacts(
 
     if (!current) {
       // First time seeing this fact.
-      merged[category][key] = { value, confidence, updated_at: now, kind }
+      merged[category][key] = { value, confidence, updated_at: now, kind, email_id: sourceEmailId }
       continue
     }
 
@@ -62,7 +64,7 @@ function mergeFacts(
       // Correction or implicit change: recency wins regardless of confidence.
       const prior = current.prior ? [...current.prior] : []
       prior.push({ value: current.value, at: current.updated_at ?? now })
-      merged[category][key] = { value, confidence, updated_at: now, kind, prior }
+      merged[category][key] = { value, confidence, updated_at: now, kind, email_id: sourceEmailId, prior }
       continue
     }
 
@@ -163,7 +165,7 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
     const existingData = (room?.room_data ?? {}) as Record<string, unknown>
 
     if (facts.length > 0) {
-      roomData = mergeFacts(existingData, facts)
+      roomData = mergeFacts(existingData, facts, emailId)
     }
   }
 

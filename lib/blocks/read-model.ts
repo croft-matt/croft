@@ -55,7 +55,7 @@ export async function assembleReadModel(
     if (typeof keys !== 'object' || keys === null || Array.isArray(keys)) continue
     for (const [key, stored] of Object.entries(keys as Record<string, unknown>)) {
       if (typeof stored !== 'object' || stored === null || !('value' in (stored as object))) continue
-      const sf = stored as { value: unknown; confidence?: number; kind?: string }
+      const sf = stored as { value: unknown; confidence?: number; kind?: string; email_id?: string }
       if (typeof sf.value !== 'string') continue
       facts.push({
         category,
@@ -63,6 +63,7 @@ export async function assembleReadModel(
         value: sf.value,
         confidence: typeof sf.confidence === 'number' ? sf.confidence : 0,
         kind: typeof sf.kind === 'string' ? sf.kind : 'other',
+        email_id: typeof sf.email_id === 'string' ? sf.email_id : null,
       })
     }
   }
