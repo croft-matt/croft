@@ -9,12 +9,15 @@ type Stage = 'idle' | 'instructions' | 'importing'
 
 interface SetupClientProps {
   workspaceId: string
+  initialReceivingAddress: string | null
 }
 
-export function SetupClient({ workspaceId }: SetupClientProps) {
+export function SetupClient({ workspaceId, initialReceivingAddress }: SetupClientProps) {
   const router = useRouter()
-  const [stage, setStage] = useState<Stage>('idle')
-  const [receivingAddress, setReceivingAddress] = useState<string | null>(null)
+  // If the server already knows the receiving address (job ran before page loaded),
+  // start in instructions stage immediately — don't wait for a missed broadcast.
+  const [stage, setStage] = useState<Stage>(initialReceivingAddress ? 'instructions' : 'idle')
+  const [receivingAddress, setReceivingAddress] = useState<string | null>(initialReceivingAddress)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {

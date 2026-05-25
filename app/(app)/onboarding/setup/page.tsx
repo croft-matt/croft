@@ -25,5 +25,21 @@ export default async function OnboardingSetupPage() {
     redirect('/onboarding/processing')
   }
 
-  return <SetupClient workspaceId={workspaceId} />
+  // Fetch the workspace receiving address. If the configure-gmail-forwarding
+  // job already ran and broadcast before this page loaded (race condition),
+  // the address will already be in the DB — pass it as an initial prop so
+  // the client starts in the instructions stage immediately rather than
+  // waiting for a broadcast that has already fired.
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('receiving_address')
+    .eq('id', workspaceId)
+    .single()
+
+  return (
+    <SetupClient
+      workspaceId={workspaceId}
+      initialReceivingAddress={workspace?.receiving_address ?? null}
+    />
+  )
 }

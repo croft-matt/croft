@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { getProcessingStatus } from './actions'
 
 interface ProcessingClientProps {
   workspaceId: string
@@ -45,42 +45,47 @@ export function ProcessingClient({
   const routerRef = useRef(router)
   routerRef.current = router
 
-  useEffect(() => {
-    const supabase = createClient()
+  // Track complete in a ref so the polling interval can read it without
+  // needing it as a dependency (avoids changing the deps array size).
+  const completeRef = useRef(complete)
+  completeRef.current = complete
 
-    const channel = supabase
-      .channel(`workspace:${workspaceId}`)
-      .on('broadcast', { event: 'import_progress' }, ({ payload }) => {
-        const p = payload as { n: number; total: number }
-        setImportN(p.n)
-        setImportTotal(p.total)
-        setFilterTotal(p.total)
-      })
-      .on('broadcast', { event: 'filter_progress' }, ({ payload }) => {
-        const p = payload as { filtered: number; total: number }
-        setFilterStarted(true)
-        setFilterN(p.filtered)
-        setFilterTotal(p.total)
-        setClassifyTotal(p.filtered)
-      })
-      .on('broadcast', { event: 'classify_progress' }, ({ payload }) => {
-        const p = payload as { processed: number; total: number }
-        setClassifyStarted(true)
-        setClassifyN(p.processed)
-        setClassifyTotal(p.total)
-      })
-      .on('broadcast', { event: 'room_created' }, ({ payload }) => {
-        const p = payload as { count: number }
-        setRoomsStarted(true)
-        setRooms(p.count)
-      })
-      .on('broadcast', { event: 'processing_complete' }, () => {
-        setComplete(true)
-      })
-      .subscribe()
+  useEffect(() => {
+    let active = true
+
+    async function poll() {
+      if (completeRef.current) return
+      try {
+        const status = await getProcessingStatus(workspaceId)
+        if (!active) return
+
+        setImportTotal(status.importTotal)
+        setImportN(status.importN)
+        setFilterTotal(status.importTotal)
+        setFilterN(status.filterN)
+        setClassifyTotal(status.filterN)
+        setClassifyN(status.classifyN)
+        setRooms(status.rooms)
+
+        if (status.filterN > 0) setFilterStarted(true)
+        if (status.classifyN > 0) setClassifyStarted(true)
+        if (status.rooms > 0) setRoomsStarted(true)
+        if (status.complete) setComplete(true)
+      } catch (err) {
+        console.error('[processing] poll failed:', err)
+      }
+    }
+
+    // Poll immediately, then every 3 seconds until complete.
+    poll()
+    const interval = setInterval(() => {
+      if (!active || completeRef.current) return
+      poll()
+    }, 3000)
 
     return () => {
-      supabase.removeChannel(channel)
+      active = false
+      clearInterval(interval)
     }
   }, [workspaceId])
 

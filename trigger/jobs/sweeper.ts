@@ -1,11 +1,12 @@
 import { schedules, tasks } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { noiseGateTask } from '@/trigger/jobs/noise-gate'
+import type { urgencyTask } from '@/trigger/jobs/urgency'
 import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 
 // Runs every 5 minutes and recovers emails that have fallen out of the pipeline.
 //
-// Three stuck states are handled:
+// Four stuck states are handled:
 //
 // `processing` older than 30 minutes: the worker was evicted or killed between
 // setting the state and finishing. Reset to `queued` so the next classifier
@@ -20,6 +21,10 @@ import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 //
 // `received` with body_text older than 5 minutes: fetch-body stored the body
 // but the noiseGateTask trigger failed before firing. Re-trigger it directly.
+//
+// `urgency_scanned` older than 5 minutes: noise-gate set the state and
+// triggered the urgency task, but the runner was killed before it completed.
+// Re-trigger urgency-scan directly.
 export const sweeperTask = schedules.task({
   id: 'sweeper',
   cron: '*/5 * * * *',
@@ -32,6 +37,7 @@ export const sweeperTask = schedules.task({
 
     let queuedCount = 0
     let noiseGateTriggered = 0
+    let urgencyTriggered = 0
 
     // Reset stuck `processing` emails.
     const { data: stuckProcessing } = await supabase
@@ -86,11 +92,28 @@ export const sweeperTask = schedules.task({
       console.log(`sweeper: re-triggered noise gate for ${stuckReceived.length} stuck received emails`)
     }
 
+    // Re-trigger urgency scan for stuck urgency_scanned emails.
+    // This state is set by noise-gate before triggering urgency-scan. If the
+    // runner was killed between those two steps, the email never progresses.
+    const { data: stuckUrgency } = await supabase
+      .from('emails')
+      .select('id')
+      .eq('processing_state', 'urgency_scanned')
+      .lt('created_at', receivedCutoff)
+
+    if (stuckUrgency && stuckUrgency.length > 0) {
+      for (const email of stuckUrgency) {
+        await tasks.trigger<typeof urgencyTask>('urgency-scan', { emailId: email.id })
+      }
+      urgencyTriggered += stuckUrgency.length
+      console.log(`sweeper: re-triggered urgency scan for ${stuckUrgency.length} stuck urgency_scanned emails`)
+    }
+
     // Kick the processor immediately if any emails were re-queued.
     if (queuedCount > 0) {
       await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', undefined)
     }
 
-    return { queuedCount, noiseGateTriggered }
+    return { queuedCount, noiseGateTriggered, urgencyTriggered }
   },
 })

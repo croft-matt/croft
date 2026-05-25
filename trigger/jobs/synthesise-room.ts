@@ -1,5 +1,7 @@
 import { task } from '@trigger.dev/sdk/v3'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { synthesiseRoom } from '@/lib/rooms/synthesise'
+import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 
 export interface SynthesiseRoomPayload {
   roomId: string
@@ -21,6 +23,26 @@ export const synthesiseRoomTask = task({
   run: async (payload: SynthesiseRoomPayload) => {
     const { roomId, emailId } = payload
     await synthesiseRoom(roomId, emailId)
+
+    // Broadcast the current total room count so the onboarding processing gate
+    // can tick its rooms counter live. We look up workspace_id from the room
+    // and count all rooms for that workspace after synthesis completes.
+    const supabase = createAdminClient()
+    const { data: room } = await supabase
+      .from('rooms')
+      .select('workspace_id')
+      .eq('id', roomId)
+      .single()
+
+    if (room?.workspace_id) {
+      const { count } = await supabase
+        .from('rooms')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', room.workspace_id)
+
+      await broadcastToWorkspace(room.workspace_id, 'room_created', { count: count ?? 0 })
+    }
+
     return { roomId }
   },
 })

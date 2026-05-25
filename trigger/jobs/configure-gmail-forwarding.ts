@@ -33,12 +33,16 @@ export const configureGmailForwardingTask = task({
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY)
-    await resend.emails.send({
-      from: workspace.croft_email_address ?? 'setup@mail.yourcroft.com',
+    const { error: sendError } = await resend.emails.send({
+      from: 'setup@inbound.yourcroft.com',
       to: account.email_address,
       subject: 'One step to finish setting up Croft',
       text: buildSetupEmailText(workspace.receiving_address),
     })
+
+    if (sendError) {
+      throw new Error(`configure-gmail-forwarding: email send failed: ${JSON.stringify(sendError)}`)
+    }
 
     await broadcastToWorkspace(account.workspace_id, 'forwarding_setup_required', {
       receivingAddress: workspace.receiving_address,
