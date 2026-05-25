@@ -4,15 +4,17 @@ import type { WebhookEventPayload } from 'resend'
 import { storeEmailMetadata } from '@/lib/email/ingest'
 import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
 import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
+import { confirmGmailForwardingTask } from '@/trigger/jobs/confirm-gmail-forwarding'
 import { inboundRatelimit } from '@/lib/ratelimit'
 
-// This handler does exactly three things:
+// This handler does three things:
 // 1. Verify the Resend webhook signature
 // 2. Store the raw email metadata to the emails table
 // 3. Return 200
 //
-// No AI. No body fetching. No synchronous processing.
-// Body is fetched and processing is triggered by the fetch-body Trigger.dev job (see trigger/jobs/).
+// Gmail forwarding verification emails (from forwarding-noreply@google.com) are detected
+// before the normal path and routed to confirm-gmail-forwarding instead of fetch-body.
+// All other email processing is async via Trigger.dev jobs.
 // Resend retries on non-200 — a slow handler causes duplicate emails.
 
 export async function POST(request: NextRequest) {
@@ -47,6 +49,22 @@ export async function POST(request: NextRequest) {
   const parsed = ResendInboundEventSchema.safeParse(event)
   if (!parsed.success) {
     console.error('[inbound] unexpected payload shape:', parsed.error.flatten())
+    return NextResponse.json({ ok: true })
+  }
+
+  const fromAddress = (parsed.data.data.from as string).toLowerCase()
+  if (fromAddress.includes('forwarding-noreply@google.com')) {
+    try {
+      const result = await storeEmailMetadata(parsed.data.data)
+      if (result) {
+        await confirmGmailForwardingTask.trigger({
+          emailId: result.emailId,
+          workspaceId: result.workspaceId,
+        })
+      }
+    } catch (err) {
+      console.error('[inbound] failed to handle Gmail verification email:', err)
+    }
     return NextResponse.json({ ok: true })
   }
 
