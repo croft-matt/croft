@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { runUrgencyScan } from '@/lib/ai/tier2'
 import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 
+
 export interface UrgencyPayload {
   emailId: string
 }
@@ -35,18 +36,9 @@ export const urgencyTask = task({
       })
       .eq('id', emailId)
 
-    // Broadcast urgency data to the UI via Supabase Realtime.
-    // The cockpit subscribes to this channel per workspace.
-    // httpSend() is used explicitly because this runs in a background job with no
-    // WebSocket connection. send() would silently fall back to REST and log a deprecation warning.
-    const channel = supabase.channel(`workspace:${email.workspace_id}`)
-    await channel.httpSend('urgency_update', {
-      email_id: emailId,
-      urgency_score: result.urgency_score,
-      urgency_reason: result.urgency_reason,
-      requires_response: result.requires_response,
-    })
-    await supabase.removeChannel(channel)
+    // The cockpit receives urgency data via the postgres_changes subscription on
+    // the emails table (workspace:${id}:emails channel). A separate broadcast to
+    // workspace:${id} was never received by any subscriber and has been removed.
 
     // Poke the processor so classification starts within seconds rather than
     // waiting for the next 15-minute cron tick.

@@ -2,6 +2,7 @@ import { task } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyEmail } from '@/lib/email/batch'
 
+
 export interface ClassifyNowPayload {
   emailId: string
 }
@@ -31,18 +32,10 @@ export const classifyNowTask = task({
 
     await classifyEmail(emailId)
 
-    // Broadcast completion to the UI so structured data populates without a page refresh.
-    const { data: updated } = await supabase
-      .from('emails')
-      .select('workspace_id')
-      .eq('id', emailId)
-      .single()
-
-    if (updated) {
-      const channel = supabase.channel(`workspace:${updated.workspace_id}`)
-      await channel.httpSend('email_processed', { email_id: emailId })
-      await supabase.removeChannel(channel)
-    }
+    // The email page updates via the postgres_changes subscription on the emails
+    // table (email:${id}:state channel in email-processing.tsx). A separate
+    // broadcast to workspace:${id} was never received by any subscriber and has
+    // been removed.
 
     return { emailId, skipped: false }
   },
