@@ -11,9 +11,9 @@ interface SidebarProps {
 
 export function Sidebar({ workspaceName, userName, rooms }: SidebarProps) {
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-sidebar-border bg-sidebar sticky top-0">
+    <aside className="flex h-screen w-60 flex-col bg-sidebar sticky top-0">
       {/* Top zone */}
-      <div className="px-4 pt-5 pb-4 border-b border-sidebar-border">
+      <div className="px-4 pt-5 pb-4">
         <p className="text-sm font-semibold text-sidebar-foreground truncate">{workspaceName}</p>
         <p className="text-xs text-muted-foreground truncate mt-0.5">{userName}</p>
       </div>
@@ -27,7 +27,7 @@ export function Sidebar({ workspaceName, userName, rooms }: SidebarProps) {
       </div>
 
       {/* Bottom zone */}
-      <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
+      <div className="px-3 py-3 space-y-0.5">
         <Link
           href="/settings"
           className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"

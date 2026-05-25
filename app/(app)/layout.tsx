@@ -21,15 +21,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const rooms = workspaceId ? await getRoomsTree(workspaceId) : []
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-muted">
       <Sidebar
         workspaceName={workspaceName}
         userName={user.email ?? ''}
         rooms={rooms}
       />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <div className="flex flex-1 flex-col py-2 pr-2 min-h-0">
+        <main className="flex-1 bg-background border border-border rounded-3xl overflow-y-auto">
+          {children}
+        </main>
+      </div>
       {/* JobModal renders via createPortal into document.body — position in tree does not matter */}
       <JobModal />
     </div>
