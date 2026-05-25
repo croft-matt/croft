@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Room, Job, Asset, Contact, Email } from '@/lib/types/database'
+import type { Room, Job, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
+import type { RoomAssets } from '@/lib/rooms/assets'
 import type { RoomReadModel, RoomJob, Fact } from '@/lib/blocks/types'
 import type { OpenLoop, OpenLoops, OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomShell } from '@/components/room/room-shell'
@@ -13,7 +14,7 @@ interface RoomRealtimeProps {
   initialRoom: Room
   initialChildRooms: Room[]
   initialJobs: Job[]
-  initialAssets: Asset[]
+  initialRoomAssets: RoomAssets
   initialContacts: Contact[]
   initialEmails: Email[]
   initialCrossRefs: CrossReference[]
@@ -76,7 +77,7 @@ export function RoomRealtimeProvider({
   initialRoom,
   initialChildRooms,
   initialJobs,
-  initialAssets,
+  initialRoomAssets,
   initialContacts,
   initialEmails,
   initialCrossRefs,
@@ -119,12 +120,12 @@ export function RoomRealtimeProvider({
       openLoops,
       roomData,
       facts,
-      assets: initialAssets,
+      assets: initialRoomAssets.flat,
       contacts: initialContacts,
       jobs: roomJobs,
       connectedAddresses: initialConnectedAddresses,
     }
-  }, [room.room_data, jobs, emails, initialConnectedAddresses, workspaceId, initialRoom.id, initialAssets, initialContacts])
+  }, [room.room_data, jobs, emails, initialConnectedAddresses, workspaceId, initialRoom.id, initialRoomAssets.flat, initialContacts])
 
   useEffect(() => {
     const supabase = createClient()
@@ -227,6 +228,7 @@ export function RoomRealtimeProvider({
       crossRefs={initialCrossRefs}
       ownerGroups={initialTheirCourtByPerson}
       parent={parent}
+      roomAssets={initialRoomAssets}
     />
   )
 }

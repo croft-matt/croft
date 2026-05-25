@@ -13,7 +13,9 @@ import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { JobsTab } from '@/components/room/jobs-tab'
 import { DatesTab } from '@/components/room/dates-tab'
+import { AssetsTab } from '@/components/room/assets-tab'
 import { assembleDates } from '@/lib/rooms/dates'
+import type { RoomAssets } from '@/lib/rooms/assets'
 
 type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
@@ -33,11 +35,7 @@ interface RoomShellProps {
   crossRefs: CrossReference[]
   ownerGroups: OwnerGroup[]
   parent: Pick<Room, 'id' | 'name'> | null
-}
-
-function AssetsTab({ readModel }: { readModel: RoomReadModel }) {
-  void readModel
-  return <div />
+  roomAssets: RoomAssets
 }
 
 function PeopleTab({ readModel }: { readModel: RoomReadModel }) {
@@ -58,6 +56,7 @@ export function RoomShell({
   crossRefs,
   ownerGroups,
   parent,
+  roomAssets,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
   const { emailId: panelEmailId } = useEmailSidePanel()
@@ -80,7 +79,7 @@ export function RoomShell({
       case 'dates':
         return <DatesTab roomDates={assembleDates(readModel)} />
       case 'assets':
-        return <AssetsTab readModel={readModel} />
+        return <AssetsTab assets={roomAssets} />
       case 'people':
         return <PeopleTab readModel={readModel} />
       case 'record':

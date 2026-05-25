@@ -5,11 +5,11 @@ import {
   getChildRooms,
   getEmailIdsForRoom,
   getJobsForRoom,
-  getAssetsForRoom,
   getContactsForRoom,
   getEmailsForRoom,
   getCrossReferences,
 } from '@/lib/queries/rooms'
+import { getRoomAssets } from '@/lib/rooms/assets'
 import { assembleReadModel } from '@/lib/blocks/read-model'
 import { RoomRealtimeProvider } from '@/components/room/room-realtime'
 
@@ -30,12 +30,12 @@ export default async function RoomPage({
   // avoid three redundant room_emails round-trips per page load.
   const emailIds = await getEmailIdsForRoom(id)
 
-  const [parent, childRooms, jobs, assets, contacts, emails, crossRefs] =
+  const [parent, childRooms, jobs, roomAssetsData, contacts, emails, crossRefs] =
     await Promise.all([
       room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
       getChildRooms(id),
       getJobsForRoom(id, emailIds),
-      getAssetsForRoom(id, emailIds),
+      getRoomAssets({ workspaceId, roomId: id, emailIds }),
       getContactsForRoom(id),
       getEmailsForRoom(id, 50, emailIds),
       getCrossReferences(id),
@@ -46,7 +46,7 @@ export default async function RoomPage({
   const readModel = await assembleReadModel(id, workspaceId, {
     room,
     jobs,
-    assets,
+    assets: roomAssetsData.flat,
     contacts,
     emails,
   })
@@ -57,7 +57,7 @@ export default async function RoomPage({
       initialRoom={room}
       initialChildRooms={childRooms}
       initialJobs={jobs}
-      initialAssets={assets}
+      initialRoomAssets={roomAssetsData}
       initialContacts={contacts}
       initialEmails={emails}
       initialCrossRefs={crossRefs}
