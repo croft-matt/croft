@@ -148,6 +148,8 @@ function computeSignals(
 // Returns true if the two addresses co-occurred in any email thread in the workspace.
 // A co-occurrence is defined as: one address is the sender and the other appears in
 // to_addresses or cc_addresses of the same email.
+// All four directional checks run in parallel. With GIN indexes on to_addresses and
+// cc_addresses each check is an index lookup rather than a sequential scan.
 async function checkCoOccurrence(
   supabase: ReturnType<typeof createAdminClient>,
   workspaceId: string,
@@ -160,45 +162,44 @@ async function checkCoOccurrence(
   const jsonB = JSON.stringify([addrB])
   const jsonA = JSON.stringify([addrA])
 
-  // Check A->B direction: A sent, B was a recipient
-  const { count: countAB } = await supabase
-    .from('emails')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .eq('from_address', addrA)
-    .filter('to_addresses', 'cs', jsonB)
+  const [
+    { count: countABTo },
+    { count: countABCc },
+    { count: countBATo },
+    { count: countBACc },
+  ] = await Promise.all([
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('from_address', addrA)
+      .filter('to_addresses', 'cs', jsonB),
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('from_address', addrA)
+      .filter('cc_addresses', 'cs', jsonB),
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('from_address', addrB)
+      .filter('to_addresses', 'cs', jsonA),
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('from_address', addrB)
+      .filter('cc_addresses', 'cs', jsonA),
+  ])
 
-  if (countAB && countAB > 0) return true
-
-  const { count: countABcc } = await supabase
-    .from('emails')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .eq('from_address', addrA)
-    .filter('cc_addresses', 'cs', jsonB)
-
-  if (countABcc && countABcc > 0) return true
-
-  // Check B->A direction
-  const { count: countBA } = await supabase
-    .from('emails')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .eq('from_address', addrB)
-    .filter('to_addresses', 'cs', jsonA)
-
-  if (countBA && countBA > 0) return true
-
-  const { count: countBAcc } = await supabase
-    .from('emails')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .eq('from_address', addrB)
-    .filter('cc_addresses', 'cs', jsonA)
-
-  if (countBAcc && countBAcc > 0) return true
-
-  return false
+  return (
+    (countABTo ?? 0) > 0 ||
+    (countABCc ?? 0) > 0 ||
+    (countBATo ?? 0) > 0 ||
+    (countBACc ?? 0) > 0
+  )
 }
 
 // Orders two contact IDs so contact_id_low < contact_id_high (UUID string compare).

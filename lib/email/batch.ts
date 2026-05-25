@@ -7,7 +7,7 @@ import { tasks } from '@trigger.dev/sdk/v3'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { fetchAttachmentsTask } from '@/trigger/jobs/fetch-attachments'
 import type { fetchGmailAttachmentsTask } from '@/trigger/jobs/fetch-gmail-attachments'
-import type { matchContactTask } from '@/trigger/jobs/match-contact'
+import type { backfillContactMatchingTask } from '@/trigger/jobs/backfill-contact-matching'
 import type { AttachmentMeta, Extraction } from '@/lib/types/database'
 import type { Json } from '@/lib/types/database'
 
@@ -266,14 +266,22 @@ async function writeExtractionResults(
     }
   }
 
-  // Enqueue incremental matcher for each upserted contact.
-  // Fire-and-forget: a failed enqueue must not affect the email's processing state.
-  for (const payload of upsertedContactIds) {
+  // Trigger a workspace-level contact matching run after extraction.
+  // An idempotency key scoped to a 5-minute bucket means multiple emails
+  // processed in the same window coalesce into one backfill run rather than
+  // firing one match-contact per upserted contact. This prevents the O(n^2)
+  // burst of matcher tasks during a bulk Gmail import.
+  if (upsertedContactIds.length > 0) {
+    const bucket = Math.floor(Date.now() / 300_000)
     tasks
-      .trigger<typeof matchContactTask>('match-contact', payload)
+      .trigger<typeof backfillContactMatchingTask>(
+        'backfill-contact-matching',
+        { workspaceId },
+        { idempotencyKey: `match-workspace-${workspaceId}-${bucket}` },
+      )
       .catch((err: unknown) => {
         console.error(
-          `writeExtractionResults: match-contact trigger failed for ${payload.contactId}:`,
+          `writeExtractionResults: contact matching trigger failed for ${workspaceId}:`,
           err,
         )
       })
