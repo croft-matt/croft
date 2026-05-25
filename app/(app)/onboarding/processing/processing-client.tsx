@@ -57,12 +57,11 @@ export function ProcessingClient({
         setFilterTotal(p.total)
       })
       .on('broadcast', { event: 'filter_progress' }, ({ payload }) => {
-        const p = payload as { passed: boolean }
+        const p = payload as { filtered: number; total: number }
         setFilterStarted(true)
-        if (p.passed) {
-          setFilterN((prev) => prev + 1)
-          setClassifyTotal((prev) => prev + 1)
-        }
+        setFilterN(p.filtered)
+        setFilterTotal(p.total)
+        setClassifyTotal(p.filtered)
       })
       .on('broadcast', { event: 'classify_progress' }, ({ payload }) => {
         const p = payload as { processed: number; total: number }
@@ -70,9 +69,10 @@ export function ProcessingClient({
         setClassifyN(p.processed)
         setClassifyTotal(p.total)
       })
-      .on('broadcast', { event: 'room_created' }, () => {
+      .on('broadcast', { event: 'room_created' }, ({ payload }) => {
+        const p = payload as { count: number }
         setRoomsStarted(true)
-        setRooms((prev) => prev + 1)
+        setRooms(p.count)
       })
       .on('broadcast', { event: 'processing_complete' }, () => {
         setComplete(true)

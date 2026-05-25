@@ -85,6 +85,11 @@ export const importGmailHistoryTask = task({
     let stored = 0
     let skipped = 0
 
+    // Signal to the setup screen that import is underway so it redirects to the
+    // processing gate. Sent before fetching so the redirect happens immediately.
+    await broadcastToWorkspace(account.workspace_id, 'history_import_started', { total })
+    await broadcastToWorkspace(account.workspace_id, 'import_progress', { n: 0, total })
+
     // Process in batches to stay within Gmail API rate limits.
     for (let i = 0; i < messages.length; i += BATCH_SIZE) {
       const batch = messages.slice(i, i + BATCH_SIZE)
@@ -144,6 +149,15 @@ export const importGmailHistoryTask = task({
             // sort below live inbound in the Tier 3 batch queue.
             await noiseGateTask.trigger({ emailId: result.emailId })
             stored++
+
+            // Broadcast every 5 stored emails. The final broadcast after the loop
+            // guarantees the bar reaches 100% regardless of batch alignment.
+            if (stored % 5 === 0) {
+              await broadcastToWorkspace(account.workspace_id, 'import_progress', {
+                n: stored,
+                total,
+              })
+            }
           } else {
             skipped++
           }
@@ -153,17 +167,13 @@ export const importGmailHistoryTask = task({
         }
       }
 
-      // Broadcast progress after each batch so the setup screen count advances
-      // in steps rather than all at once at the end.
-      await broadcastToWorkspace(account.workspace_id, 'import_progress', {
-        n: stored,
-        total,
-      })
-
       if (i + BATCH_SIZE < messages.length) {
         await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS))
       }
     }
+
+    // Final broadcast ensures the bar always reaches 100%.
+    await broadcastToWorkspace(account.workspace_id, 'import_progress', { n: stored, total })
 
     await supabase
       .from('email_accounts')

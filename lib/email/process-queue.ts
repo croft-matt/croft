@@ -120,13 +120,14 @@ export async function processQueuedEmails(): Promise<ProcessQueueResult> {
             throttle.lastHeaders = result.rateLimitHeaders
           }
           processed++
-          broadcastToWorkspace(email.workspace_id, 'classify_progress', {
-            emailId: email.id,
-            processed,
-            total: batchTotal,
-          }).catch((err: unknown) =>
-            console.error(`process-queue: classify_progress broadcast failed:`, err),
-          )
+          if (processed % 10 === 0 || processed === batchTotal) {
+            broadcastToWorkspace(email.workspace_id, 'classify_progress', {
+              processed,
+              total: batchTotal,
+            }).catch((err: unknown) =>
+              console.error(`process-queue: classify_progress broadcast failed:`, err),
+            )
+          }
         } catch (err) {
           if (isRateLimitError(err)) {
             rateLimited++

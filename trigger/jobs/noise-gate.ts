@@ -1,5 +1,6 @@
 import { task } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { runNoiseGate } from '@/lib/ai/tier1'
 import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 import { urgencyTask } from './urgency'
@@ -31,7 +32,7 @@ export const noiseGateTask = task({
         .update({ processing_state: 'ignored' })
         .eq('id', emailId)
 
-      await broadcastToWorkspace(email.workspace_id, 'filter_progress', { emailId, passed: false })
+      await maybebroadcastFilterProgress(supabase, email.workspace_id)
 
       return { emailId, relevant: false, reason: result.reason }
     }
@@ -41,10 +42,37 @@ export const noiseGateTask = task({
       .update({ processing_state: 'urgency_scanned' })
       .eq('id', emailId)
 
-    await broadcastToWorkspace(email.workspace_id, 'filter_progress', { emailId, passed: true })
+    await maybebroadcastFilterProgress(supabase, email.workspace_id)
 
     await urgencyTask.trigger({ emailId })
 
     return { emailId, relevant: true }
   },
 })
+
+// Queries absolute filtered/total counts for the workspace and broadcasts
+// filter_progress every 10 emails. The absolute payload lets the client set
+// rather than increment, so missed events do not cause drift.
+async function maybebroadcastFilterProgress(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<void> {
+  const [{ count: filtered }, { count: total }] = await Promise.all([
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .neq('processing_state', 'received'),
+    supabase
+      .from('emails')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId),
+  ])
+
+  const f = filtered ?? 0
+  const t = total ?? 0
+
+  if (f % 10 === 0 || f === t) {
+    await broadcastToWorkspace(workspaceId, 'filter_progress', { filtered: f, total: t })
+  }
+}

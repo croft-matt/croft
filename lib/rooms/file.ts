@@ -149,12 +149,6 @@ export async function fileEmailToRooms(
       allRooms.push({ id: newRoom.id, name: segment, parent_room_id: parentId })
       parentId = newRoom.id
       leafId = newRoom.id
-
-      // Notify the processing gate that a new room was created.
-      // Non-fatal: a broadcast failure must not stop the filing.
-      broadcastToWorkspace(workspaceId, 'room_created', { roomId: newRoom.id, name: segment }).catch(
-        (err: unknown) => console.error(`fileEmailToRooms: room_created broadcast failed:`, err),
-      )
     }
 
     if (!pathBroken && leafId) {
@@ -177,6 +171,19 @@ export async function fileEmailToRooms(
     if (filingError) {
       console.error(`fileEmailToRooms: filing failed for ${emailId}:`, filingError.message)
     }
+
+    // Broadcast absolute room count so the processing gate shows the live total.
+    // Fires on every filing (new room or existing) so the client can set rather
+    // than increment, avoiding drift from missed events.
+    const { count: roomCount } = await supabase
+      .from('rooms')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .is('archived_at', null)
+
+    broadcastToWorkspace(workspaceId, 'room_created', { count: roomCount ?? 0 }).catch(
+      (err: unknown) => console.error(`fileEmailToRooms: room_created broadcast failed:`, err),
+    )
   }
 
   return { matchedRoomIds }
