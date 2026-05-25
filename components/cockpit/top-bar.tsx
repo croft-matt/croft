@@ -8,8 +8,8 @@ interface TopBarProps {
 
 export function TopBar({ workspaceName, processing, failed }: TopBarProps) {
   return (
-    <div className="flex items-center justify-between border-b border-neutral-800 bg-neutral-950 px-6 py-3">
-      <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+    <div className="flex items-center justify-between border-b border-border bg-background px-6 py-3">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {workspaceName}
       </p>
 
@@ -24,8 +24,8 @@ export function TopBar({ workspaceName, processing, failed }: TopBarProps) {
           </span>
         )}
         {failed === 0 && processing > 0 && (
-          <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-600" />
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
             Processing {processing} {processing === 1 ? 'email' : 'emails'}
           </span>
         )}
@@ -34,7 +34,7 @@ export function TopBar({ workspaceName, processing, failed }: TopBarProps) {
       <button
         type="button"
         disabled
-        className="rounded-md border border-neutral-800 px-3 py-1 text-xs text-neutral-600 cursor-not-allowed"
+        className="rounded-md border border-border px-3 py-1 text-xs text-muted-foreground cursor-not-allowed"
         title="Compose coming soon"
       >
         New email

@@ -35,8 +35,8 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
     <div className="mx-auto max-w-lg space-y-10">
 
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold text-white">Email connection</h1>
-          <p className="text-sm text-neutral-400">
+          <h1 className="text-xl font-semibold text-foreground">Email connection</h1>
+          <p className="text-sm text-muted-foreground">
             Connect your Gmail account so Croft can receive and organise your email.
           </p>
         </div>
@@ -61,24 +61,24 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
         )}
 
         <div className="space-y-3">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-neutral-600">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             How it works
           </h2>
-          <ol className="space-y-2 text-sm text-neutral-400">
+          <ol className="space-y-2 text-sm text-muted-foreground">
             <li className="flex gap-2">
-              <span className="shrink-0 text-neutral-600">1.</span>
+              <span className="shrink-0 text-muted-foreground">1.</span>
               Connect your Gmail account with read-only access.
             </li>
             <li className="flex gap-2">
-              <span className="shrink-0 text-neutral-600">2.</span>
+              <span className="shrink-0 text-muted-foreground">2.</span>
               Add your Croft address as a forwarding address in Gmail settings.
             </li>
             <li className="flex gap-2">
-              <span className="shrink-0 text-neutral-600">3.</span>
+              <span className="shrink-0 text-muted-foreground">3.</span>
               Your last 7 days of email are imported and processed in the background.
             </li>
             <li className="flex gap-2">
-              <span className="shrink-0 text-neutral-600">4.</span>
+              <span className="shrink-0 text-muted-foreground">4.</span>
               New email arrives automatically from that point on.
             </li>
           </ol>
@@ -90,31 +90,31 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
 
 function NotConnectedCard({ isRevoked }: { isRevoked: boolean; justConnected: boolean }) {
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-6 space-y-4">
       {isRevoked ? (
         <>
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-400" />
-            <p className="text-sm font-medium text-white">Reconnection required</p>
+            <p className="text-sm font-medium text-foreground">Reconnection required</p>
           </div>
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-muted-foreground">
             Your Gmail connection was disconnected. Reconnect to resume email processing.
           </p>
         </>
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-neutral-500" />
-            <p className="text-sm font-medium text-white">No account connected</p>
+            <Mail className="h-5 w-5 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">No account connected</p>
           </div>
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-muted-foreground">
             Connect Gmail to start receiving and organising your email in Croft.
           </p>
         </>
       )}
       <a
         href="/auth/gmail/connect"
-        className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 text-sm font-medium text-neutral-950 transition-colors hover:bg-neutral-100"
+        className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         {isRevoked ? 'Reconnect Gmail' : 'Connect Gmail'}
       </a>
@@ -134,13 +134,13 @@ function ConnectedCard({
   const fullyReady = account.forwarding_configured && account.history_imported
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-5">
+    <div className="rounded-xl border border-border bg-card p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <CheckCircle className="h-5 w-5 text-emerald-400" />
           <div>
-            <p className="text-sm font-medium text-white">{account.email_address}</p>
-            <p className="text-xs text-neutral-500">Gmail</p>
+            <p className="text-sm font-medium text-foreground">{account.email_address}</p>
+            <p className="text-xs text-muted-foreground">Gmail</p>
           </div>
         </div>
         {justConnected && (
@@ -168,7 +168,7 @@ function ConnectedCard({
       )}
 
       {!fullyReady && account.forwarding_configured && (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-muted-foreground">
           Setup is running in the background. This page will reflect progress on next refresh.
         </p>
       )}
@@ -180,17 +180,17 @@ function ForwardingInstructions({ inboundAddress }: { inboundAddress: string }) 
   return (
     <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4 space-y-3">
       <p className="text-sm font-medium text-amber-300">Set up email forwarding</p>
-      <p className="text-sm text-neutral-400">
+      <p className="text-sm text-muted-foreground">
         Add this address as a forwarding address in your Gmail settings, then confirm the
         verification email Gmail sends to it.
       </p>
-      <div className="flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2">
-        <Copy className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
-        <span className="flex-1 truncate font-mono text-xs text-neutral-200">
+      <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
+        <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className="flex-1 truncate font-mono text-xs text-foreground">
           {inboundAddress}
         </span>
       </div>
-      <ol className="space-y-1 text-xs text-neutral-500">
+      <ol className="space-y-1 text-xs text-muted-foreground">
         <li>1. Open Gmail and go to Settings (gear icon) &gt; See all settings</li>
         <li>2. Click the Forwarding and POP/IMAP tab</li>
         <li>3. Click Add a forwarding address and paste the address above</li>
@@ -215,9 +215,9 @@ function StatusRow({
       {done ? (
         <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
       ) : (
-        <Circle className="h-4 w-4 shrink-0 text-neutral-600" />
+        <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}
-      <span className={done ? 'text-neutral-300' : 'text-neutral-500'}>
+      <span className={done ? 'text-foreground' : 'text-muted-foreground'}>
         {done ? label : pending}
       </span>
     </div>

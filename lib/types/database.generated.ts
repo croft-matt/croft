@@ -99,12 +99,119 @@ export type Database = {
           },
         ]
       }
+      contact_identities: {
+        Row: {
+          canonical_name: string | null
+          canonical_organisation: string | null
+          created_at: string
+          id: string
+          name_locked: boolean
+          primary_contact_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          canonical_name?: string | null
+          canonical_organisation?: string | null
+          created_at?: string
+          id?: string
+          name_locked?: boolean
+          primary_contact_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          canonical_name?: string | null
+          canonical_organisation?: string | null
+          created_at?: string
+          id?: string
+          name_locked?: boolean
+          primary_contact_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_identities_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_identities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_merge_candidates: {
+        Row: {
+          contact_id_high: string
+          contact_id_low: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          score: number
+          signals: Json
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_id_high: string
+          contact_id_low: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          score: number
+          signals?: Json
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_id_high?: string
+          contact_id_low?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          score?: number
+          signals?: Json
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_merge_candidates_contact_id_high_fkey"
+            columns: ["contact_id_high"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_merge_candidates_contact_id_low_fkey"
+            columns: ["contact_id_low"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_merge_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           created_at: string
           email_address: string
           first_seen_at: string
           id: string
+          identity_id: string | null
           last_seen_at: string
           name: string | null
           organisation: string | null
@@ -118,6 +225,7 @@ export type Database = {
           email_address: string
           first_seen_at?: string
           id?: string
+          identity_id?: string | null
           last_seen_at?: string
           name?: string | null
           organisation?: string | null
@@ -131,6 +239,7 @@ export type Database = {
           email_address?: string
           first_seen_at?: string
           id?: string
+          identity_id?: string | null
           last_seen_at?: string
           name?: string | null
           organisation?: string | null
@@ -140,6 +249,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_identity_id_fkey"
+            columns: ["identity_id"]
+            isOneToOne: false
+            referencedRelation: "contact_identities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -626,6 +742,7 @@ export type Database = {
           created_at: string
           id: string
           role: string
+          theme_preference: string
           user_id: string
           workspace_id: string
         }
@@ -633,6 +750,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          theme_preference?: string
           user_id: string
           workspace_id: string
         }
@@ -640,6 +758,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          theme_preference?: string
           user_id?: string
           workspace_id?: string
         }

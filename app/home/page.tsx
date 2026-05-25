@@ -8,13 +8,13 @@ export default function HomePage() {
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="max-w-lg space-y-8 text-center">
         <div className="space-y-3">
-          <h1 className="text-4xl font-semibold tracking-tight text-white">Croft</h1>
-          <p className="text-lg text-neutral-400">
+          <h1 className="text-4xl font-semibold tracking-tight text-foreground">Croft</h1>
+          <p className="text-lg text-muted-foreground">
             Email intelligence for project-based professionals.
           </p>
         </div>
 
-        <p className="text-sm leading-relaxed text-neutral-500">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Croft processes your email in the background, extracts what matters,
           and gives you a clear view of every active project.
         </p>
@@ -22,7 +22,7 @@ export default function HomePage() {
         <div className="flex justify-center gap-3">
           <Link
             href="/sign-in"
-            className="rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-neutral-950 hover:bg-neutral-100 transition-colors"
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Sign in
           </Link>

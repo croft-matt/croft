@@ -46,7 +46,7 @@ function urgencyDotClass(score: number): string {
 export function UrgentList({ emails, roomNames }: UrgentListProps) {
   if (emails.length === 0) {
     return (
-      <p className="text-sm text-neutral-600 px-1">Nothing urgent right now.</p>
+      <p className="text-sm text-muted-foreground px-1">Nothing urgent right now.</p>
     )
   }
 
@@ -63,7 +63,7 @@ export function UrgentList({ emails, roomNames }: UrgentListProps) {
           <Link
             key={email.id}
             href={`/emails/${email.id}?from=cockpit`}
-            className="flex items-start gap-3 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 hover:bg-neutral-800 transition-colors"
+            className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-muted transition-colors"
           >
             <div
               className={cn(
@@ -74,17 +74,17 @@ export function UrgentList({ emails, roomNames }: UrgentListProps) {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-neutral-100 truncate">{displayName}</p>
+              <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
               {email.subject_summary && (
-                <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{email.subject_summary}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{email.subject_summary}</p>
               )}
-              <p className="text-xs text-neutral-600 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {formatTime(email.received_at)}
                 {roomName && <span> · {roomName}</span>}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 mt-0.5">
-              <span className="text-xs font-semibold text-neutral-300">{score}</span>
+              <span className="text-xs font-semibold text-foreground">{score}</span>
               <span className={cn('h-2 w-2 rounded-full', urgencyDotClass(score))} />
             </div>
           </Link>

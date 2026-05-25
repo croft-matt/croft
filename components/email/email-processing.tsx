@@ -90,15 +90,15 @@ export function EmailProcessingProvider({
         <div className="flex flex-1 gap-6 p-6">
           <div className="w-[42%] shrink-0 space-y-4">
             {keyDates.length > 0 && (
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Key dates
                 </p>
-                <div className="divide-y divide-neutral-800">
+                <div className="divide-y divide-border">
                   {keyDates.map((d, i) => (
                     <div key={i} className="flex items-start justify-between gap-4 py-1.5 first:pt-0 last:pb-0">
-                      <span className="text-xs text-neutral-400 truncate">{d.context}</span>
-                      <span className="text-xs font-medium text-neutral-200 whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground truncate">{d.context}</span>
+                      <span className="text-xs font-medium text-foreground whitespace-nowrap">
                         {new Date(d.date).toLocaleDateString('en-GB', {
                           day: 'numeric', month: 'short', year: 'numeric',
                         })}
@@ -121,14 +121,14 @@ export function EmailProcessingProvider({
       ) : (
         <div className="flex flex-1 gap-6 p-6">
           <div className="w-[42%] shrink-0">
-            <div className="flex items-center gap-2 text-neutral-600">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-600" />
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
               <p className="text-sm">Extracting intelligence from this email...</p>
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-neutral-600">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-600" />
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
               <p className="text-sm">Extracting intelligence from this email...</p>
             </div>
           </div>

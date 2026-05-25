@@ -34,19 +34,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   if (user) redirect(safeRelativePath(params.next) || '/')
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-950">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 px-6">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold text-white">Croft</h1>
-          <p className="text-sm text-neutral-400">
+          <h1 className="text-2xl font-semibold text-foreground">Croft</h1>
+          <p className="text-sm text-muted-foreground">
             {params.sent ? 'Check your email for a sign-in link.' : 'Enter your email to sign in.'}
           </p>
         </div>
 
         {params.sent ? (
-          <p className="text-center text-xs text-neutral-500">
+          <p className="text-center text-xs text-muted-foreground">
             Wrong email?{' '}
-            <a href="/sign-in" className="text-neutral-400 underline hover:text-white">
+            <a href="/sign-in" className="text-muted-foreground underline hover:text-foreground">
               Try again
             </a>
           </p>
@@ -59,14 +59,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               placeholder="you@example.com"
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-neutral-600 focus:outline-none"
+              className="w-full rounded-lg border border-input bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
             />
             {params.error && (
               <p className="text-xs text-red-400">{params.error}</p>
             )}
             <button
               type="submit"
-              className="w-full rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-neutral-950 hover:bg-neutral-100 transition-colors"
+              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Send sign-in link
             </button>

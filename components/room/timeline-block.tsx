@@ -19,7 +19,7 @@ function deadlineDot(dateStr: string): string {
   const date = new Date(dateStr)
   if (date < now) return 'bg-red-500'
   if (date < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)) return 'bg-amber-500'
-  return 'bg-neutral-500'
+  return 'bg-muted-foreground'
 }
 
 interface ItemRowProps {
@@ -36,24 +36,24 @@ function ItemRow({ item, isHighlighted, isPulsing, rowRef }: ItemRowProps) {
     <CheckCircle2
       className={cn(
         'mt-0.5 h-3.5 w-3.5 shrink-0',
-        item.past ? 'text-neutral-700' : 'text-neutral-500',
+        item.past ? 'text-muted' : 'text-muted-foreground',
       )}
     />
   ) : (
     <span
       className={cn(
         'mt-1.5 h-2 w-2 shrink-0 rounded-full',
-        item.past ? 'bg-neutral-700' : deadlineDot(item.date),
+        item.past ? 'bg-muted' : deadlineDot(item.date),
       )}
     />
   )
 
   const content = (
     <div className={cn('min-w-0 flex-1', item.past && 'opacity-50')}>
-      <p className={cn('text-sm leading-snug', item.past ? 'text-neutral-400' : 'text-neutral-100')}>
+      <p className={cn('text-sm leading-snug', item.past ? 'text-muted-foreground' : 'text-foreground')}>
         {item.label}
       </p>
-      <p className="text-xs text-neutral-500 mt-0.5">{formatDate(item.date)}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{formatDate(item.date)}</p>
     </div>
   )
 
@@ -66,8 +66,8 @@ function ItemRow({ item, isHighlighted, isPulsing, rowRef }: ItemRowProps) {
 
   const highlightClass = cn(
     'transition-colors duration-150',
-    isHighlighted && 'bg-neutral-800 rounded-lg',
-    isPulsing && 'bg-neutral-700 rounded-lg',
+    isHighlighted && 'bg-muted rounded-lg',
+    isPulsing && 'bg-muted rounded-lg',
   )
 
   if (item.email_id) {
@@ -95,9 +95,9 @@ function ItemRow({ item, isHighlighted, isPulsing, rowRef }: ItemRowProps) {
 function TimelineHero({ anchor }: { anchor: TimelineAnchor }) {
   const countdownText = anchor.daysRemaining === 0 ? 'today' : `${anchor.daysRemaining} days to go`
   return (
-    <div className="mb-4 pb-4 border-b border-neutral-800">
-      <p className="text-2xl font-semibold text-neutral-100 leading-tight">{countdownText}</p>
-      <p className="text-sm text-neutral-500 mt-0.5">
+    <div className="mb-4 pb-4 border-b border-border">
+      <p className="text-2xl font-semibold text-foreground leading-tight">{countdownText}</p>
+      <p className="text-sm text-muted-foreground mt-0.5">
         {anchor.label}, {formatDate(anchor.date)}
       </p>
     </div>
@@ -105,8 +105,8 @@ function TimelineHero({ anchor }: { anchor: TimelineAnchor }) {
 }
 
 function timelineDotClass(item: TimelineItem): string {
-  if (item.past) return 'bg-neutral-700'
-  if (item.kind === 'done') return 'bg-neutral-500'
+  if (item.past) return 'bg-muted'
+  if (item.kind === 'done') return 'bg-muted-foreground'
   return deadlineDot(item.date)
 }
 
@@ -146,19 +146,19 @@ function TimelineRibbon({ items, anchor, highlighted, onHover, onClick }: Ribbon
 
   const endCapContent = (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="w-3.5 h-3.5 rounded-full bg-neutral-100 ring-2 ring-neutral-900 shrink-0" />
-      <span className="text-[10px] text-neutral-300 max-w-[80px] text-center leading-tight line-clamp-2 hidden sm:block">
+      <span className="w-3.5 h-3.5 rounded-full bg-foreground ring-2 ring-background shrink-0" />
+      <span className="text-[10px] text-foreground max-w-[80px] text-center leading-tight line-clamp-2 hidden sm:block">
         {anchor.label}
       </span>
     </div>
   )
 
   return (
-    <div className="mb-4 pb-4 border-b border-neutral-800">
+    <div className="mb-4 pb-4 border-b border-border">
       {/* Road: pr-10 gives the end-cap room so it does not clip the card edge */}
       <div className="relative h-14 mx-1 pr-10">
         {/* Baseline */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-neutral-700 -translate-y-1/2" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-border -translate-y-1/2" />
 
         {/* Now marker */}
         {showNow && (
@@ -166,8 +166,8 @@ function TimelineRibbon({ items, anchor, highlighted, onHover, onClick }: Ribbon
             className="absolute top-0 bottom-0 flex flex-col items-center"
             style={{ left: `${todayPct}%`, transform: 'translateX(-50%)' }}
           >
-            <div className="h-full w-px bg-neutral-600" />
-            <span className="text-[9px] text-neutral-500 uppercase tracking-wider mt-0.5 absolute -bottom-4">
+            <div className="h-full w-px bg-muted-foreground" />
+            <span className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5 absolute -bottom-4">
               now
             </span>
           </div>
@@ -185,7 +185,7 @@ function TimelineRibbon({ items, anchor, highlighted, onHover, onClick }: Ribbon
               title={label}
               className={cn(
                 'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'transition-transform hover:scale-150',
                 timelineDotClass(item),
                 highlighted === item.ref_id && 'scale-150',
@@ -209,7 +209,7 @@ function TimelineRibbon({ items, anchor, highlighted, onHover, onClick }: Ribbon
               href={`/emails/${anchorEmailId}`}
               aria-label={anchorTitle}
               title={anchorTitle}
-              className="flex flex-col items-center gap-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+              className="flex flex-col items-center gap-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {endCapContent}
             </Link>
@@ -255,11 +255,11 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
 
   if (data.isEmpty) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Timeline
         </p>
-        <p className="text-sm text-neutral-600">No dated events in this room yet.</p>
+        <p className="text-sm text-muted-foreground">No dated events in this room yet.</p>
       </div>
     )
   }
@@ -268,8 +268,8 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
   const upcoming = data.items.slice(data.nowIndex)
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Timeline
       </p>
 
@@ -285,7 +285,7 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
         />
       )}
 
-      <div className="divide-y divide-neutral-800">
+      <div className="divide-y divide-border">
         {past.map((item) => (
           <ItemRow
             key={item.ref_id}
@@ -298,11 +298,11 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
 
         {past.length > 0 && upcoming.length > 0 && (
           <div className="flex items-center gap-2 py-2">
-            <div className="h-px flex-1 bg-neutral-700" />
-            <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Now
             </span>
-            <div className="h-px flex-1 bg-neutral-700" />
+            <div className="h-px flex-1 bg-border" />
           </div>
         )}
 

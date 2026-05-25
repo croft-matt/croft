@@ -40,15 +40,11 @@ export const urgencyTask = task({
     // httpSend() is used explicitly because this runs in a background job with no
     // WebSocket connection. send() would silently fall back to REST and log a deprecation warning.
     const channel = supabase.channel(`workspace:${email.workspace_id}`)
-    await channel.httpSend({
-      type: 'broadcast',
-      event: 'urgency_update',
-      payload: {
-        email_id: emailId,
-        urgency_score: result.urgency_score,
-        urgency_reason: result.urgency_reason,
-        requires_response: result.requires_response,
-      },
+    await channel.httpSend('urgency_update', {
+      email_id: emailId,
+      urgency_score: result.urgency_score,
+      urgency_reason: result.urgency_reason,
+      requires_response: result.requires_response,
     })
     await supabase.removeChannel(channel)
 

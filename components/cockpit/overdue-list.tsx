@@ -14,7 +14,7 @@ export function OverdueList({ jobs }: OverdueListProps) {
 
   return (
     <div>
-      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         Overdue
       </p>
       <div className="space-y-0.5">
@@ -26,14 +26,14 @@ export function OverdueList({ jobs }: OverdueListProps) {
             <Link
               key={job.id}
               href={href}
-              className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-neutral-900 transition-colors group"
+              className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-card transition-colors group"
             >
               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-neutral-200 leading-snug">
+                <p className="text-sm font-medium text-foreground leading-snug">
                   {job.description}
                 </p>
-                <p className="mt-0.5 text-xs text-neutral-600">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {job.from_name && <span>{job.from_name}</span>}
                   {job.from_name && job.room_name && <span> · </span>}
                   {job.room_name && <span>{job.room_name}</span>}

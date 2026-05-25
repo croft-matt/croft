@@ -25,8 +25,8 @@ export function ContactsList({ contacts }: ContactsListProps) {
   if (contacts.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         Contacts
       </p>
       <div className="space-y-3">
@@ -41,15 +41,15 @@ export function ContactsList({ contacts }: ContactsListProps) {
               {getInitials(contact.name, contact.email ?? '')}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-neutral-200 truncate">{contact.name}</p>
-              {contact.role && (
-                <p className="text-xs text-neutral-500 truncate">{contact.role}</p>
-              )}
+              <p className="text-sm font-medium text-foreground truncate">{contact.name}</p>
+                {contact.role && (
+                  <p className="text-xs text-muted-foreground truncate">{contact.role}</p>
+                )}
             </div>
             {contact.email && (
               <a
                 href={`mailto:${contact.email}`}
-                className="shrink-0 text-xs text-neutral-500 hover:text-white transition-colors"
+                className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {contact.email}
               </a>

@@ -50,10 +50,10 @@ export function RoomCard({ room }: RoomCardProps) {
   return (
     <Link
       href={`/rooms/${room.id}`}
-      className="block rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3.5 hover:bg-neutral-800 transition-colors"
+      className="block rounded-xl border border-border bg-card px-4 py-3.5 hover:bg-muted transition-colors"
     >
       <div className="flex items-start justify-between gap-2 mb-2.5">
-        <p className="text-sm font-semibold text-white leading-snug truncate">{room.name}</p>
+        <p className="text-sm font-semibold text-foreground leading-snug truncate">{room.name}</p>
         {room.has_overdue && (
           <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400">
             overdue
@@ -63,23 +63,23 @@ export function RoomCard({ room }: RoomCardProps) {
 
       {hasProg && (
         <div className="mb-2.5 flex items-center gap-2">
-          <div className="flex-1 h-1 rounded-full bg-neutral-800 overflow-hidden">
+          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-white transition-all"
+              className="h-full rounded-full bg-foreground transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-[11px] text-neutral-500 tabular-nums w-7 text-right">{pct}%</span>
+          <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
         </div>
       )}
 
       {facts.length > 0 && (
-        <p className="mb-1.5 text-xs text-neutral-500 truncate">
+        <p className="mb-1.5 text-xs text-muted-foreground truncate">
           {facts.join(' · ')}
         </p>
       )}
 
-      <p className="text-xs text-neutral-600">
+      <p className="text-xs text-muted-foreground">
         <span>{room.progress_closed} closed</span>
         {room.progress_total > room.progress_closed && (
           <span> · {room.progress_total - room.progress_closed} open</span>

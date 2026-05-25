@@ -135,7 +135,7 @@ export function JobModal() {
       onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-[560px] rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-[560px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         <JobHeader job={job} roomName={context?.roomName ?? null} senderName={context?.senderName ?? null} />
 
         <div className="flex flex-col gap-5 px-5 py-5 overflow-y-auto max-h-[60vh]">

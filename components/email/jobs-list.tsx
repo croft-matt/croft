@@ -11,21 +11,21 @@ interface JobsListProps {
 const intentConfig: Record<JobIntent, { label: string; className: string }> = {
   REQUEST: { label: 'REQUEST', className: 'bg-amber-500/10 text-amber-400' },
   DELIVER: { label: 'DELIVER', className: 'bg-blue-500/10 text-blue-400' },
-  CONFIRM: { label: 'CONFIRM', className: 'bg-neutral-500/10 text-neutral-300' },
+  CONFIRM: { label: 'CONFIRM', className: 'bg-muted text-foreground' },
   CHASE: { label: 'CHASE', className: 'bg-red-500/10 text-red-400' },
-  QUERY: { label: 'QUERY', className: 'bg-neutral-500/10 text-neutral-400' },
+  QUERY: { label: 'QUERY', className: 'bg-muted text-muted-foreground' },
   INTRODUCE: { label: 'INTRODUCE', className: 'bg-purple-500/10 text-purple-400' },
 }
 
 function getStatusDot(job: Job): string {
-  if (job.status !== 'open') return 'bg-neutral-600'
-  if (!job.due) return 'bg-neutral-500'
+  if (job.status !== 'open') return 'bg-muted-foreground'
+  if (!job.due) return 'bg-muted-foreground'
   const dueDate = new Date(job.due)
   const now = new Date()
   if (dueDate < now) return 'bg-red-500'
   const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
   if (dueDate < sevenDays) return 'bg-amber-500'
-  return 'bg-neutral-500'
+  return 'bg-muted-foreground'
 }
 
 function formatDue(due: string): string {
@@ -42,18 +42,18 @@ export function JobsList({ jobs }: JobsListProps) {
   const closedJobs = jobs.filter((j) => j.status !== 'open')
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Jobs</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jobs</p>
         {openJobs.length > 0 && (
-          <span className="text-xs text-neutral-500">{openJobs.length} open</span>
+          <span className="text-xs text-muted-foreground">{openJobs.length} open</span>
         )}
       </div>
 
       {jobs.length === 0 ? (
-        <p className="text-sm text-neutral-600">No jobs extracted from this email.</p>
+        <p className="text-sm text-muted-foreground">No jobs extracted from this email.</p>
       ) : (
-        <div className="divide-y divide-neutral-800">
+        <div className="divide-y divide-border">
           {[...openJobs, ...closedJobs].map((job) => {
             const intent = intentConfig[job.intent as JobIntent]
             const dotClass = getStatusDot(job)
@@ -84,14 +84,14 @@ export function JobsList({ jobs }: JobsListProps) {
                     <p
                       className={cn(
                         'text-sm font-medium leading-snug',
-                        isClosed ? 'line-through text-neutral-500' : 'text-neutral-100'
+                        isClosed ? 'line-through text-muted-foreground' : 'text-foreground'
                       )}
                     >
                       {job.description}
                     </p>
                   </div>
                   {(job.owner || job.due) && (
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {[job.owner, job.due ? formatDue(job.due) : null]
                         .filter(Boolean)
                         .join(' · ')}

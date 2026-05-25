@@ -18,18 +18,18 @@ function ChildRoomCard({ room }: { room: Room }) {
   return (
     <Link
       href={`/rooms/${room.id}`}
-      className="block rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3.5 hover:bg-neutral-800 transition-colors"
+      className="block rounded-xl border border-border bg-card px-4 py-3.5 hover:bg-muted transition-colors"
     >
-      <p className="text-sm font-semibold text-white mb-2 truncate">{room.name}</p>
+      <p className="text-sm font-semibold text-foreground mb-2 truncate">{room.name}</p>
       {hasProg && (
         <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1 h-1 rounded-full bg-neutral-800 overflow-hidden">
-            <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
+          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+            <div className="h-full rounded-full bg-foreground transition-all" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-[11px] text-neutral-500 tabular-nums w-7 text-right">{pct}%</span>
+          <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
         </div>
       )}
-      <p className="text-xs text-neutral-600">
+      <p className="text-xs text-muted-foreground">
         {room.progress_closed} closed
         {room.progress_total > room.progress_closed && ` · ${room.progress_total - room.progress_closed} open`}
       </p>
@@ -44,7 +44,7 @@ export function OverviewTab({ roomId, childRooms, stack, suggestions }: Overview
     <div className="space-y-6">
       {isParent && (
         <div>
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Sub-rooms
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

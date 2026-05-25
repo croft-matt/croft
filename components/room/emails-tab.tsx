@@ -12,7 +12,7 @@ const PROCESSING_STATES = new Set(['received', 'urgency_scanned', 'queued', 'pro
 
 export function EmailsTab({ emails, roomId }: EmailsTabProps) {
   if (emails.length === 0) {
-    return <p className="text-sm text-neutral-600">No emails in this room yet.</p>
+    return <p className="text-sm text-muted-foreground">No emails in this room yet.</p>
   }
 
   return (
@@ -28,21 +28,21 @@ export function EmailsTab({ emails, roomId }: EmailsTabProps) {
           <Link
             key={email.id}
             href={`/emails/${email.id}?from=/rooms/${roomId}`}
-            className="flex items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3 hover:bg-muted transition-colors"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-sm font-medium text-neutral-100 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {email.from_name ?? email.from_address}
                 </p>
                 {isProcessing && (
-                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-neutral-600" />
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
                 )}
                 {isIncomplete && (
-                  <Flag className="h-3.5 w-3.5 shrink-0 text-neutral-600" />
+                  <Flag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 )}
               </div>
-              <p className="text-xs text-neutral-500 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {email.subject_summary ?? email.subject ?? '(no subject)'}
               </p>
             </div>
@@ -53,7 +53,7 @@ export function EmailsTab({ emails, roomId }: EmailsTabProps) {
                   {openJobCount} jobs
                 </span>
               )}
-              <p className="text-xs text-neutral-600 whitespace-nowrap">
+              <p className="text-xs text-muted-foreground whitespace-nowrap">
                 {formatRelativeTime(email.received_at)}
               </p>
             </div>

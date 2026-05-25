@@ -7,20 +7,20 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   await requireUser()
 
   return (
-    <div className="min-h-screen bg-neutral-950">
-      <div className="border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border px-6 py-4 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to inbox
         </Link>
-        <span className="text-sm font-medium text-white">Settings</span>
+        <span className="text-sm font-medium text-foreground">Settings</span>
       </div>
 
       <div className="flex">
-        <aside className="w-52 shrink-0 border-r border-neutral-800 px-3 py-6">
+        <aside className="w-52 shrink-0 border-r border-border px-3 py-6">
           <SettingsNav />
         </aside>
 

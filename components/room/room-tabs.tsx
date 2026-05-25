@@ -34,7 +34,7 @@ export function RoomTabs({ defaultTab, overview, assets, contacts, emails }: Roo
 
   return (
     <div>
-      <div className="flex border-b border-neutral-800 px-6">
+      <div className="flex border-b border-border px-6">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -43,8 +43,8 @@ export function RoomTabs({ defaultTab, overview, assets, contacts, emails }: Roo
             className={cn(
               'mr-6 pb-3 pt-3 text-sm transition-colors',
               activeTab === tab.id
-                ? 'border-b-2 border-white text-white font-medium'
-                : 'text-neutral-500 hover:text-neutral-300'
+                ? 'border-b-2 border-foreground text-foreground font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {tab.label}

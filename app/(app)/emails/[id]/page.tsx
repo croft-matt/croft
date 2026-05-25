@@ -54,10 +54,10 @@ export default async function EmailPage({
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="border-b border-neutral-800 px-6 py-2.5">
+      <div className="border-b border-border px-6 py-2.5">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           {backLabel}
