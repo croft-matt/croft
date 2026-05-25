@@ -3,6 +3,7 @@ import { getWorkspaceId } from '@/lib/auth/helpers'
 import {
   getRoomById,
   getChildRooms,
+  getEmailIdsForRoom,
   getJobsForRoom,
   getAssetsForRoom,
   getContactsForRoom,
