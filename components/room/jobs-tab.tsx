@@ -197,11 +197,13 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
               const chaseCount = chaseCountMap.get(loop.id) ?? 0
 
               return (
-                <button
+                <div
                   key={loop.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openModal(loop)}
-                  className="flex w-full items-start gap-3 py-3 first:pt-0 text-left hover:opacity-80 transition-opacity"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openModal(loop) }}
+                  className="flex w-full items-start gap-3 py-3 first:pt-0 text-left hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <span
                     className={cn(
@@ -238,7 +240,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                     </p>
                   </div>
                   <EmailCitation emailId={loop.email_id} />
-                </button>
+                </div>
               )
             })}
           </div>
