@@ -12,6 +12,8 @@ import { OverdueAlert } from '@/components/room/overdue-alert'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { JobsTab } from '@/components/room/jobs-tab'
+import { DatesTab } from '@/components/room/dates-tab'
+import { assembleDates } from '@/lib/rooms/dates'
 
 type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
@@ -31,11 +33,6 @@ interface RoomShellProps {
   crossRefs: CrossReference[]
   ownerGroups: OwnerGroup[]
   parent: Pick<Room, 'id' | 'name'> | null
-}
-
-function DatesTab({ readModel }: { readModel: RoomReadModel }) {
-  void readModel
-  return <div />
 }
 
 function AssetsTab({ readModel }: { readModel: RoomReadModel }) {
@@ -81,7 +78,7 @@ export function RoomShell({
           />
         )
       case 'dates':
-        return <DatesTab readModel={readModel} />
+        return <DatesTab roomDates={assembleDates(readModel)} />
       case 'assets':
         return <AssetsTab readModel={readModel} />
       case 'people':
