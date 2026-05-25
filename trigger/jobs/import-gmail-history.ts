@@ -2,6 +2,7 @@ import { task, tasks } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getValidAccessToken } from '@/lib/email/google-client'
 import { storeGmailMessage } from '@/lib/email/ingest'
+import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 import { noiseGateTask } from './noise-gate'
 import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
 import type { AttachmentMeta } from '@/lib/types/database'
@@ -80,6 +81,7 @@ export const importGmailHistoryTask = task({
 
     const listData = (await listRes.json()) as GmailMessageListResponse
     const messages = listData.messages ?? []
+    const total = messages.length
     let stored = 0
     let skipped = 0
 
@@ -151,6 +153,13 @@ export const importGmailHistoryTask = task({
         }
       }
 
+      // Broadcast progress after each batch so the setup screen count advances
+      // in steps rather than all at once at the end.
+      await broadcastToWorkspace(account.workspace_id, 'import_progress', {
+        n: stored,
+        total,
+      })
+
       if (i + BATCH_SIZE < messages.length) {
         await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS))
       }
@@ -161,12 +170,14 @@ export const importGmailHistoryTask = task({
       .update({ history_imported: true })
       .eq('id', accountId)
 
+    await broadcastToWorkspace(account.workspace_id, 'history_imported', { accountId, stored, total })
+
     // Final kick after the import loop completes. The per-email pokes from
     // urgency-scan cover most of the import; this guarantees a pass after the
     // last email clears Tier 2. The import does not wait for Tier 3 to finish.
     await tasks.trigger<typeof processQueuedEmailsTask>('process-queued-emails', undefined)
 
-    return { accountId, total: messages.length, stored, skipped }
+    return { accountId, total, stored, skipped }
   },
 })
 
