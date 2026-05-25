@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { RoomWithOverdue } from '@/lib/queries/cockpit'
 
@@ -61,16 +61,21 @@ function RoomRow({ node, depth, expandedIds, onToggle, pathname }: RoomRowProps)
     <>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-md py-1 text-sm transition-colors group',
-          depth === 0 ? 'px-1' : 'px-1',
-          isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
+          'flex items-center gap-1.5 rounded-lg h-7 text-xs font-medium transition-colors group',
+          isActive
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
         )}
-        style={{ paddingLeft: `${(depth * 12) + 4}px` }}
+        style={{
+          paddingLeft: `${(depth * 12) + 6}px`,
+          paddingRight: '6px',
+          color: isActive ? undefined : 'var(--sidebar-muted-foreground)',
+        }}
       >
         {hasChildren ? (
           <button
             onClick={() => onToggle(node.id)}
-            className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-sidebar-foreground transition-colors"
+            className="flex h-4 w-4 shrink-0 items-center justify-center transition-colors"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             {isExpanded ? (
@@ -80,12 +85,18 @@ function RoomRow({ node, depth, expandedIds, onToggle, pathname }: RoomRowProps)
             )}
           </button>
         ) : (
-          <span className="h-5 w-5 shrink-0" />
+          <span className="h-4 w-4 shrink-0" />
+        )}
+
+        {isExpanded ? (
+          <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+        ) : (
+          <Folder className="h-3.5 w-3.5 shrink-0" />
         )}
 
         <Link
           href={`/rooms/${node.id}`}
-          className="flex-1 truncate text-[13px] leading-5"
+          className="flex-1 truncate leading-5"
         >
           {node.name}
         </Link>
@@ -152,7 +163,7 @@ export function RoomsTree({ rooms }: RoomsTreeProps) {
 
   if (tree.length === 0) {
     return (
-      <p className="px-2 text-xs text-muted-foreground">No rooms yet.</p>
+      <p className="px-2 text-xs" style={{ color: 'var(--sidebar-muted-foreground)' }}>No rooms yet.</p>
     )
   }
 

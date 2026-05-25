@@ -10,23 +10,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: member } = await supabase
     .from('workspace_members')
-    .select('workspace_id, workspaces(name)')
+    .select('workspace_id')
     .eq('user_id', user.id)
     .single()
 
   const workspaceId = (member?.workspace_id as string | undefined) ?? ''
-  const workspaceName =
-    (member?.workspaces as { name: string } | null)?.name ?? 'Croft'
-
   const rooms = workspaceId ? await getRoomsTree(workspaceId) : []
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted">
-      <Sidebar
-        workspaceName={workspaceName}
-        userName={user.email ?? ''}
-        rooms={rooms}
-      />
+    <div className="flex h-screen overflow-hidden bg-sidebar">
+      <Sidebar rooms={rooms} />
       <div className="flex flex-1 flex-col py-2 pr-2 min-h-0">
         <main className="flex-1 bg-background border border-border rounded-3xl overflow-y-auto">
           {children}
