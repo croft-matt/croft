@@ -24,18 +24,14 @@ const GMAIL_PROFILE_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/profil
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
-  const settingsUrl = `${origin}/settings/email`
-
   const errorParam = searchParams.get('error')
-  if (errorParam) {
-    return NextResponse.redirect(`${settingsUrl}?error=${errorParam}`)
-  }
-
   const code = searchParams.get('code')
   const state = searchParams.get('state')
 
+  // We need the PKCE state to know where to redirect on error, so handle
+  // missing params before attempting to resolve the redirect destination.
   if (!code || !state) {
-    return NextResponse.redirect(`${settingsUrl}?error=missing_params`)
+    return NextResponse.redirect(`${origin}/settings/email?error=missing_params`)
   }
 
   // Confirm the user is still authenticated.
@@ -48,16 +44,28 @@ export async function GET(request: NextRequest) {
   // Retrieve and immediately delete the PKCE state to prevent replay.
   // Upstash Redis automatically deserialises stored JSON, so the value is
   // already a plain object — no JSON.parse needed.
-  const stored = await redis.get<{ verifier: string; workspaceId: string; userId: string }>(
+  const stored = await redis.get<{ verifier: string; workspaceId: string; userId: string; redirectTo?: string }>(
     `gmail:pkce:${state}`
   )
   await redis.del(`gmail:pkce:${state}`)
 
   if (!stored) {
-    return NextResponse.redirect(`${settingsUrl}?error=invalid_state`)
+    return NextResponse.redirect(`${origin}/settings/email?error=invalid_state`)
   }
 
-  const { verifier, workspaceId, userId } = stored
+  const { verifier, workspaceId, userId, redirectTo } = stored
+
+  // Resolve the post-OAuth destination based on where the flow originated.
+  const successUrl = redirectTo === 'onboarding'
+    ? `${origin}/onboarding/setup`
+    : `${origin}/settings/email?connected=1`
+  const errorUrl = redirectTo === 'onboarding'
+    ? `${origin}/onboarding?error=`
+    : `${origin}/settings/email?error=`
+
+  if (errorParam) {
+    return NextResponse.redirect(`${errorUrl}${errorParam}`)
+  }
 
   // Exchange the authorisation code for tokens.
   const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
@@ -76,7 +84,7 @@ export async function GET(request: NextRequest) {
   if (!tokenResponse.ok) {
     const body = await tokenResponse.text()
     console.error('[gmail/callback] token exchange failed:', body)
-    return NextResponse.redirect(`${settingsUrl}?error=token_exchange_failed`)
+    return NextResponse.redirect(`${errorUrl}token_exchange_failed`)
   }
 
   const tokens = (await tokenResponse.json()) as {
@@ -96,7 +104,7 @@ export async function GET(request: NextRequest) {
   if (!profileResponse.ok) {
     const body = await profileResponse.text()
     console.error('[gmail/callback] profile fetch failed:', profileResponse.status, body)
-    return NextResponse.redirect(`${settingsUrl}?error=profile_fetch_failed`)
+    return NextResponse.redirect(`${errorUrl}profile_fetch_failed`)
   }
 
   const profile = (await profileResponse.json()) as { emailAddress: string }
@@ -127,12 +135,12 @@ export async function GET(request: NextRequest) {
 
   if (upsertError || !account) {
     console.error('[gmail/callback] upsert failed:', upsertError)
-    return NextResponse.redirect(`${settingsUrl}?error=account_save_failed`)
+    return NextResponse.redirect(`${errorUrl}account_save_failed`)
   }
 
   // Enqueue the forwarding setup job. Uses string ID to avoid importing the
   // task file directly — allows this commit to be independent of the jobs commit.
   await tasks.trigger('configure-gmail-forwarding', { accountId: account.id })
 
-  return NextResponse.redirect(`${settingsUrl}?connected=1`)
+  return NextResponse.redirect(successUrl)
 }

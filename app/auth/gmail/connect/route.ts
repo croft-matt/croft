@@ -29,7 +29,11 @@ function createRouteClient(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const { origin } = new URL(request.url)
+  const { origin, searchParams } = new URL(request.url)
+
+  // 'onboarding' redirects to /onboarding/setup after OAuth completes.
+  // Any other value (or absent) redirects to /settings/email as before.
+  const redirectTo = searchParams.get('redirect_to') === 'onboarding' ? 'onboarding' : 'settings'
 
   const supabase = createRouteClient(request)
   const { data: { user } } = await supabase.auth.getUser()
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
 
   await redis.set(
     `gmail:pkce:${state}`,
-    { verifier, workspaceId: membership.workspace_id, userId: user.id },
+    { verifier, workspaceId: membership.workspace_id, userId: user.id, redirectTo },
     { ex: 600 }
   )
 
