@@ -16,6 +16,8 @@ import { DatesTab } from '@/components/room/dates-tab'
 import { AssetsTab } from '@/components/room/assets-tab'
 import { assembleDates } from '@/lib/rooms/dates'
 import type { RoomAssets } from '@/lib/rooms/assets'
+import type { RoomPeople } from '@/lib/rooms/people'
+import { PeopleTab } from '@/components/room/people-tab'
 
 type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
@@ -36,11 +38,7 @@ interface RoomShellProps {
   ownerGroups: OwnerGroup[]
   parent: Pick<Room, 'id' | 'name'> | null
   roomAssets: RoomAssets
-}
-
-function PeopleTab({ readModel }: { readModel: RoomReadModel }) {
-  void readModel
-  return <div />
+  roomPeople: RoomPeople
 }
 
 function RecordTab({ readModel }: { readModel: RoomReadModel }) {
@@ -57,6 +55,7 @@ export function RoomShell({
   ownerGroups,
   parent,
   roomAssets,
+  roomPeople,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
   const { emailId: panelEmailId } = useEmailSidePanel()
@@ -81,7 +80,7 @@ export function RoomShell({
       case 'assets':
         return <AssetsTab assets={roomAssets} />
       case 'people':
-        return <PeopleTab readModel={readModel} />
+        return <PeopleTab people={roomPeople} />
       case 'record':
         return <RecordTab readModel={readModel} />
     }

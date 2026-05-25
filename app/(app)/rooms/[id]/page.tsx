@@ -10,6 +10,7 @@ import {
   getCrossReferences,
 } from '@/lib/queries/rooms'
 import { getRoomAssets } from '@/lib/rooms/assets'
+import { getRoomPeople } from '@/lib/rooms/people'
 import { assembleReadModel } from '@/lib/blocks/read-model'
 import { RoomRealtimeProvider } from '@/components/room/room-realtime'
 
@@ -30,12 +31,13 @@ export default async function RoomPage({
   // avoid three redundant room_emails round-trips per page load.
   const emailIds = await getEmailIdsForRoom(id)
 
-  const [parent, childRooms, jobs, roomAssetsData, contacts, emails, crossRefs] =
+  const [parent, childRooms, jobs, roomAssetsData, roomPeopleData, contacts, emails, crossRefs] =
     await Promise.all([
       room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
       getChildRooms(id),
       getJobsForRoom(id, emailIds),
       getRoomAssets({ workspaceId, roomId: id, emailIds }),
+      getRoomPeople({ workspaceId, roomId: id, emailIds }),
       getContactsForRoom(id),
       getEmailsForRoom(id, 50, emailIds),
       getCrossReferences(id),
@@ -58,6 +60,7 @@ export default async function RoomPage({
       initialChildRooms={childRooms}
       initialJobs={jobs}
       initialRoomAssets={roomAssetsData}
+      initialRoomPeople={roomPeopleData}
       initialContacts={contacts}
       initialEmails={emails}
       initialCrossRefs={crossRefs}

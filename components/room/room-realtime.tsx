@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Room, Job, Contact, Email } from '@/lib/types/database'
 import type { CrossReference } from '@/lib/queries/rooms'
 import type { RoomAssets } from '@/lib/rooms/assets'
+import type { RoomPeople } from '@/lib/rooms/people'
 import type { RoomReadModel, RoomJob, Fact } from '@/lib/blocks/types'
 import type { OpenLoop, OpenLoops, OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomShell } from '@/components/room/room-shell'
@@ -15,6 +16,7 @@ interface RoomRealtimeProps {
   initialChildRooms: Room[]
   initialJobs: Job[]
   initialRoomAssets: RoomAssets
+  initialRoomPeople: RoomPeople
   initialContacts: Contact[]
   initialEmails: Email[]
   initialCrossRefs: CrossReference[]
@@ -78,6 +80,7 @@ export function RoomRealtimeProvider({
   initialChildRooms,
   initialJobs,
   initialRoomAssets,
+  initialRoomPeople,
   initialContacts,
   initialEmails,
   initialCrossRefs,
@@ -229,6 +232,7 @@ export function RoomRealtimeProvider({
       ownerGroups={initialTheirCourtByPerson}
       parent={parent}
       roomAssets={initialRoomAssets}
+      roomPeople={initialRoomPeople}
     />
   )
 }
