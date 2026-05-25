@@ -108,7 +108,7 @@ export async function getActiveRooms(workspaceId: string): Promise<RoomCardRow[]
 
   const roomIds = rooms.map((r) => r.id)
 
-  // Fetch all room_email rows for these rooms in one query.
+  // Fetch room_email rows for these rooms to compute last_email_at per room.
   const { data: reRows } = await supabase
     .from('room_emails')
     .select('room_id, email_id')
@@ -135,17 +135,19 @@ export async function getActiveRooms(workspaceId: string): Promise<RoomCardRow[]
     }
   }
 
-  // Find which rooms have overdue open jobs.
+  // Find which rooms have overdue open jobs by querying jobs directly by
+  // workspace_id. This avoids an unbounded IN list over all email IDs in the
+  // workspace and uses the existing jobs(workspace_id, status) index instead.
   const overdueRoomIds = new Set<string>()
-  if (allEmailIds.length > 0) {
-    const { data: overdueJobs } = await supabase
-      .from('jobs')
-      .select('email_id')
-      .in('email_id', allEmailIds)
-      .eq('status', 'open')
-      .lt('due', now)
+  const { data: overdueJobs } = await supabase
+    .from('jobs')
+    .select('email_id')
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'open')
+    .lt('due', now)
 
-    const overdueEmailIds = new Set((overdueJobs ?? []).map((j) => j.email_id))
+  if (overdueJobs && overdueJobs.length > 0) {
+    const overdueEmailIds = new Set(overdueJobs.map((j) => j.email_id))
     const emailToRooms: Record<string, string[]> = {}
     for (const re of reRows ?? []) {
       if (!emailToRooms[re.email_id]) emailToRooms[re.email_id] = []
@@ -201,23 +203,26 @@ export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue
 
   const roomIds = rooms.map((r) => r.id)
 
+  // Fetch room_emails to build the email-to-room mapping used for overdue flagging.
   const { data: reRows } = await supabase
     .from('room_emails')
     .select('room_id, email_id')
     .in('room_id', roomIds)
 
-  const allEmailIds = [...new Set((reRows ?? []).map((r) => r.email_id))]
+  // Query overdue jobs directly by workspace_id rather than routing through an
+  // unbounded IN list of all email IDs. This runs on every authenticated page
+  // (app layout) so keeping it index-efficient matters. Uses the existing
+  // jobs(workspace_id, status) composite index.
   const overdueRoomIds = new Set<string>()
+  const { data: overdueJobs } = await supabase
+    .from('jobs')
+    .select('email_id')
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'open')
+    .lt('due', now)
 
-  if (allEmailIds.length > 0) {
-    const { data: overdueJobs } = await supabase
-      .from('jobs')
-      .select('email_id')
-      .in('email_id', allEmailIds)
-      .eq('status', 'open')
-      .lt('due', now)
-
-    const overdueEmailIds = new Set((overdueJobs ?? []).map((j) => j.email_id))
+  if (overdueJobs && overdueJobs.length > 0) {
+    const overdueEmailIds = new Set(overdueJobs.map((j) => j.email_id))
     const emailToRooms: Record<string, string[]> = {}
     for (const re of reRows ?? []) {
       if (!emailToRooms[re.email_id]) emailToRooms[re.email_id] = []

@@ -32,14 +32,18 @@ export default async function RoomPage({
   const workspaceId = await getWorkspaceId()
   if (!workspaceId) notFound()
 
+  // Fetch email IDs once and share with jobs, assets, and emails queries to
+  // avoid three redundant room_emails round-trips per page load.
+  const emailIds = await getEmailIdsForRoom(id)
+
   const [parent, childRooms, jobs, assets, contacts, emails, crossRefs, roomBlocks] =
     await Promise.all([
       room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
       getChildRooms(id),
-      getJobsForRoom(id),
-      getAssetsForRoom(id),
+      getJobsForRoom(id, emailIds),
+      getAssetsForRoom(id, emailIds),
       getContactsForRoom(id),
-      getEmailsForRoom(id, 50),
+      getEmailsForRoom(id, 50, emailIds),
       getCrossReferences(id),
       getRoomBlocks(id),
     ])

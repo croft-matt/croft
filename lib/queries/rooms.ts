@@ -31,28 +31,32 @@ export async function getEmailIdsForRoom(roomId: string): Promise<string[]> {
   return (data ?? []).map((r) => r.email_id)
 }
 
-export async function getJobsForRoom(roomId: string): Promise<Job[]> {
+// Accepts an optional pre-fetched emailIds list to avoid a redundant
+// room_emails query when the caller already has the ids (e.g. the room page).
+export async function getJobsForRoom(roomId: string, emailIds?: string[]): Promise<Job[]> {
   const supabase = await createClient()
-  const emailIds = await getEmailIdsForRoom(roomId)
-  if (emailIds.length === 0) return []
+  const ids = emailIds ?? (await getEmailIdsForRoom(roomId))
+  if (ids.length === 0) return []
 
   const { data } = await supabase
     .from('jobs')
     .select('*')
-    .in('email_id', emailIds)
+    .in('email_id', ids)
     .order('created_at', { ascending: true })
   return (data ?? []) as Job[]
 }
 
-export async function getAssetsForRoom(roomId: string): Promise<Asset[]> {
+// Accepts an optional pre-fetched emailIds list to avoid a redundant
+// room_emails query when the caller already has the ids.
+export async function getAssetsForRoom(roomId: string, emailIds?: string[]): Promise<Asset[]> {
   const supabase = await createClient()
-  const emailIds = await getEmailIdsForRoom(roomId)
-  if (emailIds.length === 0) return []
+  const ids = emailIds ?? (await getEmailIdsForRoom(roomId))
+  if (ids.length === 0) return []
 
   const { data } = await supabase
     .from('assets')
     .select('*')
-    .in('email_id', emailIds)
+    .in('email_id', ids)
     .order('created_at', { ascending: false })
   return (data ?? []) as Asset[]
 }
@@ -98,15 +102,17 @@ export async function getContactsForRoom(roomId: string): Promise<Contact[]> {
   return (data ?? []) as Contact[]
 }
 
-export async function getEmailsForRoom(roomId: string, limit = 50): Promise<Email[]> {
+// Accepts an optional pre-fetched emailIds list to avoid a redundant
+// room_emails query when the caller already has the ids.
+export async function getEmailsForRoom(roomId: string, limit = 50, emailIds?: string[]): Promise<Email[]> {
   const supabase = await createClient()
-  const emailIds = await getEmailIdsForRoom(roomId)
-  if (emailIds.length === 0) return []
+  const ids = emailIds ?? (await getEmailIdsForRoom(roomId))
+  if (ids.length === 0) return []
 
   const { data } = await supabase
     .from('emails')
     .select('*')
-    .in('id', emailIds)
+    .in('id', ids)
     .order('received_at', { ascending: false })
     .limit(limit)
   return (data ?? []) as Email[]
