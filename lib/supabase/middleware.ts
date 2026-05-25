@@ -77,7 +77,7 @@ export async function updateSession(request: NextRequest) {
 
     if (membership) {
       const workspaceId = membership.workspace_id
-      const onboardingComplete = (membership.workspaces as { onboarding_complete: boolean } | null)?.onboarding_complete ?? false
+      const onboardingComplete = (membership.workspaces as unknown as { onboarding_complete: boolean } | null)?.onboarding_complete ?? false
 
       if (!onboardingComplete) {
         // Check whether Gmail has been connected yet.
