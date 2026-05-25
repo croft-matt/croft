@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         await confirmGmailForwardingTask.trigger({
           emailId: result.emailId,
           workspaceId: result.workspaceId,
+          resendEmailId: parsed.data.data.email_id,
         })
       }
     } catch (err) {

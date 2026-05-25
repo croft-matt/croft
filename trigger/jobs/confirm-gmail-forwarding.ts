@@ -7,29 +7,18 @@ import { importGmailHistoryTask } from './import-gmail-history'
 export interface ConfirmGmailForwardingPayload {
   emailId: string
   workspaceId: string
+  resendEmailId: string
 }
 
 export const confirmGmailForwardingTask = task({
   id: 'confirm-gmail-forwarding',
   maxDuration: 60,
   run: async (payload: ConfirmGmailForwardingPayload) => {
-    const { emailId, workspaceId } = payload
+    const { emailId, workspaceId, resendEmailId } = payload
     const supabase = createAdminClient()
     const resend = new Resend(process.env.RESEND_API_KEY)
 
-    const { data: emailRow } = await supabase
-      .from('emails')
-      .select('resend_email_id')
-      .eq('id', emailId)
-      .single()
-
-    if (!emailRow?.resend_email_id) {
-      throw new Error(`confirm-gmail-forwarding: no resend_email_id for email ${emailId}`)
-    }
-
-    const { data: received, error: fetchError } = await resend.emails.get(
-      emailRow.resend_email_id,
-    ) as { data: { text: string | null; html: string | null } | null; error: unknown }
+    const { data: received, error: fetchError } = await resend.emails.receiving.get(resendEmailId)
 
     if (fetchError || !received) {
       throw new Error(
@@ -37,14 +26,15 @@ export const confirmGmailForwardingTask = task({
       )
     }
 
-    const body = received.text ?? received.html ?? ''
-    const confirmationUrl = extractGmailConfirmationUrl(body)
+    const emailText = received.text ?? received.html ?? ''
+    const confirmationUrl = extractGmailConfirmationUrl(emailText)
 
     if (!confirmationUrl) {
       console.error(
         `confirm-gmail-forwarding: no confirmation URL found for email ${emailId}`,
         '\nBody preview:',
-        body.slice(0, 500),
+        emailText.slice(0, 500),
+        '\nResend email ID:', resendEmailId,
       )
       throw new Error(`confirm-gmail-forwarding: confirmation URL not found`)
     }
@@ -96,9 +86,10 @@ export const confirmGmailForwardingTask = task({
 // If this throws in production, the 500-char body preview above will show the raw content.
 function extractGmailConfirmationUrl(body: string): string | null {
   const patterns = [
+    /https:\/\/mail-settings\.google\.com\/mail\/[^\s<"]+/,
     /https:\/\/mail\.google\.com\/mail\/[^\s<"]+/,
     /https:\/\/accounts\.google\.com\/[^\s<"]*[Cc]onfirm[^\s<"]*/,
-    /https:\/\/[a-z.]*google\.com\/[^\s<"]{30,}/,
+    /https:\/\/[a-z.-]*google\.com\/[^\s<"]{30,}/,
   ]
 
   for (const pattern of patterns) {

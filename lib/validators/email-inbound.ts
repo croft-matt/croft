@@ -20,6 +20,8 @@ export const ResendInboundEventSchema = z.object({
     cc: z.array(z.string()),
     message_id: z.string(),
     subject: z.string(),
+    text: z.string().nullable().optional(),
+    html: z.string().nullable().optional(),
     attachments: z.array(ResendAttachmentSchema),
   }),
 })
