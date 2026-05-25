@@ -40,11 +40,7 @@ export const classifyNowTask = task({
 
     if (updated) {
       const channel = supabase.channel(`workspace:${updated.workspace_id}`)
-      await channel.httpSend({
-        type: 'broadcast',
-        event: 'email_processed',
-        payload: { email_id: emailId },
-      })
+      await channel.httpSend('email_processed', { email_id: emailId })
       await supabase.removeChannel(channel)
     }
 

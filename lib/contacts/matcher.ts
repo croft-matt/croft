@@ -154,13 +154,19 @@ async function checkCoOccurrence(
   addrA: string,
   addrB: string,
 ): Promise<boolean> {
+  // to_addresses and cc_addresses are jsonb columns, so containment must be
+  // passed as JSON via .filter() rather than .contains() — the latter sends
+  // Postgres array syntax ({value}) which is invalid for jsonb columns.
+  const jsonB = JSON.stringify([addrB])
+  const jsonA = JSON.stringify([addrA])
+
   // Check A->B direction: A sent, B was a recipient
   const { count: countAB } = await supabase
     .from('emails')
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
     .eq('from_address', addrA)
-    .contains('to_addresses', [addrB])
+    .filter('to_addresses', 'cs', jsonB)
 
   if (countAB && countAB > 0) return true
 
@@ -169,7 +175,7 @@ async function checkCoOccurrence(
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
     .eq('from_address', addrA)
-    .contains('cc_addresses', [addrB])
+    .filter('cc_addresses', 'cs', jsonB)
 
   if (countABcc && countABcc > 0) return true
 
@@ -179,7 +185,7 @@ async function checkCoOccurrence(
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
     .eq('from_address', addrB)
-    .contains('to_addresses', [addrA])
+    .filter('to_addresses', 'cs', jsonA)
 
   if (countBA && countBA > 0) return true
 
@@ -188,7 +194,7 @@ async function checkCoOccurrence(
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
     .eq('from_address', addrB)
-    .contains('cc_addresses', [addrA])
+    .filter('cc_addresses', 'cs', jsonA)
 
   if (countBAcc && countBAcc > 0) return true
 

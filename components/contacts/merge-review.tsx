@@ -72,10 +72,10 @@ function ContactCard({
   organisation: string | null
 }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 min-w-0">
-      <p className="text-sm font-medium text-neutral-100 truncate">{name ?? email}</p>
-      {name && <p className="text-xs text-neutral-500 truncate">{email}</p>}
-      {organisation && <p className="text-xs text-neutral-600 truncate">{organisation}</p>}
+    <div className="rounded-lg border border-border bg-background px-3 py-2 min-w-0">
+      <p className="text-sm font-medium text-foreground truncate">{name ?? email}</p>
+      {name && <p className="text-xs text-muted-foreground truncate">{email}</p>}
+      {organisation && <p className="text-xs text-muted-foreground truncate">{organisation}</p>}
     </div>
   )
 }
@@ -98,9 +98,9 @@ function ActionButton({
       disabled={pending}
       className={cn(
         'inline-flex items-center rounded px-3 py-1.5 text-xs font-medium transition-opacity disabled:opacity-40',
-        variant === 'primary' && 'bg-neutral-100 text-neutral-900 hover:bg-white',
-        variant === 'ghost' && 'border border-neutral-700 text-neutral-400 hover:text-neutral-200',
-        variant === 'danger' && 'border border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-800',
+        variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
+        variant === 'ghost' && 'border border-border text-muted-foreground hover:text-foreground',
+        variant === 'danger' && 'border border-border text-muted-foreground hover:text-red-400 hover:border-red-800',
       )}
     >
       {children}
@@ -131,7 +131,7 @@ function CandidateRow({ candidate }: { candidate: MergeCandidate }) {
   const reason = signalsToText(candidate.signals)
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:gap-3 min-w-0">
           <div className="flex-1 min-w-0">
@@ -141,7 +141,7 @@ function CandidateRow({ candidate }: { candidate: MergeCandidate }) {
               organisation={low.organisation}
             />
           </div>
-          <div className="hidden sm:flex items-center text-neutral-600 text-xs px-1">+</div>
+          <div className="hidden sm:flex items-center text-muted-foreground text-xs px-1">+</div>
           <div className="flex-1 min-w-0">
             <ContactCard
               name={high.name}
@@ -153,9 +153,9 @@ function CandidateRow({ candidate }: { candidate: MergeCandidate }) {
       </div>
 
       <div className="mt-3 flex flex-col gap-1">
-        <p className="text-xs text-neutral-500">{reason}</p>
-        <p className="text-xs text-neutral-700">
-          Merged as: <span className="text-neutral-400">{preview}</span>
+        <p className="text-xs text-muted-foreground">{reason}</p>
+        <p className="text-xs text-muted-foreground">
+          Merged as: <span className="text-foreground">{preview}</span>
         </p>
       </div>
 
@@ -185,11 +185,11 @@ function IdentityRow({ identity }: { identity: MergedIdentity }) {
   const heading = identity.canonical_name ?? identity.members[0]?.name ?? identity.members[0]?.email_address ?? 'Unknown'
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2 mb-3">
-        <p className="text-sm font-medium text-neutral-100">{heading}</p>
+        <p className="text-sm font-medium text-foreground">{heading}</p>
         {identity.name_locked && (
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-600 border border-neutral-700 rounded px-1.5 py-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
             Locked
           </span>
         )}
@@ -198,9 +198,9 @@ function IdentityRow({ identity }: { identity: MergedIdentity }) {
         {identity.members.map((member) => (
           <div key={member.id} className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm text-neutral-300 truncate">{member.name ?? member.email_address}</p>
+              <p className="text-sm text-foreground truncate">{member.name ?? member.email_address}</p>
               {member.name && (
-                <p className="text-xs text-neutral-600 truncate">{member.email_address}</p>
+                <p className="text-xs text-muted-foreground truncate">{member.email_address}</p>
               )}
             </div>
             <ActionButton
@@ -222,10 +222,10 @@ export function MergeReview({ candidates, identities }: MergeReviewProps) {
     <div className="space-y-8">
       <section>
         <div className="mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-0.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
             Possible duplicates
           </p>
-          <p className="text-xs text-neutral-600">
+          <p className="text-xs text-muted-foreground">
             {candidates.length === 0
               ? 'No suggestions. Croft will surface new ones as email arrives.'
               : `${candidates.length} suggestion${candidates.length === 1 ? '' : 's'}, ordered by confidence.`}
@@ -243,10 +243,10 @@ export function MergeReview({ candidates, identities }: MergeReviewProps) {
       {identities.length > 0 && (
         <section>
           <div className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 mb-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
               Merged people
             </p>
-            <p className="text-xs text-neutral-600">
+            <p className="text-xs text-muted-foreground">
               Split removes a contact from a person. If only one contact remains, the person is dissolved.
             </p>
           </div>

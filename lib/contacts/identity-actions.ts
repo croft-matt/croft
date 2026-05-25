@@ -240,19 +240,14 @@ export async function setCanonicalName(
   await requireUser()
   const supabase = await createClient()
 
-  const updatePayload: Record<string, unknown> = {
-    canonical_name: name,
-    name_locked: true,
-    updated_at: new Date().toISOString(),
-  }
-
-  if (organisation !== undefined) {
-    updatePayload.canonical_organisation = organisation
-  }
-
   const { error } = await supabase
     .from('contact_identities')
-    .update(updatePayload)
+    .update({
+      canonical_name: name,
+      name_locked: true,
+      updated_at: new Date().toISOString(),
+      ...(organisation !== undefined ? { canonical_organisation: organisation } : {}),
+    })
     .eq('id', identityId)
 
   if (error) return { success: false, error: 'Failed to set canonical name' }

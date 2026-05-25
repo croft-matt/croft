@@ -33,7 +33,7 @@ export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
   const timeStr = formatRelativeTime(email.received_at)
 
   return (
-    <div className="border-b border-neutral-800 px-6 py-5">
+    <div className="border-b border-border px-6 py-5">
       <div className="flex items-start gap-4 justify-between">
         <div className="flex items-start gap-3 min-w-0">
           <div
@@ -45,9 +45,9 @@ export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
             {getInitials(email.from_name, email.from_address)}
           </div>
           <div className="min-w-0">
-            <p className="text-base font-medium text-white">{displayName}</p>
-            <p className="text-xs text-neutral-500 mt-0.5">{email.from_address}</p>
-            <p className="text-xs text-neutral-600 mt-0.5">{timeStr}</p>
+            <p className="text-base font-medium text-foreground">{displayName}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{email.from_address}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{timeStr}</p>
           </div>
         </div>
 
@@ -61,22 +61,22 @@ export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
             <Link
               key={room.id}
               href={`/rooms/${room.id}`}
-              className="rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-400 hover:text-white hover:border-neutral-500 transition-colors"
+              className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
             >
               {room.name}
             </Link>
           ))}
           {rooms.length > 4 && (
-            <span className="text-xs text-neutral-600">+{rooms.length - 4} more</span>
+            <span className="text-xs text-muted-foreground">+{rooms.length - 4} more</span>
           )}
         </div>
       </div>
 
       {email.subject && (
-        <p className="mt-3 text-sm font-medium text-neutral-200">{email.subject}</p>
+        <p className="mt-3 text-sm font-medium text-foreground">{email.subject}</p>
       )}
       {email.subject_summary && email.subject_summary !== email.subject && (
-        <p className="mt-1 text-xs text-neutral-500">{email.subject_summary}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{email.subject_summary}</p>
       )}
     </div>
   )

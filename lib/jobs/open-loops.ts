@@ -82,6 +82,7 @@ export async function groupTheirCourtByPerson(
   // This lets us map any address to the correct group even when two addresses share an identity.
   const addressToPersonKey = new Map<string, string>()
   for (const [personKey, person] of personMap) {
+    if (personKey === null) continue
     for (const addr of person.addresses) {
       addressToPersonKey.set(addr.toLowerCase(), personKey)
     }

@@ -48,21 +48,21 @@ export function ToField({ recipients, onChange }: ToFieldProps) {
 
   return (
     <div>
-      <label className="block text-xs font-medium text-neutral-500 mb-1.5">To</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">To</label>
       <div
-        className="flex flex-wrap gap-1.5 min-h-9 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1.5 cursor-text"
+        className="flex flex-wrap gap-1.5 min-h-9 rounded-md border border-input bg-input px-2.5 py-1.5 cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
         {recipients.map((r) => (
           <span
             key={r.email}
-            className="flex items-center gap-1 rounded bg-neutral-700 px-1.5 py-0.5 text-xs text-white"
+            className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs text-foreground"
           >
             {r.name}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); removeRecipient(r.email) }}
-              className="text-neutral-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-3 w-3" />
             </button>
@@ -76,10 +76,10 @@ export function ToField({ recipients, onChange }: ToFieldProps) {
           onKeyDown={handleKeyDown}
           onBlur={() => addRecipient(input)}
           placeholder={recipients.length === 0 ? 'name@example.com' : ''}
-          className="flex-1 min-w-24 bg-transparent text-sm text-white placeholder-neutral-600 outline-none"
+          className="flex-1 min-w-24 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
       </div>
-      <p className="mt-1 text-[11px] text-neutral-600">Press Enter or comma to add</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">Press Enter or comma to add</p>
     </div>
   )
 }

@@ -19,16 +19,16 @@ export function AssetField({ file, onChange }: AssetFieldProps) {
 
   return (
     <div>
-      <label className="block text-xs font-medium text-neutral-500 mb-1.5">Attachment (optional)</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">Attachment (optional)</label>
       {file ? (
-        <div className="flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2">
-          <Paperclip className="h-4 w-4 text-neutral-500 shrink-0" />
-          <span className="flex-1 truncate text-sm text-white">{file.name}</span>
-          <span className="text-xs text-neutral-500">{formatBytes(file.size)}</span>
+        <div className="flex items-center gap-2 rounded-md border border-input bg-input px-3 py-2">
+          <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="flex-1 truncate text-sm text-foreground">{file.name}</span>
+          <span className="text-xs text-muted-foreground">{formatBytes(file.size)}</span>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-neutral-500 hover:text-white transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -37,7 +37,7 @@ export function AssetField({ file, onChange }: AssetFieldProps) {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-2 rounded-md border border-dashed border-neutral-700 bg-transparent px-3 py-2 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-400 transition-colors w-full"
+          className="flex items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-3 py-2 text-sm text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors w-full"
         >
           <Paperclip className="h-4 w-4" />
           Attach a file

@@ -11,7 +11,7 @@ interface ActionBarProps {
 
 export function ActionBar({ onCancel, onSubmit, loading, error }: ActionBarProps) {
   return (
-    <div className="border-t border-neutral-800 px-5 py-4">
+    <div className="border-t border-border px-5 py-4">
       {error && (
         <p className="mb-3 text-xs text-red-400">{error}</p>
       )}
@@ -20,7 +20,7 @@ export function ActionBar({ onCancel, onSubmit, loading, error }: ActionBarProps
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="rounded-md px-4 py-1.5 text-sm text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
+          className="rounded-md px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
           Cancel
         </button>
@@ -28,7 +28,7 @@ export function ActionBar({ onCancel, onSubmit, loading, error }: ActionBarProps
           type="button"
           onClick={onSubmit}
           disabled={loading}
-          className="flex items-center gap-2 rounded-md bg-white px-4 py-1.5 text-sm font-medium text-black hover:bg-neutral-200 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

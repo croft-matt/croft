@@ -4,7 +4,7 @@ import type { Email } from '@/lib/types/database'
 
 const voyage = new VoyageAIClient({ apiKey: process.env.VOYAGE_API_KEY })
 
-// Input is capped at 4000 characters to stay within voyage-3-lite context limits.
+// Input is capped at 4000 characters — well within voyage-3's 32k token context.
 const MAX_CHARS = 4000
 
 function buildEmbeddingInput(email: Pick<Email, 'subject' | 'body_text'>): string {
@@ -20,7 +20,7 @@ export async function generateEmbedding(email: Email): Promise<number[]> {
   try {
     const response = await voyage.embed({
       input: buildEmbeddingInput(email),
-      model: 'voyage-3-lite',
+      model: 'voyage-3',
     })
 
     const embedding = response.data?.[0]?.embedding
@@ -31,7 +31,7 @@ export async function generateEmbedding(email: Email): Promise<number[]> {
     await supabase.from('email_processing_log').insert({
       email_id: email.id,
       tier: 3,
-      model: 'voyage-3-lite',
+      model: 'voyage-3',
       input_tokens: response.usage?.totalTokens ?? null,
       output_tokens: null,
       cache_read_tokens: null,
@@ -46,7 +46,7 @@ export async function generateEmbedding(email: Email): Promise<number[]> {
     await supabase.from('email_processing_log').insert({
       email_id: email.id,
       tier: 3,
-      model: 'voyage-3-lite',
+      model: 'voyage-3',
       input_tokens: null,
       output_tokens: null,
       cache_read_tokens: null,
