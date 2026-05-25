@@ -10,6 +10,7 @@ import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { OverdueAlert } from '@/components/room/overdue-alert'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
+import { JobsTab } from '@/components/room/jobs-tab'
 
 type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
@@ -28,12 +29,6 @@ interface RoomShellProps {
   childRooms: Room[]
   crossRefs: CrossReference[]
   parent: Pick<Room, 'id' | 'name'> | null
-}
-
-// Stub tab content components. Each will be replaced in Briefs 30 through 34.
-function JobsTab({ readModel }: { readModel: RoomReadModel }) {
-  void readModel
-  return <div />
 }
 
 function DatesTab({ readModel }: { readModel: RoomReadModel }) {
@@ -75,7 +70,13 @@ export function RoomShell({
   function renderTab() {
     switch (activeTab) {
       case 'jobs':
-        return <JobsTab readModel={readModel} />
+        return (
+          <JobsTab
+            loops={readModel.openLoops}
+            ownerGroups={[]}
+            workspaceId={readModel.workspaceId}
+          />
+        )
       case 'dates':
         return <DatesTab readModel={readModel} />
       case 'assets':
