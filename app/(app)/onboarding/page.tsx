@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold text-foreground">Connect your Gmail</h1>
           <p className="text-sm text-muted-foreground">
-            Croft will set up email forwarding automatically. It takes about 30 seconds.
+            You will need to add a forwarding address to Gmail. Croft walks you through it.
           </p>
         </div>
         <a

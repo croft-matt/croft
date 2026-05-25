@@ -1,95 +1,139 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { retryForwarding } from './actions'
+import { cn } from '@/lib/utils'
+
+type Stage = 'idle' | 'instructions' | 'importing'
 
 interface SetupClientProps {
   workspaceId: string
-  accountId: string
-  initialForwardingConfigured: boolean
-  initialHistoryImported: boolean
 }
 
-export function SetupClient({
-  workspaceId,
-  accountId,
-  initialForwardingConfigured,
-  initialHistoryImported,
-}: SetupClientProps) {
+export function SetupClient({ workspaceId }: SetupClientProps) {
   const router = useRouter()
-  const [forwardingDone, setForwardingDone] = useState(initialForwardingConfigured)
-  const [historyDone, setHistoryDone] = useState(initialHistoryImported)
-  const [forwardingFailed, setForwardingFailed] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [stage, setStage] = useState<Stage>('idle')
+  const [receivingAddress, setReceivingAddress] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel(`workspace:${workspaceId}`)
+      .on('broadcast', { event: 'forwarding_setup_required' }, ({ payload }) => {
+        const p = payload as { receivingAddress: string }
+        setReceivingAddress(p.receivingAddress)
+        setStage('instructions')
+      })
       .on('broadcast', { event: 'forwarding_configured' }, () => {
-        setForwardingDone(true)
-        setForwardingFailed(false)
+        setStage('importing')
       })
-      .on('broadcast', { event: 'forwarding_failed' }, () => {
-        setForwardingFailed(true)
-      })
-      .on('broadcast', { event: 'history_imported' }, () => {
-        setHistoryDone(true)
+      .on('broadcast', { event: 'history_import_started' }, () => {
+        router.push('/onboarding/processing')
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [workspaceId])
+  }, [workspaceId, router])
 
-  // Once both are done, navigate to the processing gate.
-  useEffect(() => {
-    if (forwardingDone && historyDone) {
-      router.push('/onboarding/processing')
-    }
-  }, [forwardingDone, historyDone, router])
-
-  function handleRetry() {
-    setForwardingFailed(false)
-    startTransition(async () => {
-      await retryForwarding(accountId)
+  function handleCopy() {
+    if (!receivingAddress) return
+    navigator.clipboard.writeText(receivingAddress).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     })
   }
 
-  const statusText = forwardingFailed
-    ? 'Something went wrong setting up forwarding.'
-    : !forwardingDone
-    ? 'Setting up email forwarding...'
-    : !historyDone
-    ? 'Importing your last 7 days of email...'
-    : "You're in."
+  if (stage === 'instructions' && receivingAddress) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-foreground">
+              Add your Croft address to Gmail forwarding
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Paste this address into Gmail and Croft handles the rest.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
+            <span className="flex-1 truncate font-mono text-xs text-foreground">
+              {receivingAddress}
+            </span>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+
+          <ol className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex gap-2">
+              <span className="shrink-0">1.</span>
+              Open Gmail and go to Settings (gear icon) &gt; See all settings
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0">2.</span>
+              Click the Forwarding and POP/IMAP tab
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0">3.</span>
+              Click Add a forwarding address and paste the address above
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0">4.</span>
+              A verification email will arrive -- Croft confirms it automatically
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0">5.</span>
+              Select Forward a copy of incoming mail and save changes
+            </li>
+          </ol>
+
+          <div className="flex items-center gap-2">
+            <WaitingDot />
+            <span className="text-sm text-muted-foreground">Waiting for confirmation...</span>
+          </div>
+
+          <p className="text-xs text-muted-foreground/60">
+            Check your email -- we sent the address there too.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const statusText =
+    stage === 'importing'
+      ? 'Importing your last 7 days of email...'
+      : 'Setting up your account...'
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-8 text-center">
         <div className="space-y-4">
           <div className="flex items-center justify-center">
-            {!forwardingFailed && !(forwardingDone && historyDone) && (
-              <Spinner />
-            )}
+            <Spinner />
           </div>
           <p className="text-sm text-muted-foreground">{statusText}</p>
         </div>
-
-        {forwardingFailed && (
-          <button
-            onClick={handleRetry}
-            disabled={isPending}
-            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {isPending ? 'Retrying...' : 'Try again'}
-          </button>
-        )}
       </div>
     </div>
+  )
+}
+
+function WaitingDot() {
+  return (
+    <span
+      className={cn(
+        'inline-flex h-2 w-2 shrink-0 rounded-full bg-muted-foreground animate-pulse',
+      )}
+    />
   )
 }
 

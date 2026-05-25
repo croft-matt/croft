@@ -12,25 +12,18 @@ export default async function OnboardingSetupPage() {
 
   const { data: account } = await supabase
     .from('email_accounts')
-    .select('id, forwarding_configured, history_imported')
+    .select('forwarding_configured')
     .eq('workspace_id', workspaceId)
     .limit(1)
     .maybeSingle()
 
   if (!account) redirect('/onboarding')
 
-  // If both stages are already done (e.g. user refreshed after completion),
-  // send them straight to the processing gate.
-  if (account.forwarding_configured && account.history_imported) {
+  // If forwarding is already confirmed, import has been triggered.
+  // The processing screen is the right destination.
+  if (account.forwarding_configured) {
     redirect('/onboarding/processing')
   }
 
-  return (
-    <SetupClient
-      workspaceId={workspaceId}
-      accountId={account.id}
-      initialForwardingConfigured={account.forwarding_configured ?? false}
-      initialHistoryImported={account.history_imported ?? false}
-    />
-  )
+  return <SetupClient workspaceId={workspaceId} />
 }
