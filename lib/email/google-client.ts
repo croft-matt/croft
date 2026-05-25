@@ -45,8 +45,25 @@ export async function getValidAccessToken(accountId: string): Promise<string> {
   })
 
   if (!response.ok) {
-    await revokeAndBroadcast(accountId, account.workspace_id)
-    throw new Error(`getValidAccessToken: token refresh failed for account ${accountId} — reconnection required`)
+    // Only revoke on a definitive invalid_grant response. Google returns this
+    // when the refresh token has been explicitly revoked by the user or expired
+    // due to inactivity. For 5xx errors and network failures, throwing without
+    // revoking lets Trigger.dev's retry policy recover without disconnecting
+    // a still-valid mailbox.
+    let errorCode: string | null = null
+    try {
+      const body = (await response.json()) as { error?: string }
+      errorCode = body.error ?? null
+    } catch {
+      // Non-JSON body (e.g. 5xx HTML error page) — treat as transient.
+    }
+
+    if (errorCode === 'invalid_grant') {
+      await revokeAndBroadcast(accountId, account.workspace_id)
+      throw new Error(`getValidAccessToken: refresh token revoked for account ${accountId} — reconnection required`)
+    }
+
+    throw new Error(`getValidAccessToken: token refresh failed for account ${accountId} (${response.status} ${errorCode ?? 'unknown'}) — will retry`)
   }
 
   const tokens = (await response.json()) as { access_token: string; expires_in: number }

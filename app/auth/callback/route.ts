@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
 
 // Creates a workspace and owner membership for first-time users.
 // Safe to call on every sign-in — exits immediately if a membership already exists.
+// Uses create_workspace_with_owner RPC so both inserts are atomic: if the membership
+// insert fails the workspace row is rolled back, preventing an orphaned workspace
+// that would leave the user with a permanently broken account.
 async function ensureWorkspace(userId: string, email: string): Promise<void> {
   const admin = createAdminClient()
 
@@ -40,26 +43,16 @@ async function ensureWorkspace(userId: string, email: string): Promise<void> {
   const receivingAddress = `${workspaceId}@inbound.yourcroft.com`
   const croftEmailAddress = deriveCroftAddress(email)
 
-  const { error: wsError } = await admin.from('workspaces').insert({
-    id: workspaceId,
-    name,
-    receiving_address: receivingAddress,
-    croft_email_address: croftEmailAddress,
+  const { error } = await admin.rpc('create_workspace_with_owner', {
+    p_workspace_id: workspaceId,
+    p_name: name,
+    p_receiving_address: receivingAddress,
+    p_croft_email_address: croftEmailAddress,
+    p_user_id: userId,
   })
 
-  if (wsError) {
-    console.error('[auth/callback] workspace insert failed:', wsError)
-    return
-  }
-
-  const { error: memberError } = await admin.from('workspace_members').insert({
-    workspace_id: workspaceId,
-    user_id: userId,
-    role: 'owner',
-  })
-
-  if (memberError) {
-    console.error('[auth/callback] workspace_members insert failed:', memberError)
+  if (error) {
+    console.error('[auth/callback] create_workspace_with_owner failed:', error)
   }
 }
 
