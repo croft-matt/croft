@@ -1,7 +1,8 @@
-import { CheckCircle, Circle, AlertTriangle, Mail, Copy } from 'lucide-react'
+import { CheckCircle, Circle, AlertTriangle, Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { CopyAddressButton } from './copy-address-button'
 
 interface PageProps {
   searchParams: Promise<{ connected?: string; error?: string }>
@@ -150,6 +151,16 @@ function ConnectedCard({
         )}
       </div>
 
+      {inboundAddress && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground mb-0.5">Croft address</p>
+            <p className="truncate font-mono text-xs text-foreground">{inboundAddress}</p>
+          </div>
+          <CopyAddressButton address={inboundAddress} />
+        </div>
+      )}
+
       <div className="space-y-2">
         <StatusRow
           done={account.forwarding_configured}
@@ -176,25 +187,19 @@ function ConnectedCard({
   )
 }
 
-function ForwardingInstructions({ inboundAddress }: { inboundAddress: string }) {
+function ForwardingInstructions(_props: { inboundAddress: string }) {
   return (
     <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4 space-y-3">
       <p className="text-sm font-medium text-amber-300">Set up email forwarding</p>
       <p className="text-sm text-muted-foreground">
-        Add this address as a forwarding address in your Gmail settings, then confirm the
-        verification email Gmail sends to it.
+        Add the Croft address above as a forwarding address in Gmail settings. Gmail will send
+        a verification email -- Croft confirms it automatically.
       </p>
-      <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
-        <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <span className="flex-1 truncate font-mono text-xs text-foreground">
-          {inboundAddress}
-        </span>
-      </div>
       <ol className="space-y-1 text-xs text-muted-foreground">
         <li>1. Open Gmail and go to Settings (gear icon) &gt; See all settings</li>
         <li>2. Click the Forwarding and POP/IMAP tab</li>
         <li>3. Click Add a forwarding address and paste the address above</li>
-        <li>4. Confirm the verification email that Gmail sends</li>
+        <li>4. Wait for confirmation -- Croft handles it automatically</li>
         <li>5. Select Forward a copy of incoming mail and save changes</li>
       </ol>
     </div>
