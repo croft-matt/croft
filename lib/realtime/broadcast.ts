@@ -12,7 +12,7 @@ export async function broadcastToWorkspace(
   const body = JSON.stringify({
     messages: [
       {
-        topic: `workspace:${workspaceId}`,
+        topic: `realtime:workspace:${workspaceId}`,
         event,
         payload,
       },
