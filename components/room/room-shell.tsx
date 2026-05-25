@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import type { Room, Job } from '@/lib/types/database'
 import type { RoomReadModel } from '@/lib/blocks/types'
 import type { CrossReference } from '@/lib/queries/rooms'
+import type { OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { OverdueAlert } from '@/components/room/overdue-alert'
@@ -28,6 +29,7 @@ interface RoomShellProps {
   jobs: Job[]
   childRooms: Room[]
   crossRefs: CrossReference[]
+  ownerGroups: OwnerGroup[]
   parent: Pick<Room, 'id' | 'name'> | null
 }
 
@@ -57,6 +59,7 @@ export function RoomShell({
   jobs,
   childRooms,
   crossRefs,
+  ownerGroups,
   parent,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
@@ -73,7 +76,7 @@ export function RoomShell({
         return (
           <JobsTab
             loops={readModel.openLoops}
-            ownerGroups={[]}
+            ownerGroups={ownerGroups}
             workspaceId={readModel.workspaceId}
           />
         )

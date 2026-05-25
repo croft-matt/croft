@@ -62,6 +62,7 @@ export default async function RoomPage({
       initialEmails={emails}
       initialCrossRefs={crossRefs}
       initialConnectedAddresses={readModel.connectedAddresses}
+      initialTheirCourtByPerson={readModel.theirCourtByPerson ?? []}
       parent={parent ? { id: parent.id, name: parent.name } : null}
     />
   )
