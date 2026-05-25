@@ -656,6 +656,8 @@ export type Database = {
           progress_closed: number
           progress_total: number
           room_data: Json
+          room_summary: string | null
+          room_summary_updated_at: string | null
           updated_at: string
           workspace_id: string
         }
@@ -672,6 +674,8 @@ export type Database = {
           progress_closed?: number
           progress_total?: number
           room_data?: Json
+          room_summary?: string | null
+          room_summary_updated_at?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -688,6 +692,8 @@ export type Database = {
           progress_closed?: number
           progress_total?: number
           room_data?: Json
+          room_summary?: string | null
+          room_summary_updated_at?: string | null
           updated_at?: string
           workspace_id?: string
         }
