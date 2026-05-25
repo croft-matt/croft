@@ -25,6 +25,14 @@ export interface PendingMerge {
 
 const EMPTY: RoomPeople = { persons: [], pendingMerges: [] }
 
+// to_addresses and cc_addresses may be stored as RFC 2822 formatted strings
+// ("Display Name <email@domain.com>") rather than bare addresses. Extract the
+// actual email so we can match against contacts.email_address correctly.
+function extractEmail(raw: string): string {
+  const match = raw.match(/<([^>]+)>/)
+  return (match ? match[1] : raw).toLowerCase().trim()
+}
+
 export async function getRoomPeople(params: {
   workspaceId: string
   roomId: string
@@ -56,14 +64,14 @@ export async function getRoomPeople(params: {
 
   if (!emailRows || emailRows.length === 0) return EMPTY
 
-  // Collect every address across from/to/cc, normalised to lowercase.
+  // Collect every address across from/to/cc, normalised to bare lowercase email.
   const allAddresses = new Set<string>()
   for (const row of emailRows) {
-    allAddresses.add(row.from_address.toLowerCase())
+    allAddresses.add(extractEmail(row.from_address))
     const toArr = Array.isArray(row.to_addresses) ? row.to_addresses : []
     const ccArr = Array.isArray(row.cc_addresses) ? row.cc_addresses : []
-    for (const a of toArr) if (typeof a === 'string') allAddresses.add(a.toLowerCase())
-    for (const a of ccArr) if (typeof a === 'string') allAddresses.add(a.toLowerCase())
+    for (const a of toArr) if (typeof a === 'string') allAddresses.add(extractEmail(a))
+    for (const a of ccArr) if (typeof a === 'string') allAddresses.add(extractEmail(a))
   }
 
   // Exclude the workspace's own connected mailbox addresses.
@@ -91,11 +99,11 @@ export async function getRoomPeople(params: {
   // Walk email rows chronologically and record the first email per person.
   const firstEmail = new Map<string, { id: string; date: string }>()
   for (const row of emailRows) {
-    const rowAddresses: string[] = [row.from_address.toLowerCase()]
+    const rowAddresses: string[] = [extractEmail(row.from_address)]
     const toArr = Array.isArray(row.to_addresses) ? row.to_addresses : []
     const ccArr = Array.isArray(row.cc_addresses) ? row.cc_addresses : []
-    for (const a of toArr) if (typeof a === 'string') rowAddresses.push(a.toLowerCase())
-    for (const a of ccArr) if (typeof a === 'string') rowAddresses.push(a.toLowerCase())
+    for (const a of toArr) if (typeof a === 'string') rowAddresses.push(extractEmail(a))
+    for (const a of ccArr) if (typeof a === 'string') rowAddresses.push(extractEmail(a))
 
     for (const addr of rowAddresses) {
       const personKey = addressToPersonKey.get(addr)
