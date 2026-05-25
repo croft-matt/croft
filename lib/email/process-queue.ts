@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyEmail } from '@/lib/email/batch'
+import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 import type { RateLimitHeaders } from '@/lib/ai/tier3'
 
 export interface ProcessQueueResult {
@@ -89,6 +90,7 @@ export async function processQueuedEmails(): Promise<ProcessQueueResult> {
   let processed = 0
   let failed = 0
   let rateLimited = 0
+  const batchTotal = rows.length
 
   // Work queue: workers pull from the front as they free up.
   const queue = [...groups]
@@ -118,6 +120,13 @@ export async function processQueuedEmails(): Promise<ProcessQueueResult> {
             throttle.lastHeaders = result.rateLimitHeaders
           }
           processed++
+          broadcastToWorkspace(email.workspace_id, 'classify_progress', {
+            emailId: email.id,
+            processed,
+            total: batchTotal,
+          }).catch((err: unknown) =>
+            console.error(`process-queue: classify_progress broadcast failed:`, err),
+          )
         } catch (err) {
           if (isRateLimitError(err)) {
             rateLimited++
@@ -167,6 +176,43 @@ export async function processQueuedEmails(): Promise<ProcessQueueResult> {
     .from('emails')
     .select('id', { count: 'exact', head: true })
     .eq('processing_state', 'queued')
+
+  // When the queue is empty, check whether any emails are still in-flight
+  // across all pipeline stages. If not, and if the workspace has not already
+  // been marked complete, broadcast processing_complete and set the flag.
+  // This fires at most once per workspace: subsequent runs skip it because
+  // onboarding_complete will already be true.
+  if ((remaining ?? 0) === 0 && rows.length > 0) {
+    // Collect distinct workspace IDs from this batch.
+    const workspaceIds = [...new Set(rows.map((r) => r.workspace_id))]
+
+    for (const wsId of workspaceIds) {
+      const { count: inFlight } = await supabase
+        .from('emails')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', wsId)
+        .in('processing_state', ['received', 'urgency_scanned', 'queued', 'processing'])
+
+      if ((inFlight ?? 1) > 0) continue
+
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('onboarding_complete')
+        .eq('id', wsId)
+        .single()
+
+      if (workspace?.onboarding_complete) continue
+
+      await supabase
+        .from('workspaces')
+        .update({ onboarding_complete: true })
+        .eq('id', wsId)
+
+      broadcastToWorkspace(wsId, 'processing_complete', {}).catch((err: unknown) =>
+        console.error(`process-queue: processing_complete broadcast failed for ${wsId}:`, err),
+      )
+    }
+  }
 
   return { processed, failed, rateLimited, remaining: remaining ?? 0 }
 }

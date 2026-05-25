@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 import stringSimilarity from 'string-similarity'
 
 // Minimum Dice coefficient for a fuzzy name match at a given tree level.
@@ -148,6 +149,12 @@ export async function fileEmailToRooms(
       allRooms.push({ id: newRoom.id, name: segment, parent_room_id: parentId })
       parentId = newRoom.id
       leafId = newRoom.id
+
+      // Notify the processing gate that a new room was created.
+      // Non-fatal: a broadcast failure must not stop the filing.
+      broadcastToWorkspace(workspaceId, 'room_created', { roomId: newRoom.id, name: segment }).catch(
+        (err: unknown) => console.error(`fileEmailToRooms: room_created broadcast failed:`, err),
+      )
     }
 
     if (!pathBroken && leafId) {

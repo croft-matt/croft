@@ -1,6 +1,7 @@
 import { task } from '@trigger.dev/sdk/v3'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runNoiseGate } from '@/lib/ai/tier1'
+import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
 import { urgencyTask } from './urgency'
 
 export interface NoiseGatePayload {
@@ -30,6 +31,8 @@ export const noiseGateTask = task({
         .update({ processing_state: 'ignored' })
         .eq('id', emailId)
 
+      await broadcastToWorkspace(email.workspace_id, 'filter_progress', { emailId, passed: false })
+
       return { emailId, relevant: false, reason: result.reason }
     }
 
@@ -37,6 +40,8 @@ export const noiseGateTask = task({
       .from('emails')
       .update({ processing_state: 'urgency_scanned' })
       .eq('id', emailId)
+
+    await broadcastToWorkspace(email.workspace_id, 'filter_progress', { emailId, passed: true })
 
     await urgencyTask.trigger({ emailId })
 
