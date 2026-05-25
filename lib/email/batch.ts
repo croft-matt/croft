@@ -51,6 +51,13 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
     const candidateJobIds = new Set(context.openJobs.map((j) => j.id))
     const result = await runFullClassification(email, context)
 
+    const rateLimitHeaders = result.rateLimitHeaders
+
+    // Write structured intelligence before marking processed. The email stays in
+    // `processing` until all derived writes complete so that the sweeper can recover
+    // it if the worker is killed between classification and the derived writes.
+    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as unknown as AttachmentMeta[])
+
     await supabase
       .from('emails')
       .update({
@@ -62,18 +69,13 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
       })
       .eq('id', emailId)
 
-    const rateLimitHeaders = result.rateLimitHeaders
-
-    // Write structured intelligence derived from the extraction.
-    // These writes are non-fatal: failure here does not mark the email as failed.
-    // The email processed successfully. Write errors are logged and retried separately.
-    const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as unknown as AttachmentMeta[])
-
     // Enqueue room synthesis for each room the email was filed into.
     // Pass emailId so facts from this email are merged into room_data.
+    // concurrencyKey serializes synthesis per room: two emails classified at the
+    // same time for the same room will not race on room_data.
     // Non-fatal: a synthesis failure must not affect the email's processing state.
     for (const roomId of matchedRoomIds) {
-      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId, emailId }).catch((err: unknown) => {
+      tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId, emailId }, { concurrencyKey: roomId }).catch((err: unknown) => {
         console.error(`classifyEmail: synthesis trigger failed for room ${roomId}:`, err)
       })
     }

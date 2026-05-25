@@ -14,6 +14,10 @@ export interface SynthesiseRoomPayload {
 export const synthesiseRoomTask = task({
   id: 'synthesise-room',
   maxDuration: 60,
+  // concurrencyLimit: 1 combined with a per-room concurrencyKey at the trigger
+  // call site serializes synthesis runs for the same room, preventing the
+  // lost-update race on room_data when multiple emails are classified at once.
+  queue: { concurrencyLimit: 1 },
   run: async (payload: SynthesiseRoomPayload) => {
     const { roomId, emailId } = payload
     await synthesiseRoom(roomId, emailId)
