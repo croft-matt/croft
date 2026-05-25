@@ -1,10 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireUser } from '@/lib/auth/helpers'
+import { requireUser, getWorkspaceId } from '@/lib/auth/helpers'
 import { tasks } from '@trigger.dev/sdk/v3'
 import type { classifyNowTask } from '@/trigger/jobs/classify-now'
-import type { Email, Job, Asset, ExtractedContact, Extraction } from '@/lib/types/database'
+import type { Email, Job, Asset, ExtractedContact, Extraction, Room } from '@/lib/types/database'
+import {
+  getEmailById,
+  getJobsByEmailId,
+  getAssetsByEmailId,
+  getContactsMentionedInEmail,
+  getRoomsForEmail,
+} from '@/lib/queries/emails'
 
 // Enqueues on-demand Tier 3 for an email if it is queued or urgency_scanned.
 // Safe to call multiple times: if already processing or processed, does nothing.
@@ -56,4 +63,36 @@ export async function getEmailExtractionData(emailId: string): Promise<EmailExtr
     assets: (assets ?? []) as Asset[],
     extractedContacts,
   }
+}
+
+export interface EmailPanelData {
+  email: Email
+  jobs: Job[]
+  assets: Asset[]
+  extractedContacts: ExtractedContact[]
+  rooms: Pick<Room, 'id' | 'name'>[]
+  workspaceId: string
+}
+
+// Returns all data needed to render the email detail view inside the side panel.
+// getContactsMentionedInEmail is a pure sync function that reads from email.extraction,
+// so the email must be fetched first before calling it.
+export async function getEmailPanelData(emailId: string): Promise<EmailPanelData | null> {
+  await requireUser()
+
+  const workspaceId = await getWorkspaceId()
+  if (!workspaceId) return null
+
+  const email = await getEmailById(emailId)
+  if (!email) return null
+
+  const [jobs, assets, rooms] = await Promise.all([
+    getJobsByEmailId(emailId),
+    getAssetsByEmailId(emailId),
+    getRoomsForEmail(emailId),
+  ])
+
+  const extractedContacts = getContactsMentionedInEmail(email)
+
+  return { email, jobs, assets, extractedContacts, rooms, workspaceId }
 }
