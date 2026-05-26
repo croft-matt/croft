@@ -233,18 +233,23 @@ export function RoomShell({
         <CrossReferenceCards crossRefs={crossRefs} />
 
         {/* Tab bar: full width, flush under header */}
-        <div className="flex border-b border-border px-6">
+        <div className="flex items-center gap-2 px-6 pt-4 pb-2">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'mr-6 pb-3 pt-3 text-sm transition-colors',
+                'h-[27px] px-[10px] text-xs font-medium rounded-full transition-colors inline-flex items-center cursor-pointer',
                 activeTab === tab.id
-                  ? 'border-b-2 border-primary text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground',
+                  ? 'bg-[#202021] text-white'
+                  : 'bg-[#141415] text-[#949496] hover:text-white',
               )}
+              style={
+                activeTab === tab.id
+                  ? { boxShadow: '0px 0px 0px 0.5px rgba(255, 255, 255, 0.16)' }
+                  : { boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.08), 0px 4px 4px -1px rgba(0, 0, 0, 0.04), 0px 0px 0px 0.5px rgba(255, 255, 255, 0.14)' }
+              }
             >
               {tab.label}
             </button>

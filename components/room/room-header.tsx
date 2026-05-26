@@ -109,7 +109,7 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
   }
 
   return (
-    <div className="border-b border-border px-6 py-5">
+    <div className="border-b border-border px-6 pt-5 pb-3">
       {parent && (
         <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
           <Link href={`/rooms/${parent.id}`} className="hover:text-foreground transition-colors">
