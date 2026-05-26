@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { FileText, FileSpreadsheet, FileImage, File, FileCode } from 'lucide-react'
+import { FileText, FileSpreadsheet, FileImage, File, FileCode, Upload } from 'lucide-react'
 import type { WorkspaceAsset, AssetGroup, AssetFileType } from '@/lib/queries/assets'
 import { AssetViewerModal } from '@/components/assets/asset-viewer-modal'
+import { Button } from '@/components/ui/button'
+import { useWorkspaceUpload } from '@/hooks/use-workspace-upload'
 
 interface ViewingAsset {
   id: string
@@ -84,17 +86,30 @@ interface AssetsGridProps {
 
 export function AssetsGrid({ groups, total }: AssetsGridProps) {
   const [viewingAsset, setViewingAsset] = useState<ViewingAsset | null>(null)
-
-  if (groups.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No assets yet — they appear once emails with attachments come in.
-      </p>
-    )
-  }
+  const { uploading, errors, openPicker } = useWorkspaceUpload()
 
   return (
     <>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Assets</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {total} {total === 1 ? 'file' : 'files'} across your workspace
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => openPicker()} disabled={uploading}>
+          <Upload className="h-3.5 w-3.5 mr-1.5" />
+          {uploading ? 'Uploading...' : 'Upload file'}
+        </Button>
+      </div>
+
+      {errors.length > 0 && (
+        <p className="text-xs text-destructive mb-6">{errors.join(' ')}</p>
+      )}
+
+      {groups.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No files yet.</p>
+      ) : (
       <div className="space-y-10">
         {groups.map((group) => (
           <section key={group.fileType}>
@@ -110,6 +125,7 @@ export function AssetsGrid({ groups, total }: AssetsGridProps) {
           </section>
         ))}
       </div>
+      )}
 
       {viewingAsset && (
         <AssetViewerModal

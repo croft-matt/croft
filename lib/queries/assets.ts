@@ -67,7 +67,11 @@ export async function getWorkspaceAssetsGrouped(workspaceId: string): Promise<As
 
   const { data, error } = await supabase
     .from('assets')
-    .select('id, filename, likely_type, mime_type, size_bytes, created_at, storage_path, email_id, emails(received_at, room_emails(rooms(id, name)))')
+    .select(`
+      id, filename, likely_type, mime_type, size_bytes, created_at, storage_path, email_id, room_id,
+      emails(received_at, room_emails(rooms(id, name))),
+      rooms(id, name)
+    `)
     .eq('workspace_id', workspaceId)
     .not('storage_path', 'is', null)
     .order('created_at', { ascending: false })
@@ -78,15 +82,18 @@ export async function getWorkspaceAssetsGrouped(workspaceId: string): Promise<As
   for (const ft of FILE_TYPE_ORDER) grouped.set(ft, [])
 
   for (const row of data) {
+    if (!row.storage_path) continue
+
     const emailJoin = row.emails as {
       received_at: string
       room_emails: Array<{ rooms: { id: string; name: string } | null }>
     } | null
 
-    if (!emailJoin || !row.storage_path) continue
-
-    // Take the first room this email belongs to
-    const firstRoom = emailJoin.room_emails?.[0]?.rooms ?? null
+    // For email-derived assets, resolve room via the email's room_emails join.
+    // For uploaded assets, resolve room via the direct room_id foreign key.
+    const emailRoom = emailJoin?.room_emails?.[0]?.rooms ?? null
+    const directRoom = row.rooms as { id: string; name: string } | null
+    const resolvedRoom = emailRoom ?? directRoom
 
     const fileType = classifyFileType(row.mime_type, row.filename)
 
@@ -98,10 +105,10 @@ export async function getWorkspaceAssetsGrouped(workspaceId: string): Promise<As
       sizeBytes: row.size_bytes,
       fileType,
       createdAt: row.created_at,
-      emailDate: emailJoin.received_at,
+      emailDate: emailJoin?.received_at ?? row.created_at,
       storagePath: row.storage_path,
-      roomId: firstRoom?.id ?? null,
-      roomName: firstRoom?.name ?? null,
+      roomId: resolvedRoom?.id ?? null,
+      roomName: resolvedRoom?.name ?? null,
     })
   }
 

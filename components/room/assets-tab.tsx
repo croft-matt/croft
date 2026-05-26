@@ -1,13 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, FileSpreadsheet, FileImage, File } from 'lucide-react'
+import { FileText, FileSpreadsheet, FileImage, File, Upload } from 'lucide-react'
 import type { RoomAssets, RoomAsset } from '@/lib/rooms/assets'
 import { EmailCitation } from '@/components/room/email-citation'
 import { AssetViewerModal } from '@/components/assets/asset-viewer-modal'
+import { Button } from '@/components/ui/button'
+import { useRoomUpload } from '@/hooks/use-room-upload'
 
 interface AssetsTabProps {
   assets: RoomAssets
+  roomId: string
 }
 
 interface ViewingAsset {
@@ -65,7 +68,7 @@ function formatDate(iso: string): string {
 
 function AssetRow({ asset, onOpen }: { asset: RoomAsset; onOpen: (a: ViewingAsset) => void }) {
   const fileSize = formatFileSize(asset.size_bytes)
-  const senderLabel = asset.from_name ?? 'Unknown'
+  const isUpload = asset.source === 'user_upload'
 
   return (
     <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
@@ -73,15 +76,26 @@ function AssetRow({ asset, onOpen }: { asset: RoomAsset; onOpen: (a: ViewingAsse
 
       <div className="min-w-0 flex-1">
         <button
-          onClick={() => onOpen({ id: asset.id, filename: asset.filename, mimeType: asset.mime_type ?? null })}
+          onClick={() =>
+            onOpen({ id: asset.id, filename: asset.filename, mimeType: asset.mime_type ?? null })
+          }
           className="text-sm font-medium text-foreground hover:text-muted-foreground transition-colors truncate block text-left w-full"
         >
           {asset.filename}
         </button>
 
         <p className="text-xs text-muted-foreground mt-0.5">
-          From {senderLabel}, {formatDate(asset.email_date)}
-          {fileSize && <span className="ml-2 text-muted-foreground/60">{fileSize}</span>}
+          {isUpload ? (
+            <>
+              Uploaded {formatDate(asset.email_date)}
+              {fileSize && <span className="ml-2 text-muted-foreground/60">{fileSize}</span>}
+            </>
+          ) : (
+            <>
+              From {asset.from_name ?? 'Unknown'}, {formatDate(asset.email_date)}
+              {fileSize && <span className="ml-2 text-muted-foreground/60">{fileSize}</span>}
+            </>
+          )}
         </p>
       </div>
 
@@ -92,7 +106,11 @@ function AssetRow({ asset, onOpen }: { asset: RoomAsset; onOpen: (a: ViewingAsse
           </span>
         )}
 
-        <EmailCitation emailId={asset.email_id} />
+        {isUpload ? (
+          <span className="text-xs text-muted-foreground">Uploaded manually</span>
+        ) : (
+          <EmailCitation emailId={asset.email_id ?? ''} />
+        )}
       </div>
     </div>
   )
@@ -123,29 +141,43 @@ function StatusGroup({
   )
 }
 
-export function AssetsTab({ assets }: AssetsTabProps) {
+export function AssetsTab({ assets, roomId }: AssetsTabProps) {
   const [viewingAsset, setViewingAsset] = useState<ViewingAsset | null>(null)
-
-  if (assets.total === 0) {
-    return (
-      <div className="py-8 text-sm text-muted-foreground">
-        No files have been received in this room.
-      </div>
-    )
-  }
+  const { uploading, errors, openPicker } = useRoomUpload(roomId)
 
   return (
     <>
-      <div>
-        {STATUS_ORDER.map((status) => (
-          <StatusGroup
-            key={status}
-            status={status}
-            items={assets[status]}
-            onOpen={setViewingAsset}
-          />
-        ))}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-medium text-muted-foreground">Files</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openPicker()}
+          disabled={uploading}
+        >
+          <Upload className="h-3.5 w-3.5 mr-1.5" />
+          {uploading ? 'Uploading...' : 'Upload file'}
+        </Button>
       </div>
+
+      {errors.length > 0 && (
+        <p className="text-xs text-destructive mb-3">{errors.join(' ')}</p>
+      )}
+
+      {assets.total === 0 ? (
+        <div className="py-8 text-sm text-muted-foreground">No files in this room yet.</div>
+      ) : (
+        <div>
+          {STATUS_ORDER.map((status) => (
+            <StatusGroup
+              key={status}
+              status={status}
+              items={assets[status]}
+              onOpen={setViewingAsset}
+            />
+          ))}
+        </div>
+      )}
 
       {viewingAsset && (
         <AssetViewerModal

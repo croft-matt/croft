@@ -21,6 +21,7 @@ import {
   FolderOpen,
   Send,
   User,
+  Upload,
 } from 'lucide-react'
 import type { OpenLoops, OpenLoop, OwnerGroup } from '@/lib/jobs/open-loops'
 import type { CommandDefinition } from './registry'
@@ -347,6 +348,21 @@ function buildRoomCommands(params: UseRoomCommandsParams): CommandDefinition[] {
       },
     })
   }
+
+  // Upload file: dispatches an event that the room shell's listener picks up.
+  // The room shell holds the file picker so the user gesture requirement is met.
+  commands.push({
+    id: `room-upload-file-${room.id}`,
+    group: 'rooms',
+    label: 'Upload file to room',
+    keywords: ['upload', 'file', 'attach', 'add file', 'import'],
+    icon: Upload,
+    context: 'in-room',
+    action: () => {
+      closePalette()
+      window.dispatchEvent(new Event('croft:open-upload-picker'))
+    },
+  })
 
   // Add a block (always show; sub-step filters to non-active blocks)
   commands.push({

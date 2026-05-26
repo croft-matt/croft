@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRoomUpload } from '@/hooks/use-room-upload'
 import type { Room, Job } from '@/lib/types/database'
 import type { RoomReadModel } from '@/lib/blocks/types'
 import type { CrossReference } from '@/lib/queries/rooms'
@@ -64,8 +66,21 @@ export function RoomShell({
   workspaceId,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('brief')
+
+  // Read ?tab= from the URL on mount so cross-room views can link directly to a tab.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab') as RoomTab | null
+    if (tab && TABS.some((t) => t.id === tab)) {
+      setActiveTab(tab)
+    }
+  }, [])
+
   const { isOpen } = useEmailSidePanel()
   const router = useRouter()
+  const [dragging, setDragging] = useState(false)
+  const dragCounter = useRef(0)
+  const { upload, openPicker } = useRoomUpload(room.id)
   // showPanel stays true for 200ms after isOpen goes false so the exit
   // animation completes before the panel is removed from the DOM.
   const [showPanel, setShowPanel] = useState(false)
@@ -88,6 +103,38 @@ export function RoomShell({
   // room.id is stable for the lifetime of a room shell mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id])
+
+  // Listen for the upload picker event dispatched by the command palette.
+  useEffect(() => {
+    const handler = () => openPicker()
+    window.addEventListener('croft:open-upload-picker', handler)
+    return () => window.removeEventListener('croft:open-upload-picker', handler)
+  }, [openPicker])
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    if (e.dataTransfer.types.includes('Files')) {
+      dragCounter.current += 1
+      setDragging(true)
+    }
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    dragCounter.current -= 1
+    if (dragCounter.current === 0) setDragging(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      dragCounter.current = 0
+      setDragging(false)
+      if (e.dataTransfer.files.length) {
+        upload(e.dataTransfer.files)
+      }
+    },
+    [upload]
+  )
 
   // Listen for tab-switch events dispatched by command palette tab commands.
   useEffect(() => {
@@ -149,7 +196,7 @@ export function RoomShell({
       case 'dates':
         return <DatesTab roomDates={assembleDates(readModel)} />
       case 'assets':
-        return <AssetsTab assets={roomAssets} />
+        return <AssetsTab assets={roomAssets} roomId={room.id} />
       case 'people':
         return <PeopleTab people={roomPeople} />
       case 'record':
@@ -158,7 +205,21 @@ export function RoomShell({
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div
+      className="flex flex-1 overflow-hidden relative"
+      onDragEnter={handleDragEnter}
+      onDragOver={(e) => e.preventDefault()}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragging && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Upload className="h-8 w-8" />
+            <p className="text-sm font-medium">Drop files to upload to this room</p>
+          </div>
+        </div>
+      )}
       {/* Room content column: full width normally, 50% when side panel is open.
           On narrow viewports the column is hidden while the panel is open. */}
       <div

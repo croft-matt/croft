@@ -43,12 +43,14 @@ export type Database = {
         Row: {
           confidence: number | null
           created_at: string
-          email_id: string
+          email_id: string | null
           filename: string
           id: string
           likely_type: string | null
           mime_type: string | null
+          room_id: string | null
           size_bytes: number | null
+          source: string
           status: string
           status_updated_at: string | null
           storage_path: string | null
@@ -57,12 +59,14 @@ export type Database = {
         Insert: {
           confidence?: number | null
           created_at?: string
-          email_id: string
+          email_id?: string | null
           filename: string
           id?: string
           likely_type?: string | null
           mime_type?: string | null
+          room_id?: string | null
           size_bytes?: number | null
+          source?: string
           status?: string
           status_updated_at?: string | null
           storage_path?: string | null
@@ -71,12 +75,14 @@ export type Database = {
         Update: {
           confidence?: number | null
           created_at?: string
-          email_id?: string
+          email_id?: string | null
           filename?: string
           id?: string
           likely_type?: string | null
           mime_type?: string | null
+          room_id?: string | null
           size_bytes?: number | null
+          source?: string
           status?: string
           status_updated_at?: string | null
           storage_path?: string | null
@@ -88,6 +94,13 @@ export type Database = {
             columns: ["email_id"]
             isOneToOne: false
             referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {

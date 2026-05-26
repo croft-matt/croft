@@ -10,7 +10,8 @@ export interface RoomAsset {
   storage_path: string
   mime_type: string | null
   size_bytes: number | null
-  email_id: string
+  source: 'email_attachment' | 'user_upload'
+  email_id: string | null
   from_name: string | null
   email_date: string
   created_at: string
@@ -59,14 +60,21 @@ export async function getRoomAssets(params: {
     ids = (reData ?? []).map((r) => r.email_id)
   }
 
-  if (ids.length === 0) return { ...EMPTY }
-
-  const { data, error } = await supabase
+  // Build query. Always include assets uploaded directly to this room (room_id match).
+  // Also include email-derived assets if there are emails in the room (email_id match).
+  let query = supabase
     .from('assets')
     .select('*, emails(from_name, received_at)')
-    .in('email_id', ids)
     .not('storage_path', 'is', null)
     .eq('workspace_id', workspaceId)
+
+  if (ids.length > 0) {
+    query = query.or(`room_id.eq.${roomId},email_id.in.(${ids.join(',')})`)
+  } else {
+    query = query.eq('room_id', roomId)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return { ...EMPTY }
 
@@ -80,13 +88,16 @@ export async function getRoomAssets(params: {
   const flat: Asset[] = []
 
   for (const row of data) {
-    const emailJoin = row.emails as { from_name: string | null; received_at: string } | null
-    if (!emailJoin || !row.storage_path) continue
+    if (!row.storage_path) continue
 
     const status = row.status as string
     if (!VALID_STATUSES.has(status)) continue
 
     const typedStatus = status as RoomAsset['status']
+    const emailJoin = row.emails as { from_name: string | null; received_at: string } | null
+
+    // Determine source: fall back to 'email_attachment' for rows that pre-date the column.
+    const source = (row.source as string) === 'user_upload' ? 'user_upload' : 'email_attachment'
 
     grouped[typedStatus].push({
       id: row.id,
@@ -97,16 +108,17 @@ export async function getRoomAssets(params: {
       storage_path: row.storage_path,
       mime_type: row.mime_type,
       size_bytes: row.size_bytes,
-      email_id: row.email_id,
-      from_name: emailJoin.from_name,
-      email_date: emailJoin.received_at,
+      source,
+      email_id: row.email_id ?? null,
+      from_name: emailJoin?.from_name ?? null,
+      email_date: emailJoin?.received_at ?? row.created_at,
       created_at: row.created_at,
     })
 
     flat.push({
       id: row.id,
       workspace_id: row.workspace_id,
-      email_id: row.email_id,
+      email_id: row.email_id ?? null,
       filename: row.filename,
       mime_type: row.mime_type,
       size_bytes: row.size_bytes,
@@ -116,7 +128,7 @@ export async function getRoomAssets(params: {
       status: row.status,
       status_updated_at: row.status_updated_at,
       created_at: row.created_at,
-    })
+    } as Asset)
   }
 
   // Sort each group by email_date desc (most recent first).
