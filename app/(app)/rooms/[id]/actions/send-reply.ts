@@ -3,8 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
-import { generateReplySuggestion, getRoomAssetsForCompose } from '@/lib/ai/reply-suggestion'
-import type { ComposeAsset } from '@/lib/ai/reply-suggestion'
+import { generateReplySuggestion } from '@/lib/ai/reply-suggestion'
+import { getWorkspaceAssetsGrouped } from '@/lib/queries/assets'
+import type { AssetGroup } from '@/lib/queries/assets'
 
 export async function sendReply(params: {
   roomId: string
@@ -98,11 +99,20 @@ export async function getReplysuggestion(
   return generateReplySuggestion({ emailId, roomId })
 }
 
-export async function fetchComposeAssets(roomId: string): Promise<ComposeAsset[]> {
+export async function fetchWorkspaceAssetsForCompose(): Promise<AssetGroup[]> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return []
-  return getRoomAssetsForCompose(roomId)
+
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .single()
+
+  if (!membership) return []
+  return getWorkspaceAssetsGrouped(membership.workspace_id)
 }

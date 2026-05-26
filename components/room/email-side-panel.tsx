@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, ArrowLeft, Paperclip, File, Send, Loader2 } from 'lucide-react'
+import { X, ArrowLeft, Paperclip, Send, Loader2 } from 'lucide-react'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { getEmailPanelData, type EmailPanelData } from '@/lib/email/actions'
 import { EmailHeader } from '@/components/email/email-header'
 import { EmailProcessingProvider } from '@/components/email/email-processing'
-import { sendReply, getReplysuggestion, fetchComposeAssets } from '@/app/(app)/rooms/[id]/actions/send-reply'
-import type { ComposeAsset } from '@/lib/ai/reply-suggestion'
-import { cn } from '@/lib/utils'
+import { sendReply, getReplysuggestion, fetchWorkspaceAssetsForCompose } from '@/app/(app)/rooms/[id]/actions/send-reply'
+import { AssetPickerModal } from '@/components/room/asset-picker-modal'
+import type { AssetGroup, WorkspaceAsset } from '@/lib/queries/assets'
 import type { Email } from '@/lib/types/database'
 
 // ---------------------------------------------------------------------------
@@ -38,14 +38,20 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
 
   const [body, setBody] = useState('')
   const [suggestionLoading, setSuggestionLoading] = useState(true)
-  const [assets, setAssets] = useState<ComposeAsset[]>([])
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [assetModalOpen, setAssetModalOpen] = useState(false)
+  const [assetGroups, setAssetGroups] = useState<AssetGroup[]>([])
+  const [assetGroupsLoading, setAssetGroupsLoading] = useState(false)
+  const [assetGroupsFetched, setAssetGroupsFetched] = useState(false)
+
+  // Flat list of all assets across groups, used for the selected-chips row.
+  const allAssets: WorkspaceAsset[] = assetGroups.flatMap((g) => g.assets)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Fetch suggestion and room assets when compose opens.
+  // Fetch AI suggestion when compose opens.
   useEffect(() => {
     if (!roomId) {
       setSuggestionLoading(false)
@@ -54,29 +60,26 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
 
     setSuggestionLoading(true)
 
-    Promise.all([
-      getReplysuggestion(email.id, roomId),
-      fetchComposeAssets(roomId),
-    ]).then(([suggestion, roomAssets]) => {
+    getReplysuggestion(email.id, roomId).then((suggestion) => {
       setBody(suggestion)
-      setAssets(roomAssets)
-
-      // Pre-select chips where the suggestion mentions the asset by filename.
-      if (suggestion && roomAssets.length > 0) {
-        const lowerSuggestion = suggestion.toLowerCase()
-        const preSelected = roomAssets
-          .filter((a) => lowerSuggestion.includes(a.filename.toLowerCase()))
-          .map((a) => a.id)
-        setSelectedAssetIds(preSelected)
-      }
-
       setSuggestionLoading(false)
-      // Focus the textarea after suggestion loads.
       textareaRef.current?.focus()
     })
   // Only runs once when compose opens for this email + room combination.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email.id, roomId])
+
+  // Lazy-fetch workspace assets the first time the picker is opened.
+  function openAssetModal() {
+    setAssetModalOpen(true)
+    if (assetGroupsFetched) return
+    setAssetGroupsLoading(true)
+    fetchWorkspaceAssetsForCompose().then((groups) => {
+      setAssetGroups(groups)
+      setAssetGroupsLoading(false)
+      setAssetGroupsFetched(true)
+    })
+  }
 
   function toggleAsset(id: string) {
     setSelectedAssetIds((prev) =>
@@ -119,7 +122,7 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
   }
 
   return (
-    <div className="bg-background flex flex-col flex-1 pt-4 overflow-hidden">
+    <div className="relative bg-background flex flex-col flex-1 pt-4 overflow-hidden">
       {/* To field */}
       <div className="px-6 pb-2">
         <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
@@ -162,39 +165,32 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
         )}
       </div>
 
-      {/* Asset chips */}
-      {assets.length > 0 && (
-        <div className="px-6 pb-3">
-          <div className="flex flex-wrap gap-1.5">
-            {assets.map((asset) => {
-              const selected = selectedAssetIds.includes(asset.id)
+      {/* Selected attachments */}
+      {selectedAssetIds.length > 0 && (
+        <div className="px-6 pb-2 flex flex-wrap gap-1.5">
+          {allAssets
+            .filter((a) => selectedAssetIds.includes(a.id))
+            .map((asset) => {
               const truncated =
-                asset.filename.length > 24
-                  ? asset.filename.slice(0, 21) + '...'
-                  : asset.filename
+                asset.filename.length > 22 ? asset.filename.slice(0, 19) + '...' : asset.filename
               return (
-                <button
+                <span
                   key={asset.id}
-                  type="button"
-                  onClick={() => toggleAsset(asset.id)}
-                  title={asset.filename}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors border',
-                    selected
-                      ? 'bg-foreground/10 border-foreground/20 text-foreground'
-                      : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground hover:border-border/80',
-                  )}
+                  className="flex items-center gap-1 rounded-full bg-foreground/10 border border-foreground/20 pl-2 pr-1 py-0.5 text-[11px] font-medium text-foreground"
                 >
-                  {selected ? (
-                    <Paperclip className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <File className="h-3 w-3 shrink-0" />
-                  )}
+                  <Paperclip className="h-2.5 w-2.5 shrink-0" />
                   {truncated}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleAsset(asset.id)}
+                    className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5 transition-colors"
+                    aria-label={`Remove ${asset.filename}`}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
               )
             })}
-          </div>
         </div>
       )}
 
@@ -207,14 +203,26 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
 
       {/* Actions */}
       <div className="px-6 pb-5 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={sending}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+              type="button"
+              onClick={openAssetModal}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+              {selectedAssetIds.length > 0
+                ? `${selectedAssetIds.length} attached`
+                : 'Add attachment'}
+            </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={sending}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        </div>
 
         <button
           type="button"
@@ -230,6 +238,17 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
           Send
         </button>
       </div>
+
+      {/* Asset picker modal */}
+      {assetModalOpen && (
+        <AssetPickerModal
+          groups={assetGroups}
+          loading={assetGroupsLoading}
+          selectedIds={selectedAssetIds}
+          onToggle={toggleAsset}
+          onClose={() => setAssetModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
