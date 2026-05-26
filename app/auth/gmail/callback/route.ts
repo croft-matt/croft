@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${errorUrl}profile_fetch_failed`)
   }
 
-  const profile = (await profileResponse.json()) as { emailAddress: string }
+  const profile = (await profileResponse.json()) as { emailAddress: string; historyId?: string }
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
   const scopes = tokens.scope.split(' ')
 
@@ -125,7 +125,6 @@ export async function GET(request: NextRequest) {
         refresh_token_encrypted: encryptToken(tokens.refresh_token),
         token_expires_at: expiresAt,
         scopes,
-        forwarding_configured: false,
         history_imported: false,
       },
       { onConflict: 'workspace_id,email_address' }
@@ -138,9 +137,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${errorUrl}account_save_failed`)
   }
 
-  // Enqueue the forwarding setup job. Uses string ID to avoid importing the
-  // task file directly — allows this commit to be independent of the jobs commit.
-  await tasks.trigger('configure-gmail-forwarding', { accountId: account.id })
+  // Store the current historyId so the delta sync knows where to start after
+  // the initial import completes. The profile fetch above already returned it.
+  if (profile.historyId) {
+    await adminSupabase
+      .from('email_accounts')
+      .update({ last_history_id: String(profile.historyId) })
+      .eq('id', account.id)
+  }
+
+  await tasks.trigger('import-gmail-history', { accountId: account.id })
 
   return NextResponse.redirect(successUrl)
 }
