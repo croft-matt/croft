@@ -121,7 +121,7 @@ export default async function OverduePage() {
               {roomJobs.map((job) => {
                 const overdue = daysOverdue(job.due)
                 return (
-                  <div key={`${job.id}-${roomId}`} className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3">
+                  <Link key={`${job.id}-${roomId}`} href={`/rooms/${roomId}?tab=jobs`} className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3 hover:bg-accent transition-colors">
                     <p className="text-sm text-foreground">{job.description}</p>
                     <div className="shrink-0 text-right">
                       <p className="text-xs text-muted-foreground">{formatDate(job.due)}</p>
@@ -129,7 +129,7 @@ export default async function OverduePage() {
                         {overdue === 1 ? '1 day overdue' : `${overdue} days overdue`}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>

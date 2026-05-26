@@ -130,7 +130,11 @@ export default async function AwaitingMePage() {
             </Link>
             <div className="mt-3 space-y-2">
               {roomJobs.map((job) => (
-                <div key={`${job.id}-${roomId}`} className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3">
+                <Link
+                  key={`${job.id}-${roomId}`}
+                  href={`/rooms/${roomId}?tab=jobs`}
+                  className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3 hover:bg-accent transition-colors"
+                >
                   <div className="flex items-start gap-2 min-w-0">
                     <UrgencyDot score={job.urgency_score} />
                     <p className="text-sm text-foreground">{job.description}</p>
@@ -140,7 +144,7 @@ export default async function AwaitingMePage() {
                       Due {new Date(job.due).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </p>
                   )}
-                </div>
+                </Link>
               ))}
             </div>
           </div>
