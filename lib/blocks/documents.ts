@@ -7,7 +7,7 @@ export interface DocumentItem {
   likely_type: string | null
   status: string
   storage_path: string | null
-  email_id: string
+  email_id: string | null
   created_at: string
 }
 

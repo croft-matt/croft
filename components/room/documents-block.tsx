@@ -97,14 +97,16 @@ export function DocumentsBlock({ data }: DocumentsBlockProps) {
 
                     <StatusPill status={item.status} />
 
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Link
-                        href={`/emails/${item.email_id}`}
-                        className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        source
-                      </Link>
-                    </div>
+                    {item.email_id && (
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Link
+                          href={`/emails/${item.email_id}`}
+                          className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          source
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
