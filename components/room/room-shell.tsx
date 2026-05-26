@@ -11,8 +11,6 @@ import type { CrossReference } from '@/lib/queries/rooms'
 import type { OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
-import { EmailSidePanel } from '@/components/room/email-side-panel'
-import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { useCommandPalette } from '@/stores/command-palette-store'
 import { useRoomCommands } from '@/lib/command-palette/use-room-commands'
 import { BriefTab } from '@/components/room/brief-tab'
@@ -76,23 +74,10 @@ export function RoomShell({
     }
   }, [])
 
-  const { isOpen } = useEmailSidePanel()
   const router = useRouter()
   const [dragging, setDragging] = useState(false)
   const dragCounter = useRef(0)
   const { upload, openPicker } = useRoomUpload(room.id)
-  // showPanel stays true for 200ms after isOpen goes false so the exit
-  // animation completes before the panel is removed from the DOM.
-  const [showPanel, setShowPanel] = useState(false)
-
-  useEffect(() => {
-    if (isOpen) {
-      setShowPanel(true)
-    } else {
-      const timer = setTimeout(() => setShowPanel(false), 200)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen])
 
   // Set palette context and room ID while this room shell is mounted.
   useEffect(() => {
@@ -206,7 +191,7 @@ export function RoomShell({
 
   return (
     <div
-      className="flex flex-1 overflow-hidden relative"
+      className="flex flex-col flex-1 overflow-hidden relative"
       onDragEnter={handleDragEnter}
       onDragOver={(e) => e.preventDefault()}
       onDragLeave={handleDragLeave}
@@ -220,14 +205,7 @@ export function RoomShell({
           </div>
         </div>
       )}
-      {/* Room content column: full width normally, 50% when side panel is open.
-          On narrow viewports the column is hidden while the panel is open. */}
-      <div
-        className={cn(
-          'flex flex-col min-h-full overflow-y-auto transition-[width] duration-200 ease-out',
-          isOpen ? 'lg:w-1/2 w-0 overflow-hidden' : 'w-full',
-        )}
-      >
+      <div className="flex flex-col min-h-full w-full">
         <RoomHeader room={room} parent={parent} jobs={jobs} childRooms={childRooms} allRooms={allRooms} />
 
         <CrossReferenceCards crossRefs={crossRefs} />
@@ -274,28 +252,6 @@ export function RoomShell({
           )}
         </div>
       </div>
-
-      {/* Side panel: slides in from the right when an email citation is clicked.
-          Kept in the DOM for 200ms after close so the exit animation plays.
-          Outer div transitions width (acts as a clip so translate stays meaningful).
-          Inner div translates independently so the slide-in effect is clean. */}
-      {showPanel && (
-        <div
-          className={cn(
-            'flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-out',
-            isOpen ? 'lg:w-1/2 w-full' : 'w-0',
-          )}
-        >
-          <div
-            className={cn(
-              'h-full transition-transform duration-200 ease-out',
-              isOpen ? 'translate-x-0' : 'translate-x-full',
-            )}
-          >
-            <EmailSidePanel />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

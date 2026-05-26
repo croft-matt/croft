@@ -5,6 +5,7 @@ import { JobModal } from '@/components/job-modal/job-modal'
 import { CommandPalette } from '@/components/command-palette/command-palette'
 import { NudgeModal } from '@/components/command-palette/nudge-modal'
 import { getRoomsTree } from '@/lib/queries/cockpit'
+import { AppContent } from '@/components/layout/app-content'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser()
@@ -25,11 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden bg-sidebar">
       <Sidebar rooms={rooms} />
-      <div className="flex flex-1 flex-col py-2 pr-2 min-h-0">
-        <main className="flex-1 bg-background border border-border rounded-3xl overflow-y-auto">
-          {children}
-        </main>
-      </div>
+      <AppContent>{children}</AppContent>
       {/* JobModal renders via createPortal into document.body — position in tree does not matter */}
       <JobModal />
       {/* CommandPalette renders a portal dialog, position in tree does not matter */}

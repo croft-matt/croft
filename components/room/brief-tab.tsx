@@ -61,7 +61,7 @@ export function BriefTab({ brief, parentName, roomSummary }: BriefTabProps) {
   const theirCourtTotal = brief.theirCourt.reduce((sum, g) => sum + g.loops.length, 0)
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', paddingBottom: 64 }}>
+    <div style={{ maxWidth: 600, width: '100%', margin: '0 auto', paddingBottom: 64 }}>
       <div className="rounded-xl border border-border bg-card" style={{ padding: '36px 40px' }}>
 
         {/* Anchor */}

@@ -30,7 +30,7 @@ export function EmailSidePanel() {
   const canGoBack = history.length > 0
 
   return (
-    <div className="w-full h-full flex flex-col border-l border-border overflow-y-auto bg-background">
+    <div className="w-full h-full flex flex-col overflow-y-auto overflow-x-hidden bg-background">
       {/* Panel header: back button (when history exists) on the left, close on the right. */}
       <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
         <div className="flex items-center gap-2">

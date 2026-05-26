@@ -87,8 +87,8 @@ export function EmailProcessingProvider({
   return (
     <>
       {isProcessed ? (
-        <div className="flex flex-1 gap-6 p-6">
-          <div className="w-[42%] shrink-0 space-y-4">
+        <div className="flex flex-1 gap-6 p-6 min-w-0">
+          <div className="w-[42%] min-w-0 space-y-4">
             {keyDates.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
                 <p className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">

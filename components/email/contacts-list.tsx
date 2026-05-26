@@ -49,7 +49,7 @@ export function ContactsList({ contacts }: ContactsListProps) {
             {contact.email && (
               <a
                 href={`mailto:${contact.email}`}
-                className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="min-w-0 truncate text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {contact.email}
               </a>
