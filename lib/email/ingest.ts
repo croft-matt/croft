@@ -19,6 +19,7 @@ export interface GmailMessageData {
   references?: string | null
   providerThreadId?: string | null
   attachments?: AttachmentMeta[]
+  source?: 'inbound' | 'user_sent'
 }
 
 // Parses "Display Name <email@example.com>" or "email@example.com" into parts.
@@ -267,6 +268,7 @@ export async function storeGmailMessage(
       thread_id: threadId,
       in_reply_to: data.inReplyTo ?? null,
       email_references: data.references ?? null,
+      source: data.source ?? 'inbound',
     })
     .select('id')
     .single()
@@ -291,5 +293,5 @@ export async function storeGmailMessage(
     throw new Error(`[ingest] storeGmailMessage failed: ${error.message}`)
   }
 
-  return { emailId: email.id, workspaceId: data.workspaceId, source: 'inbound' as const }
+  return { emailId: email.id, workspaceId: data.workspaceId, source: (data.source ?? 'inbound') as EmailSource }
 }

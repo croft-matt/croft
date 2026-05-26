@@ -3,9 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getValidAccessToken } from '@/lib/email/google-client'
 import { storeGmailMessage } from '@/lib/email/ingest'
 import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
+import { extractPlainText, extractAttachments } from '@/lib/email/gmail-parse'
 import { noiseGateTask } from './noise-gate'
 import type { processQueuedEmailsTask } from '@/trigger/jobs/process-queue'
-import type { AttachmentMeta } from '@/lib/types/database'
 
 export interface ImportGmailHistoryPayload {
   accountId: string
@@ -40,12 +40,20 @@ interface GmailPart {
 
 interface GmailMessage {
   id: string
+  labelIds?: string[]
   payload?: {
     mimeType?: string
     headers?: GmailHeader[]
     body?: { data?: string }
     parts?: GmailPart[]
   }
+}
+
+function detectGmailSource(labelIds: string[]): 'inbound' | 'user_sent' {
+  // Draft, spam, and trash are filtered before this point.
+  // A message with the SENT label was sent by the user.
+  if (labelIds.includes('SENT')) return 'user_sent'
+  return 'inbound'
 }
 
 export const importGmailHistoryTask = task({
@@ -110,6 +118,20 @@ export const importGmailHistoryTask = task({
 
           const full = (await msgRes.json()) as GmailMessage
 
+          const labelIds = full.labelIds ?? []
+
+          // Skip drafts, spam, and trash -- these are not project email.
+          if (
+            labelIds.includes('DRAFT') ||
+            labelIds.includes('SPAM') ||
+            labelIds.includes('TRASH')
+          ) {
+            skipped++
+            continue
+          }
+
+          const source = detectGmailSource(labelIds)
+
           const headers = full.payload?.headers ?? []
           const header = (name: string) =>
             headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? null
@@ -141,6 +163,7 @@ export const importGmailHistoryTask = task({
             references,
             providerThreadId: msg.threadId,
             attachments,
+            source,
           })
 
           if (result) {
@@ -194,59 +217,4 @@ export const importGmailHistoryTask = task({
 function parseAddressList(value: string | null): string[] {
   if (!value) return []
   return value.split(',').map((a) => a.trim()).filter(Boolean)
-}
-
-// Filenames that are mail client internals rather than user documents.
-const NOISE_FILENAMES = new Set(['smime.p7s', 'smime.p7m', 'noname', 'winmail.dat', ''])
-
-function extractAttachments(
-  payload: { mimeType?: string; filename?: string; body?: { data?: string; attachmentId?: string; size?: number }; parts?: GmailPart[]; headers?: Array<{ name: string; value: string }> } | null
-): AttachmentMeta[] {
-  if (!payload) return []
-
-  const results: AttachmentMeta[] = []
-
-  // A part is a user-facing attachment if it has a non-noise filename, a
-  // body.attachmentId, and a Content-Disposition of attachment (not inline).
-  if (payload.filename && payload.body?.attachmentId) {
-    const fn = payload.filename.trim()
-    const disposition = payload.headers
-      ?.find((h) => h.name.toLowerCase() === 'content-disposition')
-      ?.value?.toLowerCase() ?? ''
-    const isInline = disposition.startsWith('inline')
-
-    if (!NOISE_FILENAMES.has(fn.toLowerCase()) && !isInline) {
-      results.push({
-        filename: fn,
-        mime_type: payload.mimeType ?? 'application/octet-stream',
-        size: payload.body.size ?? 0,
-        gmail_attachment_id: payload.body.attachmentId,
-      })
-    }
-  }
-
-  for (const part of payload.parts ?? []) {
-    results.push(...extractAttachments(part))
-  }
-
-  return results
-}
-
-function extractPlainText(
-  payload: { mimeType?: string; body?: { data?: string }; parts?: GmailPart[] } | null
-): string | null {
-  if (!payload) return null
-
-  if (payload.mimeType === 'text/plain' && payload.body?.data) {
-    return Buffer.from(payload.body.data, 'base64').toString('utf-8')
-  }
-
-  if (payload.parts) {
-    for (const part of payload.parts) {
-      const result = extractPlainText(part)
-      if (result) return result
-    }
-  }
-
-  return null
 }
