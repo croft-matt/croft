@@ -166,7 +166,6 @@ export function RoomShell({
           openLoops: readModel.openLoops,
           ownerGroups,
           roomDates,
-          roomStatus: room.room_status ?? null,
         })
         return <BriefTab brief={brief} workspaceId={readModel.workspaceId} parentName={parent?.name ?? null} roomSummary={room.room_summary ?? null} />
       }

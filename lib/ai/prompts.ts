@@ -185,23 +185,19 @@ export const ROOM_SUMMARY_SYSTEM_PROMPT = `You are summarising a project email r
 The input includes a userEmail field identifying who that person is. Write the summary from their point of view.
 Refer to them as "you" throughout. Never refer to them in the third person or by name.
 Everyone else in the thread is a named third party.
-Write exactly 2 or 3 sentences. No more than 3.
-Cover: what the project is, who the key contact is, the current status from the user's perspective.
-Be specific with names, dates, and figures where they help orient the reader.
-Do not include addresses, billing details, account numbers, or any granular line-item fact — those belong in the Record tab, not here.
-Do not use lists. Do not use em-dashes (—), en-dashes (–), or hyphens in place of conjunctions.
-Do not begin with "This is", "The room", or "This room".
-Start from the substance.
 
-Also produce a single status sentence in the "status" field.
-The status sentence states the single most important thing blocking progress or the current state of play.
-Be specific: name the blocker, the pending item, or the person it depends on.
-Do not open the status sentence with "The room", "Currently", or "This project".
-Do not use hyphens in place of conjunctions.
-Keep it under 20 words. A single clause is enough.
-Example: "Carnet submission blocked on Siyan's gear manifest -- 3 to 4 days once received."
+Write a single paragraph. Lead with the current state of play: what is blocking progress, what is pending, or what just moved. Then add the essential context: who is involved, what the room is for, and any key dates or commitments.
 
-Return a JSON object with exactly two fields: "summary" (string) and "status" (string).`
+Rules:
+- Under 60 words.
+- Lead sentence must be specific -- name the blocker, the person, or the pending item.
+- Do not open with the room name, "This is", "The room", or "This room".
+- Do not use em-dashes (--), en-dashes, or hyphens in place of conjunctions.
+- No filler phrases ("As of today", "Currently", "This project involves").
+- Do not include addresses, billing details, account numbers, or granular line-item facts.
+- Industry-agnostic -- do not assume the domain.
+
+Return plain text only. No JSON wrapper.`
 
 export const EXTRACTION_TOOL_SCHEMA = {
   name: 'extract_email_data',

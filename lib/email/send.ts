@@ -19,6 +19,18 @@ const SendEmailSchema = z.object({
   bodyHtml: z.string().optional(),
   inReplyTo: z.string().optional(),
   references: z.array(z.string()).optional(),
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string(),
+        content: z.instanceof(Buffer),
+      }),
+    )
+    .optional(),
+  roomId: z.string().uuid().optional(),
+  threadId: z.string().optional(),
+  source: z.enum(['user_reply', 'user_direct', 'user_cc']).optional(),
+  attachedAssetIds: z.array(z.string().uuid()).optional(),
 })
 
 export type SendEmailParams = z.infer<typeof SendEmailSchema>
@@ -38,19 +50,34 @@ export async function sendEmail(params: SendEmailParams): Promise<{ messageId: s
     throw new Error(`sendEmail: ${parsed.error.message}`)
   }
 
-  const { workspaceId, to, cc, subject, bodyText, bodyHtml, inReplyTo, references } =
-    parsed.data
+  const {
+    workspaceId,
+    to,
+    cc,
+    subject,
+    bodyText,
+    bodyHtml,
+    inReplyTo,
+    references,
+    attachments,
+    roomId,
+    threadId,
+    source,
+    attachedAssetIds,
+  } = parsed.data
 
   const { success } = await sendRatelimit.limit(workspaceId)
   if (!success) {
     throw new Error('sendEmail: rate limit exceeded (60 sends per hour)')
   }
 
-  // Fetch workspace via RLS-scoped client — confirms the calling user has access.
+  // Fetch workspace via RLS-scoped client so the caller's access is verified.
+  // Also fetch receiving_address: replies to Croft-sent emails route back to
+  // the inbound webhook, not to the user's Gmail address.
   const supabase = await createClient()
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('croft_email_address')
+    .select('croft_email_address, receiving_address')
     .eq('id', workspaceId)
     .single()
 
@@ -58,17 +85,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{ messageId: s
     throw new Error('sendEmail: workspace has no croft_email_address configured')
   }
 
-  // Fetch the connected Gmail address so replies land in a familiar inbox.
-  // reply_to points to the user's Gmail address, not the Croft inbound address —
-  // the existing forwarding rule handles getting replies back into Croft.
   const adminSupabase = createAdminClient()
-  const { data: account } = await adminSupabase
-    .from('email_accounts')
-    .select('email_address')
-    .eq('workspace_id', workspaceId)
-    .eq('provider', 'google')
-    .limit(1)
-    .maybeSingle()
 
   const finalText = bodyText + PLAIN_FOOTER
   const finalHtml = bodyHtml !== undefined ? bodyHtml + HTML_FOOTER : undefined
@@ -84,19 +101,21 @@ export async function sendEmail(params: SendEmailParams): Promise<{ messageId: s
     subject,
     text: finalText,
     ...(finalHtml ? { html: finalHtml } : {}),
-    ...(account?.email_address ? { reply_to: account.email_address } : {}),
+    ...(workspace.receiving_address ? { reply_to: workspace.receiving_address } : {}),
     ...(Object.keys(threadingHeaders).length ? { headers: threadingHeaders } : {}),
+    ...(attachments?.length ? { attachments } : {}),
   })
 
   if (error || !sent) {
     throw new Error(`sendEmail: Resend error: ${error?.message ?? 'unknown'}`)
   }
 
-  // Store sent email as processed — no AI pipeline needed for outbound emails.
-  // A generated Message-ID ensures the dedup constraint is satisfied.
+  // Store the sent email as processed. A generated Message-ID satisfies the dedup constraint.
+  // room_id and attached_asset_ids are new columns added in migration 20260526000006.
+  // They will be typed properly once pnpm types:gen is run after the migration.
   const messageId = `<${randomUUID()}@mail.yourcroft.com>`
 
-  await adminSupabase.from('emails').insert({
+  const baseInsert = {
     workspace_id: workspaceId,
     message_id: messageId,
     resend_email_id: sent.id,
@@ -110,7 +129,21 @@ export async function sendEmail(params: SendEmailParams): Promise<{ messageId: s
     processing_state: 'processed',
     extraction_complete: true,
     attachments: [],
-  })
+    ...(inReplyTo ? { in_reply_to: inReplyTo } : {}),
+    ...(threadId ? { thread_id: threadId } : {}),
+    ...(source ? { source } : {}),
+  }
+
+  // room_id and attached_asset_ids are spread separately until types:gen reflects
+  // the migration adding them to the emails table.
+  const extendedFields: Record<string, unknown> = {
+    ...(roomId ? { room_id: roomId } : {}),
+    ...(attachedAssetIds?.length ? { attached_asset_ids: attachedAssetIds } : {}),
+  }
+
+  await adminSupabase
+    .from('emails')
+    .insert({ ...baseInsert, ...extendedFields } as typeof baseInsert)
 
   return { messageId: sent.id }
 }

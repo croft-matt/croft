@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Reply } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/utils'
 import type { Email, Job, Room } from '@/lib/types/database'
@@ -7,6 +8,8 @@ interface EmailHeaderProps {
   email: Email
   jobs: Job[]
   rooms: Pick<Room, 'id' | 'name'>[]
+  onReply?: () => void
+  repliedTo?: boolean
 }
 
 function hashNeutral(str: string): string {
@@ -27,7 +30,7 @@ function getInitials(name: string | null, email: string): string {
   return email.slice(0, 2).toUpperCase()
 }
 
-export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
+export function EmailHeader({ email, jobs, rooms, onReply, repliedTo }: EmailHeaderProps) {
   const openJobCount = jobs.filter((j) => j.status === 'open').length
   const displayName = email.from_name?.replace(/['"]/g, '').trim() ?? email.from_address
   const timeStr = formatRelativeTime(email.received_at)
@@ -68,6 +71,16 @@ export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
           ))}
           {rooms.length > 4 && (
             <span className="text-xs text-muted-foreground">+{rooms.length - 4} more</span>
+          )}
+          {onReply && (
+            <button
+              type="button"
+              onClick={onReply}
+              className="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-opacity hover:opacity-80"
+            >
+              <Reply className="h-3 w-3" />
+              {repliedTo ? 'Reply again' : 'Reply'}
+            </button>
           )}
         </div>
       </div>

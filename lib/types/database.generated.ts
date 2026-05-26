@@ -386,6 +386,7 @@ export type Database = {
       }
       emails: {
         Row: {
+          attached_asset_ids: string[] | null
           attachments: Json
           body_html: string | null
           body_text: string | null
@@ -408,6 +409,7 @@ export type Database = {
           requires_response: boolean | null
           resend_email_id: string | null
           response_by: string | null
+          room_id: string | null
           source: string
           subject: string | null
           subject_summary: string | null
@@ -418,6 +420,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          attached_asset_ids?: string[] | null
           attachments?: Json
           body_html?: string | null
           body_text?: string | null
@@ -440,6 +443,7 @@ export type Database = {
           requires_response?: boolean | null
           resend_email_id?: string | null
           response_by?: string | null
+          room_id?: string | null
           source?: string
           subject?: string | null
           subject_summary?: string | null
@@ -450,6 +454,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          attached_asset_ids?: string[] | null
           attachments?: Json
           body_html?: string | null
           body_text?: string | null
@@ -472,6 +477,7 @@ export type Database = {
           requires_response?: boolean | null
           resend_email_id?: string | null
           response_by?: string | null
+          room_id?: string | null
           source?: string
           subject?: string | null
           subject_summary?: string | null
@@ -482,6 +488,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "emails_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "emails_workspace_id_fkey"
             columns: ["workspace_id"]

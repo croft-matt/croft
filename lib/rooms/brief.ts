@@ -26,7 +26,6 @@ export interface AnticipatedItem {
 
 export interface BriefData {
   anchor: BriefAnchor | null
-  status: string | null
   yourCourt: OpenLoop[]
   theirCourt: BriefTheirCourtGroup[]
   whatsComing: AnticipatedItem[]
@@ -36,9 +35,8 @@ export function assembleBrief(params: {
   openLoops: OpenLoops
   ownerGroups: OwnerGroup[]
   roomDates: RoomDates
-  roomStatus: string | null
 }): BriefData {
-  const { openLoops, ownerGroups, roomDates, roomStatus } = params
+  const { openLoops, ownerGroups, roomDates } = params
 
   // Anchor: derived from the delivery date produced by assembleDates.
   const anchor: BriefAnchor | null = roomDates.deliveryDate
@@ -62,7 +60,7 @@ export function assembleBrief(params: {
     whatsComing.push({ description: loop.description, kind: null, jobId: loop.id })
   }
 
-  return { anchor, status: roomStatus, yourCourt, theirCourt, whatsComing }
+  return { anchor, yourCourt, theirCourt, whatsComing }
 }
 
 // Groups extracted their-court loops by person using the ownerGroups identity data.

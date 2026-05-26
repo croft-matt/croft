@@ -80,21 +80,11 @@ export function BriefTab({ brief, parentName, roomSummary }: BriefTabProps) {
           </div>
         )}
 
-        {/* AI summary */}
+        {/* Room summary */}
         {roomSummary && (
-          <p className="text-[13.5px] text-muted-foreground leading-relaxed mb-6">
+          <p className="text-[15px] text-foreground/80 leading-relaxed mb-7">
             {roomSummary}
           </p>
-        )}
-
-        {/* Status line */}
-        {brief.status && (
-          <div
-            className="border-l-2 border-white/[0.06] pl-3.5 leading-relaxed mb-8"
-            style={{ fontSize: 13.5, color: 'hsl(var(--muted-foreground))' }}
-          >
-            {brief.status}
-          </div>
         )}
 
         {/* Your court */}
