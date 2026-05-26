@@ -363,3 +363,53 @@ export function buildProactiveCreationContent(emailBody: string, subject: string
 
 ${body}`
 }
+
+// --- Brief 39: Command classification ---
+//
+// Used when Matt emails Croft with a room URL in the body (source = 'user_direct').
+// Haiku classifies the command intent and extracts any required operands.
+// The prompt is static so it does not need caching -- it is small and low-frequency.
+
+export const COMMAND_CLASSIFICATION_SYSTEM_PROMPT = `The user is sending a command to manage a project room in Croft, their email intelligence system. Based on the email body, classify their intent as one of:
+
+- remove: they want to delete or dismiss the room (it was a mistake, not a real project)
+- merge: they want to combine two rooms into one
+- rename: they want to change the room's name
+- archive: they want to mark the project as complete or finished
+- unclear: the intent cannot be determined from the body
+
+For rename, also extract the new name. Look for phrases like "rename to", "call this", "name this", or "change the name to". Extract only the new name, stripped of surrounding punctuation and quotation marks.
+
+For merge, also extract the second room URL if present. A room URL contains "yourcroft.com/rooms/".
+
+Use the classify_command tool to return your answer.`
+
+export const COMMAND_CLASSIFICATION_TOOL_SCHEMA = {
+  name: 'classify_command',
+  description: 'Classify the room management command in the email body.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      command: {
+        type: 'string',
+        enum: ['remove', 'merge', 'rename', 'archive', 'unclear'],
+        description: 'The command intent.',
+      },
+      new_name: {
+        type: ['string', 'null'],
+        description: 'The new room name for a rename command. Null for all other commands.',
+      },
+      target_room_url: {
+        type: ['string', 'null'],
+        description: 'The second room URL for a merge command. Null for all other commands.',
+      },
+    },
+    required: ['command', 'new_name', 'target_room_url'],
+  },
+}
+
+export interface CommandClassificationOutput {
+  command: 'remove' | 'merge' | 'rename' | 'archive' | 'unclear'
+  new_name: string | null
+  target_room_url: string | null
+}

@@ -666,6 +666,7 @@ export type Database = {
           room_status_updated_at: string | null
           room_summary: string | null
           room_summary_updated_at: string | null
+          status: string
           updated_at: string
           watch_context: Json | null
           workspace_id: string
@@ -687,6 +688,7 @@ export type Database = {
           room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
+          status?: string
           updated_at?: string
           watch_context?: Json | null
           workspace_id: string
@@ -708,6 +710,7 @@ export type Database = {
           room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
+          status?: string
           updated_at?: string
           watch_context?: Json | null
           workspace_id?: string

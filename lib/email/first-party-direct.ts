@@ -9,19 +9,30 @@
 //   3. For single room: create room, file email, write seed facts, set watch_context, create anticipated jobs.
 //   4. For batch: create parent room, then children. Parent watch_context = union of children.
 //   5. Mark email processed.
+//
+// handleCommand (Brief 39):
+//   1. Resolve room from URL in body.
+//   2. Classify command via Haiku (remove, merge, rename, archive, unclear).
+//   3. Execute the operation and send a plain-text confirmation reply via Resend.
 
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchAndStoreEmailBody } from '@/lib/email/fetch-body'
 import { broadcastToWorkspace } from '@/lib/realtime/broadcast'
+import { sendConfirmation } from '@/lib/email/confirmation'
+import { tasks } from '@trigger.dev/sdk/v3'
+import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { Json } from '@/lib/types/database'
 import {
   PROACTIVE_CREATION_SYSTEM_PROMPT,
   PROACTIVE_CREATION_TOOL_SCHEMA,
   buildProactiveCreationContent,
+  COMMAND_CLASSIFICATION_SYSTEM_PROMPT,
+  COMMAND_CLASSIFICATION_TOOL_SCHEMA,
   type ProactiveCreationOutput,
   type ProactiveRoom,
   type WatchContext,
+  type CommandClassificationOutput,
 } from '@/lib/ai/prompts-first-party'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -424,4 +435,350 @@ async function broadcastRoomCreated(workspaceId: string): Promise<void> {
     .is('archived_at', null)
 
   await broadcastToWorkspace(workspaceId, 'room_created', { count: count ?? 0 })
+}
+
+// --- Brief 39: Command handling ---
+//
+// A room command email contains a yourcroft.com/rooms/ URL in the body.
+// The pipeline skips tier 1/2/3 and calls handleCommand instead.
+// Room status values: 'active' | 'archived' | 'deleted'.
+// These require the following migration before use:
+//   alter table rooms add column status text not null default 'active'
+//     check (status in ('active', 'archived', 'deleted'));
+
+// Represents the room row shape used by command functions.
+// status is not yet in generated types -- cast at query call sites.
+type CommandRoom = {
+  id: string
+  name: string
+  parent_room_id: string | null
+  status: string
+}
+
+// Context carried into every execute function for sending the confirmation reply.
+type CommandContext = {
+  workspaceId: string
+  to: string
+  replySubject: string
+  inReplyTo: string | undefined
+}
+
+export async function handleCommand(emailId: string, workspaceId: string): Promise<void> {
+  const supabase = createAdminClient()
+
+  await supabase.from('emails').update({ processing_state: 'processing' }).eq('id', emailId)
+
+  try {
+    const { data: email } = await supabase
+      .from('emails')
+      .select('id, body_text, from_address, subject, message_id')
+      .eq('id', emailId)
+      .single()
+
+    if (!email) throw new Error(`handleCommand: email ${emailId} not found`)
+
+    const body = email.body_text ?? ''
+    const ctx: CommandContext = {
+      workspaceId,
+      to: email.from_address,
+      replySubject: `Re: ${email.subject ?? '(no subject)'}`,
+      inReplyTo: email.message_id ?? undefined,
+    }
+
+    const roomId = extractRoomId(body)
+    if (!roomId) {
+      // containsRoomLink was true but extractRoomId returned null -- should not happen.
+      await supabase
+        .from('emails')
+        .update({ processing_state: 'processed', processed_at: new Date().toISOString() })
+        .eq('id', emailId)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: roomData } = await supabase
+      .from('rooms')
+      .select('id, name, parent_room_id' as string)
+      .eq('id', roomId)
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    // Fetch status separately since it may not be in generated types yet.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: roomStatusRow } = await (supabase.from('rooms') as any)
+      .select('status')
+      .eq('id', roomId)
+      .single()
+
+    const room: CommandRoom | null = roomData
+      ? { ...(roomData as { id: string; name: string; parent_room_id: string | null }), status: (roomStatusRow as { status?: string } | null)?.status ?? 'active' }
+      : null
+
+    if (!room) {
+      await sendConfirmation({
+        ...ctx,
+        body: 'I could not find that room. The link may be outdated.',
+      })
+      await supabase
+        .from('emails')
+        .update({ processing_state: 'processed', processed_at: new Date().toISOString() })
+        .eq('id', emailId)
+      return
+    }
+
+    const parsed = await classifyCommand(body)
+
+    switch (parsed.command) {
+      case 'remove':
+        await executeRemove(room, ctx, supabase)
+        break
+      case 'merge':
+        await executeMerge(room, parsed.target_room_url, ctx, supabase)
+        break
+      case 'rename':
+        await executeRename(room, parsed.new_name, ctx, supabase)
+        break
+      case 'archive':
+        await executeArchive(room, ctx, supabase)
+        break
+      case 'unclear':
+        await sendConfirmation({
+          ...ctx,
+          body: `I'm not sure what you'd like me to do with room '${room.name}'. Try: "remove this", "rename this to [name]", "archive this", or "merge this with [room URL]".`,
+        })
+        break
+    }
+
+    await supabase
+      .from('emails')
+      .update({ processing_state: 'processed', processed_at: new Date().toISOString() })
+      .eq('id', emailId)
+  } catch (err) {
+    await supabase.from('emails').update({ processing_state: 'failed' }).eq('id', emailId)
+    throw err
+  }
+}
+
+// Calls Haiku to classify the command intent from the email body.
+async function classifyCommand(body: string): Promise<CommandClassificationOutput> {
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 256,
+    system: COMMAND_CLASSIFICATION_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: body }],
+    tools: [COMMAND_CLASSIFICATION_TOOL_SCHEMA],
+    tool_choice: { type: 'tool', name: 'classify_command' },
+  })
+
+  for (const block of response.content) {
+    if (block.type === 'tool_use' && block.name === 'classify_command') {
+      return block.input as CommandClassificationOutput
+    }
+  }
+
+  // Fallback: model did not return a tool use block.
+  return { command: 'unclear', new_name: null, target_room_url: null }
+}
+
+// Sets status='deleted', orphans child rooms.
+// No hard deletes. Emails, jobs, and facts linked to the room are preserved.
+async function executeRemove(
+  room: CommandRoom,
+  ctx: CommandContext,
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  if (room.status === 'deleted') {
+    await sendConfirmation({ ...ctx, body: `Room '${room.name}' is already deleted.` })
+    return
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('rooms') as any)
+    .update({ status: 'deleted', updated_at: new Date().toISOString() })
+    .eq('id', room.id)
+
+  // Orphan child rooms rather than cascade-deleting them.
+  await supabase
+    .from('rooms')
+    .update({ parent_room_id: null })
+    .eq('parent_room_id', room.id)
+
+  await sendConfirmation({ ...ctx, body: `Done. Room '${room.name}' has been removed.` })
+}
+
+// Moves all room_emails, child rooms, and room_data from source to target.
+// Source is then soft-deleted. Room synthesis re-runs on the target.
+async function executeMerge(
+  source: CommandRoom,
+  targetRoomUrl: string | null,
+  ctx: CommandContext,
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  if (!targetRoomUrl) {
+    await sendConfirmation({
+      ...ctx,
+      body: `To merge '${source.name}', I need the URL of the room to merge it into. Reply with: "merge this with [room URL]".`,
+    })
+    return
+  }
+
+  const targetId = extractRoomId(targetRoomUrl)
+  if (!targetId) {
+    await sendConfirmation({
+      ...ctx,
+      body: `I could not read the target room URL. Please include a full yourcroft.com/rooms/... link.`,
+    })
+    return
+  }
+
+  if (targetId === source.id) {
+    await sendConfirmation({ ...ctx, body: `The source and target rooms are the same. Nothing to merge.` })
+    return
+  }
+
+  // Fetch target, verifying workspace ownership.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: targetData } = await supabase
+    .from('rooms')
+    .select('id, name, room_data, parent_room_id')
+    .eq('id', targetId)
+    .eq('workspace_id', ctx.workspaceId)
+    .single()
+
+  if (!targetData) {
+    await sendConfirmation({
+      ...ctx,
+      body: `I could not find the target room. The link may be outdated or belong to a different workspace.`,
+    })
+    return
+  }
+
+  // Move room_emails: upsert with target room_id, ignore duplicates that already exist.
+  const { data: sourceEmails } = await supabase
+    .from('room_emails')
+    .select('email_id, source')
+    .eq('room_id', source.id)
+
+  for (const row of sourceEmails ?? []) {
+    await supabase
+      .from('room_emails')
+      .upsert(
+        { room_id: targetId, email_id: row.email_id, source: row.source },
+        { onConflict: 'room_id,email_id', ignoreDuplicates: true },
+      )
+  }
+
+  // Reparent child rooms from source to target.
+  await supabase
+    .from('rooms')
+    .update({ parent_room_id: targetId, updated_at: new Date().toISOString() })
+    .eq('parent_room_id', source.id)
+
+  // Merge source room_data into target room_data (target facts win on key conflicts).
+  const { data: sourceRoomFull } = await supabase
+    .from('rooms')
+    .select('room_data')
+    .eq('id', source.id)
+    .single()
+
+  if (sourceRoomFull?.room_data) {
+    const merged = mergeRoomData(
+      (targetData.room_data ?? {}) as Record<string, unknown>,
+      sourceRoomFull.room_data as Record<string, unknown>,
+    )
+    await supabase
+      .from('rooms')
+      .update({ room_data: merged as Json, updated_at: new Date().toISOString() })
+      .eq('id', targetId)
+  }
+
+  // Soft-delete the source room.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('rooms') as any)
+    .update({ status: 'deleted', updated_at: new Date().toISOString() })
+    .eq('id', source.id)
+
+  // Re-synthesise the target room to rebuild progress counters with the merged emails.
+  await tasks.trigger<typeof synthesiseRoomTask>('synthesise-room', { roomId: targetId })
+
+  await sendConfirmation({
+    ...ctx,
+    body: `Done. Room '${source.name}' has been merged into '${targetData.name}'.`,
+  })
+}
+
+// Updates rooms.name to the new name extracted by Haiku.
+async function executeRename(
+  room: CommandRoom,
+  newName: string | null,
+  ctx: CommandContext,
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  if (!newName || newName.trim() === '') {
+    await sendConfirmation({
+      ...ctx,
+      body: `I could not determine the new name. Reply with: "rename to [new name]".`,
+    })
+    return
+  }
+
+  const trimmed = newName.trim()
+
+  await supabase
+    .from('rooms')
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', room.id)
+
+  await sendConfirmation({ ...ctx, body: `Done. Room renamed to '${trimmed}'.` })
+}
+
+// Sets status='archived'. Differs from remove: archived rooms are completed work.
+async function executeArchive(
+  room: CommandRoom,
+  ctx: CommandContext,
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  if (room.status === 'archived') {
+    await sendConfirmation({ ...ctx, body: `Room '${room.name}' is already archived.` })
+    return
+  }
+  if (room.status === 'deleted') {
+    await sendConfirmation({ ...ctx, body: `Room '${room.name}' is already deleted.` })
+    return
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('rooms') as any)
+    .update({ status: 'archived', updated_at: new Date().toISOString() })
+    .eq('id', room.id)
+
+  await sendConfirmation({ ...ctx, body: `Done. Room '${room.name}' has been archived.` })
+}
+
+// Merges source room_data into target room_data.
+// Target facts win on key conflicts (source fills gaps, does not overwrite).
+function mergeRoomData(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...target }
+
+  for (const [category, sourceFacts] of Object.entries(source)) {
+    if (typeof sourceFacts !== 'object' || sourceFacts === null || Array.isArray(sourceFacts)) {
+      continue
+    }
+
+    const targetFacts = result[category]
+    if (typeof targetFacts === 'object' && targetFacts !== null && !Array.isArray(targetFacts)) {
+      // Merge at fact level: target wins, source fills missing keys.
+      result[category] = {
+        ...(sourceFacts as Record<string, unknown>),
+        ...(targetFacts as Record<string, unknown>),
+      }
+    } else {
+      result[category] = sourceFacts
+    }
+  }
+
+  return result
 }

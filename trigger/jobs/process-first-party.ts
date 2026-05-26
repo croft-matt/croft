@@ -1,7 +1,11 @@
 import { task } from '@trigger.dev/sdk/v3'
 import type { EmailSource } from '@/lib/email/first-party'
 import { handleUserCc } from '@/lib/email/first-party-cc'
-import { containsRoomLink, handleProactiveCreation } from '@/lib/email/first-party-direct'
+import {
+  containsRoomLink,
+  handleCommand,
+  handleProactiveCreation,
+} from '@/lib/email/first-party-direct'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface ProcessFirstPartyPayload {
@@ -45,8 +49,8 @@ export const processFirstPartyTask = task({
 
       if (containsRoomLink(body)) {
         // Brief 39: Matt is acting on an existing room via a URL in the body.
-        // Stub: Brief 39 implements handleCommand.
-        return { emailId, source, status: 'pending_brief_39' }
+        await handleCommand(emailId, workspaceId)
+        return { emailId, source, status: 'processed' }
       }
 
       // Brief 38: no room URL -- Matt is creating rooms proactively.
