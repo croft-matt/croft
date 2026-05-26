@@ -50,7 +50,7 @@ export async function suggestAsset(jobDescription: string): Promise<AssetSuggest
   if (!data || data.length === 0) return null
 
   // Count distinct rooms per asset to find the most-used one.
-  const emailIds = [...new Set(data.map((a) => a.email_id))]
+  const emailIds = [...new Set(data.map((a) => a.email_id).filter((id): id is string => id !== null))]
 
   const { data: roomEmailRows } = await supabase
     .from('room_emails')
@@ -70,7 +70,7 @@ export async function suggestAsset(jobDescription: string): Promise<AssetSuggest
   // Sort by times_used desc, then created_at desc.
   const ranked = data.map((asset) => ({
     ...asset,
-    times_used: emailToRoomCount[asset.email_id] ?? 0,
+    times_used: asset.email_id ? (emailToRoomCount[asset.email_id] ?? 0) : 0,
   }))
   ranked.sort((a, b) => b.times_used - a.times_used || b.created_at.localeCompare(a.created_at))
 
