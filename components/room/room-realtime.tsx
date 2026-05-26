@@ -243,6 +243,7 @@ export function RoomRealtimeProvider({
       roomAssets={initialRoomAssets}
       roomPeople={initialRoomPeople}
       allRooms={initialAllRooms}
+      workspaceId={workspaceId}
     />
   )
 }

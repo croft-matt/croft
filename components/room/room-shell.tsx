@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { Room, Job } from '@/lib/types/database'
 import type { RoomReadModel } from '@/lib/blocks/types'
@@ -10,6 +11,8 @@ import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
+import { useCommandPalette } from '@/stores/command-palette-store'
+import { useRoomCommands } from '@/lib/command-palette/use-room-commands'
 import { BriefTab } from '@/components/room/brief-tab'
 import { JobsTab } from '@/components/room/jobs-tab'
 import { DatesTab } from '@/components/room/dates-tab'
@@ -44,6 +47,7 @@ interface RoomShellProps {
   roomAssets: RoomAssets
   roomPeople: RoomPeople
   allRooms: Array<{ id: string; name: string; parent_room_id: string | null }>
+  workspaceId: string
 }
 
 export function RoomShell({
@@ -57,9 +61,11 @@ export function RoomShell({
   roomAssets,
   roomPeople,
   allRooms,
+  workspaceId,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('brief')
   const { isOpen } = useEmailSidePanel()
+  const router = useRouter()
   // showPanel stays true for 200ms after isOpen goes false so the exit
   // animation completes before the panel is removed from the DOM.
   const [showPanel, setShowPanel] = useState(false)
@@ -72,6 +78,47 @@ export function RoomShell({
       return () => clearTimeout(timer)
     }
   }, [isOpen])
+
+  // Set palette context and room ID while this room shell is mounted.
+  useEffect(() => {
+    useCommandPalette.setState({ context: 'in-room', currentRoomId: room.id })
+    return () => {
+      useCommandPalette.setState({ context: 'always', currentRoomId: null })
+    }
+  // room.id is stable for the lifetime of a room shell mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.id])
+
+  // Listen for tab-switch events dispatched by command palette tab commands.
+  useEffect(() => {
+    function handleTabSwitch(e: Event) {
+      const detail = (e as CustomEvent<{ tab: string; roomId: string }>).detail
+      if (detail.roomId === room.id && TABS.some((t) => t.id === detail.tab)) {
+        setActiveTab(detail.tab as RoomTab)
+      }
+    }
+    window.addEventListener('croft:switch-tab', handleTabSwitch)
+    return () => window.removeEventListener('croft:switch-tab', handleTabSwitch)
+  }, [room.id])
+
+  // Register room-level command palette commands.
+  // activeBlocks defaults to [] since block rows are not yet passed through
+  // the realtime provider. Block add/remove commands still work; "Remove a block"
+  // is hidden when activeBlocks is empty, which is safe.
+  useRoomCommands({
+    room: {
+      id: room.id,
+      name: room.name,
+      archived_at: room.archived_at ?? null,
+      status: room.status,
+    },
+    openLoops: readModel.openLoops,
+    activeBlocks: [],
+    allRooms,
+    router,
+    workspaceId,
+    ownerGroups,
+  })
 
   const overdueJobs = jobs.filter(
     (j) => j.status === 'open' && j.due && new Date(j.due) < new Date(),

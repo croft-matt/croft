@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import type { Room, Job } from '@/lib/types/database'
 import { renameRoom, archiveRoom } from '@/lib/rooms/actions'
+import { useCommandPalette } from '@/stores/command-palette-store'
 import { MoveRoomDialog } from '@/components/room/move-room-dialog'
 import { ConfirmDialog } from '@/components/room/confirm-dialog'
 import {
@@ -44,6 +45,8 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
   // Archive confirm state
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
 
+  const { triggerRenameRoomId, clearRenameRoomTrigger } = useCommandPalette()
+
   // Focus rename input when entering rename mode.
   useEffect(() => {
     if (isRenaming) {
@@ -51,6 +54,14 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
       renameInputRef.current?.select()
     }
   }, [isRenaming])
+
+  // Respond to rename trigger from the command palette.
+  useEffect(() => {
+    if (triggerRenameRoomId === room.id) {
+      setIsRenaming(true)
+      clearRenameRoomTrigger()
+    }
+  }, [triggerRenameRoomId, room.id, clearRenameRoomTrigger])
 
   // Keep rename value in sync if room prop changes (e.g. after revalidation).
   useEffect(() => {
