@@ -5,7 +5,8 @@ import { storeEmailMetadata } from '@/lib/email/ingest'
 import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
 import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
 import { confirmGmailForwardingTask } from '@/trigger/jobs/confirm-gmail-forwarding'
-import { processFirstPartyTask } from '@/trigger/jobs/process-first-party'
+import type { processFirstPartyTask } from '@/trigger/jobs/process-first-party'
+import { tasks } from '@trigger.dev/sdk/v3'
 import { inboundRatelimit } from '@/lib/ratelimit'
 
 // This handler does three things:
@@ -79,7 +80,9 @@ export async function POST(request: NextRequest) {
         await fetchBodyTask.trigger({ emailId: result.emailId })
       } else {
         // First-party path: skip tier-1 and tier-2 entirely.
-        await processFirstPartyTask.trigger({
+        // import type is used for processFirstPartyTask to avoid pulling its
+        // module chain (embeddings -> voyageai) into the Next.js server bundle.
+        await tasks.trigger<typeof processFirstPartyTask>('process-first-party', {
           emailId: result.emailId,
           source: result.source,
           workspaceId: result.workspaceId,

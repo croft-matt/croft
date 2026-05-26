@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // voyageai ships a broken ESM bundle. Treat it as server-external so
+  // Turbopack does not attempt to resolve its ESM entry and uses CJS at runtime.
+  serverExternalPackages: ['voyageai'],
 }
 
 export default withSentryConfig(nextConfig, {

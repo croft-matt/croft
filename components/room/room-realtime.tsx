@@ -43,7 +43,12 @@ function buildOpenLoopsLocal(
     .map((job) => {
       const createdAt = new Date(job.created_at)
       const age_days = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
-      return { ...job, age_days, from_name: fromNameMap.get(job.email_id) ?? null }
+      return {
+        ...job,
+        age_days,
+        from_name: fromNameMap.get(job.email_id) ?? null,
+        source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
+      }
     })
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
@@ -158,6 +163,8 @@ export function RoomRealtimeProvider({
             alert_text_updated_at: updated.alert_text_updated_at,
             room_summary: updated.room_summary,
             room_summary_updated_at: updated.room_summary_updated_at,
+            room_status: updated.room_status,
+            room_status_updated_at: updated.room_status_updated_at,
           }))
         },
       )

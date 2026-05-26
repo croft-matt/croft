@@ -124,7 +124,7 @@ export const generateRoomSummaryTask = task({
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 256,
+      max_tokens: 512,
       system: [
         {
           type: 'text',
@@ -141,16 +141,37 @@ export const generateRoomSummaryTask = task({
       return { roomId, skipped: true }
     }
 
-    const summary = textBlock.text.trim()
+    // Parse the JSON response containing both summary and status.
+    let summary: string
+    let roomStatus: string | null = null
+
+    try {
+      const raw = textBlock.text.trim()
+      // Strip markdown code fences if the model wrapped the JSON.
+      const jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+      const parsed = JSON.parse(jsonText) as { summary?: unknown; status?: unknown }
+      summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : raw
+      roomStatus = typeof parsed.status === 'string' ? parsed.status.trim() : null
+    } catch {
+      // Fallback: treat the whole response as a plain summary with no status.
+      summary = textBlock.text.trim()
+      roomStatus = null
+    }
+
     const now = new Date().toISOString()
 
     await supabase
       .from('rooms')
-      .update({ room_summary: summary, room_summary_updated_at: now })
+      .update({
+        room_summary: summary,
+        room_summary_updated_at: now,
+        room_status: roomStatus,
+        room_status_updated_at: roomStatus ? now : null,
+      })
       .eq('id', roomId)
 
     console.log(
-      `generate-room-summary: wrote summary for room ${roomId} in ${Date.now() - startedAt}ms`,
+      `generate-room-summary: wrote summary and status for room ${roomId} in ${Date.now() - startedAt}ms`,
     )
 
     return { roomId, skipped: false, durationMs: Date.now() - startedAt }

@@ -13,6 +13,14 @@ export interface ContextJob {
   source: 'thread' | 'room' | 'semantic'
 }
 
+// Candidate rooms matched via watch context (Layer 4).
+// These are rooms Matt created before any email thread existed.
+export interface WatchContextCandidate {
+  roomId: string
+  roomName: string
+  matchReason: 'watch_context'
+}
+
 export interface ReconciliationContext {
   thread: Array<{
     from: string
@@ -25,6 +33,9 @@ export interface ReconciliationContext {
   facts: Record<string, unknown>
   openJobs: ContextJob[]
   connectedAddress: string | null
+  // Rooms matched via watch context (Layer 4). Present when the sender's address
+  // appears in a proactively-seeded room's watch_context.contacts.
+  watchContextCandidates: WatchContextCandidate[]
 }
 
 export async function getReconciliationContext(
@@ -209,11 +220,45 @@ export async function getReconciliationContext(
     // less precise.
   }
 
+  // Layer 4: Watch context match.
+  // Find rooms where watch_context.contacts contains the sender's email address.
+  // These are rooms Matt seeded in advance, expecting this sender. For a proactively
+  // created room with no prior emails, layers 1-3 return nothing -- this layer
+  // surfaces the room so the model can route the email correctly.
+  const watchContextCandidates: WatchContextCandidate[] = []
+  try {
+    const senderAddress = email.from_address.toLowerCase()
+
+    // The @> operator checks if the jsonb column contains the given value.
+    // For a nested array we filter on watch_context->contacts containing the address.
+    // Supabase .filter() with 'cs' (contains) works on jsonb arrays.
+    const { data: watchMatches } = await supabase
+      .from('rooms')
+      .select('id, name, watch_context')
+      .eq('workspace_id', workspaceId)
+      .is('archived_at', null)
+      .filter('watch_context->contacts', 'cs', JSON.stringify([senderAddress]))
+      .limit(5)
+
+    for (const row of watchMatches ?? []) {
+      // Skip rooms already in the candidate set via other layers.
+      watchContextCandidates.push({
+        roomId: row.id,
+        roomName: row.name,
+        matchReason: 'watch_context',
+      })
+    }
+  } catch (err) {
+    // Non-fatal: if watch context matching fails, degrade gracefully.
+    console.error('getReconciliationContext: watch context layer failed:', err)
+  }
+
   return {
     thread: threadEmails,
     rooms: allRoomRecords,
     facts: mergedFacts,
     openJobs,
     connectedAddress,
+    watchContextCandidates,
   }
 }

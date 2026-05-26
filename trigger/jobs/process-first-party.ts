@@ -1,6 +1,8 @@
 import { task } from '@trigger.dev/sdk/v3'
 import type { EmailSource } from '@/lib/email/first-party'
 import { handleUserCc } from '@/lib/email/first-party-cc'
+import { containsRoomLink, handleProactiveCreation } from '@/lib/email/first-party-direct'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface ProcessFirstPartyPayload {
   emailId: string
@@ -30,9 +32,26 @@ export const processFirstPartyTask = task({
     }
 
     if (source === 'user_direct') {
-      // Brief 38: proactive room creation / watch context.
-      // Brief 39: room commands (remove, merge, rename, archive).
-      return { emailId, source, status: 'pending_brief_38_39' }
+      // Fetch the email body to check for a room URL before dispatching.
+      // body_text may already be populated if fetch-body ran during ingestion.
+      const supabase = createAdminClient()
+      const { data: email } = await supabase
+        .from('emails')
+        .select('body_text')
+        .eq('id', emailId)
+        .single()
+
+      const body = email?.body_text ?? ''
+
+      if (containsRoomLink(body)) {
+        // Brief 39: Matt is acting on an existing room via a URL in the body.
+        // Stub: Brief 39 implements handleCommand.
+        return { emailId, source, status: 'pending_brief_39' }
+      }
+
+      // Brief 38: no room URL -- Matt is creating rooms proactively.
+      await handleProactiveCreation(emailId, workspaceId)
+      return { emailId, source, status: 'processed' }
     }
   },
 })

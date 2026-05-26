@@ -417,5 +417,8 @@ async function buildFirstPartyContext(
     facts,
     openJobs,
     connectedAddress,
+    // CC-seeded emails do not need watch context matching -- the room is already resolved
+    // via thread or participant match before this context is built.
+    watchContextCandidates: [],
   }
 }

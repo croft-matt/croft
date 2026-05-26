@@ -491,6 +491,7 @@ export type Database = {
           intent: string
           owner: string | null
           parent_job_id: string | null
+          source: string
           status: string
           updated_at: string
           workspace_id: string
@@ -507,6 +508,7 @@ export type Database = {
           intent: string
           owner?: string | null
           parent_job_id?: string | null
+          source?: string
           status?: string
           updated_at?: string
           workspace_id: string
@@ -523,6 +525,7 @@ export type Database = {
           intent?: string
           owner?: string | null
           parent_job_id?: string | null
+          source?: string
           status?: string
           updated_at?: string
           workspace_id?: string
@@ -659,9 +662,12 @@ export type Database = {
           progress_closed: number
           progress_total: number
           room_data: Json
+          room_status: string | null
+          room_status_updated_at: string | null
           room_summary: string | null
           room_summary_updated_at: string | null
           updated_at: string
+          watch_context: Json | null
           workspace_id: string
         }
         Insert: {
@@ -677,9 +683,12 @@ export type Database = {
           progress_closed?: number
           progress_total?: number
           room_data?: Json
+          room_status?: string | null
+          room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
           updated_at?: string
+          watch_context?: Json | null
           workspace_id: string
         }
         Update: {
@@ -695,9 +704,12 @@ export type Database = {
           progress_closed?: number
           progress_total?: number
           room_data?: Json
+          room_status?: string | null
+          room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
           updated_at?: string
+          watch_context?: Json | null
           workspace_id?: string
         }
         Relationships: [

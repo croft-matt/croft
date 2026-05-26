@@ -10,9 +10,11 @@ import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
+import { BriefTab } from '@/components/room/brief-tab'
 import { JobsTab } from '@/components/room/jobs-tab'
 import { DatesTab } from '@/components/room/dates-tab'
 import { AssetsTab } from '@/components/room/assets-tab'
+import { assembleBrief } from '@/lib/rooms/brief'
 import { assembleDates } from '@/lib/rooms/dates'
 import type { RoomAssets } from '@/lib/rooms/assets'
 import type { RoomPeople } from '@/lib/rooms/people'
@@ -20,9 +22,10 @@ import { PeopleTab } from '@/components/room/people-tab'
 import { RecordTab } from '@/components/room/record-tab'
 import { assembleRecord } from '@/lib/rooms/record'
 
-type RoomTab = 'jobs' | 'dates' | 'assets' | 'people' | 'record'
+type RoomTab = 'brief' | 'jobs' | 'dates' | 'assets' | 'people' | 'record'
 
 const TABS: { id: RoomTab; label: string }[] = [
+  { id: 'brief', label: 'Brief' },
   { id: 'jobs', label: 'Jobs' },
   { id: 'dates', label: 'Dates' },
   { id: 'assets', label: 'Assets' },
@@ -55,7 +58,7 @@ export function RoomShell({
   roomPeople,
   allRooms,
 }: RoomShellProps) {
-  const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
+  const [activeTab, setActiveTab] = useState<RoomTab>('brief')
   const { isOpen } = useEmailSidePanel()
   // showPanel stays true for 200ms after isOpen goes false so the exit
   // animation completes before the panel is removed from the DOM.
@@ -73,9 +76,21 @@ export function RoomShell({
   const overdueJobs = jobs.filter(
     (j) => j.status === 'open' && j.due && new Date(j.due) < new Date(),
   )
+  // Suppress unused variable warning. overdueJobs is passed to RoomHeader downstream.
+  void overdueJobs
 
   function renderTab() {
     switch (activeTab) {
+      case 'brief': {
+        const roomDates = assembleDates(readModel)
+        const brief = assembleBrief({
+          openLoops: readModel.openLoops,
+          ownerGroups,
+          roomDates,
+          roomStatus: room.room_status ?? null,
+        })
+        return <BriefTab brief={brief} workspaceId={readModel.workspaceId} parentName={parent?.name ?? null} roomSummary={room.room_summary ?? null} />
+      }
       case 'jobs':
         return (
           <JobsTab
@@ -128,16 +143,22 @@ export function RoomShell({
           ))}
         </div>
 
-        {/* Centered content column */}
-        <div className="flex-1 px-6 py-6">
-          <div className="max-w-3xl mx-auto w-full">
-            {room.room_summary && (
-              <p className="mb-6 text-sm text-muted-foreground leading-relaxed">
-                {room.room_summary}
-              </p>
-            )}
-            {renderTab()}
-          </div>
+        {/* Centered content column.
+            The Brief tab manages its own max-width and centering internally.
+            All other tabs use the wider max-w-3xl container. */}
+        <div className={cn('flex-1 px-6', activeTab === 'brief' ? 'py-6' : 'py-6')}>
+          {activeTab === 'brief' ? (
+            renderTab()
+          ) : (
+            <div className="max-w-3xl mx-auto w-full">
+              {room.room_summary && (
+                <p className="mb-6 text-sm text-muted-foreground leading-relaxed">
+                  {room.room_summary}
+                </p>
+              )}
+              {renderTab()}
+            </div>
+          )}
         </div>
       </div>
 

@@ -171,7 +171,15 @@ When uncertain whether two items are the same, choose \`new\`. A false merge hid
 
 Set \`relates_to_job_id\` to null when \`relation\` is \`new\`.
 
-Use the extract_email_data tool to return your structured output.`
+## Watch context candidates
+
+The user message may include a "Watch context matched rooms" section. These rooms were created by the workspace user before any email thread existed. The user explicitly listed this sender as an expected contact when setting up the room.
+
+Treat watch context matched rooms with the same confidence as a thread match when the sender and subject are coherent with the room name and seed facts. Route this email into the watch context room via room_suggestions using its exact name. Do not create a duplicate room for the same project.
+
+Watch context candidates are prospective, not historical. There will be no prior thread emails linking them to this email. Use the room name and the coherence of subject and sender to judge fit.
+
+Use the extract_email_data tool to return your structured output.\``
 
 export const ROOM_SUMMARY_SYSTEM_PROMPT = `You are summarising a project email room for the person reading it.
 The input includes a userEmail field identifying who that person is. Write the summary from their point of view.
@@ -183,7 +191,16 @@ Be specific with names, dates, and figures where they help orient the reader.
 Do not include addresses, billing details, account numbers, or any granular line-item fact — those belong in the Record tab, not here.
 Do not use lists. Do not use em-dashes (—), en-dashes (–), or hyphens in place of conjunctions.
 Do not begin with "This is", "The room", or "This room".
-Start from the substance.`
+Start from the substance.
+
+Also produce a single status sentence in the "status" field.
+The status sentence states the single most important thing blocking progress or the current state of play.
+Be specific: name the blocker, the pending item, or the person it depends on.
+Do not open the status sentence with "The room", "Currently", or "This project".
+Do not use hyphens in place of conjunctions.
+Example: "Carnet submission is blocked on the gear manifest from Siyan, who has a 3-4 working day turnaround once it is received."
+
+Return a JSON object with exactly two fields: "summary" (string) and "status" (string).`
 
 export const EXTRACTION_TOOL_SCHEMA = {
   name: 'extract_email_data',

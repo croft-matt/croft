@@ -103,6 +103,18 @@ ${body}`,
     parts.push(`## User's connected address\n\n${context.connectedAddress}`)
   }
 
+  // Watch context candidates (Layer 4). Rooms the user seeded in advance, listing
+  // this sender as an expected contact. These have high routing priority even though
+  // no prior thread links them to this email.
+  if (context.watchContextCandidates.length > 0) {
+    const lines = context.watchContextCandidates.map(
+      (c) => `Room: ${c.roomName} (id: ${c.roomId}) -- matched via watch context (sender is a listed expected contact)`,
+    )
+    parts.push(
+      `## Watch context matched rooms\n\nThe following rooms were created by the user before any email thread existed. The user listed this sender as an expected contact. Treat these as high-priority routing candidates, equivalent to a thread match.\n\n${lines.join('\n')}`,
+    )
+  }
+
   // Room hierarchy: model uses this to suggest paths and reuse existing names.
   // formatRoomTree returns an indented string. Truncate at 3000 chars to cap token cost
   // on large workspaces — the model only needs enough context to match and name rooms.

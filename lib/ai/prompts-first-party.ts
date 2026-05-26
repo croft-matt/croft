@@ -1,15 +1,16 @@
-// First-party Tier 3 prompt variant for emails authored by the workspace user.
-// Used when Matt CCs Croft on an outbound email (source = 'user_cc').
+// First-party prompt variants for emails authored by the workspace user.
 //
-// Key differences from TIER_3_SYSTEM_PROMPT:
+// FIRST_PARTY_TIER3_SYSTEM_PROMPT: used when Matt CCs Croft on an outbound email (source = 'user_cc').
 //   - The email was sent BY the user, not received FROM a counterparty.
 //   - Jobs reflect what the user is initiating: requests made of others or deliveries.
 //   - No urgency assessment (tier 2 is never run for first-party emails).
-//   - Reconciliation candidates may be absent for new rooms. Omit reconciliation
-//     instructions when no open jobs are present.
+//   - Reconciliation candidates may be absent for new rooms.
 //
-// Everything else is identical to the standard Tier 3 path: fact extraction schema,
-// job schema, kind discriminator, writeExtractionResults output.
+// PROACTIVE_CREATION_SYSTEM_PROMPT: used when Matt emails Croft directly to seed rooms
+//   before any project email has been sent (source = 'user_direct', Brief 38).
+//   - Extracts room names, seed facts, and watch context from a plain prose email.
+//   - No job reconciliation. No room_suggestions. No urgency.
+//   - Output schema is entirely different from the standard extraction schema.
 
 import type { AttachmentMeta } from '@/lib/types/database'
 import type { ReconciliationContext } from '@/lib/ai/reconciliation-context'
@@ -208,4 +209,157 @@ ${body}`,
   parts.push(`## Existing rooms in this workspace\n\n${roomTreeText.slice(0, 3000)}`)
 
   return parts.join('\n\n---\n\n')
+}
+
+// ---- Proactive creation prompt (Brief 38) ----
+//
+// Used when Matt emails Croft directly to set up rooms before any project email exists.
+// The model extracts rooms, seed facts, and watch context. No job reconciliation.
+// Prompt caching is not needed here: these calls are low-frequency and not batched.
+
+export const PROACTIVE_CREATION_SYSTEM_PROMPT = `You are reading an email the user sent to Croft to set up project rooms before any email thread has started.
+
+Your job is to extract the rooms they want to create. For each room, extract:
+- Its name (concise, suitable as a project room label)
+- Any parent room grouping (if the user lists multiple events or dates under a heading, that heading is the parent)
+- Seed facts (date, venue, location, amounts, specifications -- anything concrete the user stated)
+- Watch context (contacts they mentioned, topics or signals to listen for, and items they are anticipating receiving or confirming)
+
+## Single vs batch creation
+
+If the user describes a single project, return one room.
+
+If the user lists multiple rooms under a parent heading (e.g. "November tour -- here are the dates", "Setting up rooms for my Q4 run:"), create one parent room with the heading as its name, and one child room per listed item. The parent_name field on each child should match the parent room's name exactly.
+
+## Seed facts
+
+Seed facts are things the user states directly: dates, venues, capacities, fees, reference numbers. Do not infer facts not explicitly stated. If the user says "Manchester Apollo, November 3rd", extract:
+- kind: place, key: venue, value: Manchester Apollo
+- kind: time, key: date, value: November 3rd
+
+## Watch context
+
+contacts: email addresses or plain names the user mentioned as expected participants. Include both.
+keywords: topics, project-specific terms, or signal phrases the user listed ("stage plot", "hospitality rider", "insurance certificate").
+anticipated: items the user expects to receive or confirm. Each has a description (the user's own words) and a kind.
+
+## Anticipated item kinds
+
+document: a file, report, specification, or form the user expects to receive.
+confirmation: an agreement, approval, or acknowledgement the user is waiting for.
+information: a piece of data or answer the user needs (capacity, dates, contacts).
+payment: a fee, invoice, or financial transfer the user expects.
+other: anything that does not fit the above.
+
+## For a batch
+
+When the user mentions items that apply to all rooms in the batch ("for all three: stage plots, riders, and contracts"), include those anticipated items in the watch context of each child room. Also union all child watch contexts into the parent room's watch context.
+
+## Output
+
+Use the create_proactive_rooms tool to return your structured output. Do not return free text.`
+
+export interface WatchContext {
+  contacts: string[]
+  keywords: string[]
+  anticipated: {
+    description: string
+    kind: 'document' | 'confirmation' | 'information' | 'payment' | 'other'
+  }[]
+}
+
+export interface ProactiveSeedFact {
+  key: string
+  value: string
+  kind: 'place' | 'time' | 'money' | 'credential' | 'spec' | 'other'
+  confidence: number
+}
+
+export interface ProactiveRoom {
+  name: string
+  parent_name?: string
+  seed_facts: ProactiveSeedFact[]
+  watch_context: WatchContext
+}
+
+export interface ProactiveCreationOutput {
+  rooms: ProactiveRoom[]
+}
+
+export const PROACTIVE_CREATION_TOOL_SCHEMA = {
+  name: 'create_proactive_rooms',
+  description: 'Return the rooms, seed facts, and watch context extracted from the user\'s email.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      rooms: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Room name, concise and suitable as a project label.' },
+            parent_name: {
+              type: 'string',
+              description: 'Name of the parent room if this is a child in a batch. Omit for single rooms and the parent itself.',
+            },
+            seed_facts: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string', description: 'Short snake_case label for this fact.' },
+                  value: { type: 'string', description: 'Fact value exactly as stated.' },
+                  kind: {
+                    type: 'string',
+                    enum: ['place', 'time', 'money', 'credential', 'spec', 'other'],
+                  },
+                  confidence: { type: 'number', description: '0-1 extraction confidence.' },
+                },
+                required: ['key', 'value', 'kind', 'confidence'],
+              },
+            },
+            watch_context: {
+              type: 'object',
+              properties: {
+                contacts: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Email addresses or plain names the user mentioned as expected participants.',
+                },
+                keywords: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Topics or signal phrases to listen for in future inbound emails.',
+                },
+                anticipated: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      description: { type: 'string' },
+                      kind: {
+                        type: 'string',
+                        enum: ['document', 'confirmation', 'information', 'payment', 'other'],
+                      },
+                    },
+                    required: ['description', 'kind'],
+                  },
+                },
+              },
+              required: ['contacts', 'keywords', 'anticipated'],
+            },
+          },
+          required: ['name', 'seed_facts', 'watch_context'],
+        },
+      },
+    },
+    required: ['rooms'],
+  },
+}
+
+export function buildProactiveCreationContent(emailBody: string, subject: string | null): string {
+  const body = emailBody.split(/\s+/).slice(0, 1500).join(' ')
+  return `Subject: ${subject ?? '(no subject)'}
+
+${body}`
 }

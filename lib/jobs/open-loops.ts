@@ -5,6 +5,9 @@ import { groupAddressesByPerson } from '@/lib/contacts/identity'
 export interface OpenLoop extends Job {
   age_days: number
   from_name: string | null
+  // Narrowed from the DB string type. 'extracted' = from an actual email;
+  // 'anticipated' = created from watch_context before any matching email arrived.
+  source: 'extracted' | 'anticipated'
 }
 
 export interface OpenLoops {
@@ -52,6 +55,7 @@ export function buildOpenLoops(
         ...job,
         age_days,
         from_name: fromNameMap.get(job.email_id) ?? null,
+        source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
       }
     })
     // Oldest first
