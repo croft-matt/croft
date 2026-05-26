@@ -81,7 +81,7 @@ Do NOT use hardcoded object types like "rider" or "contract" in the intent field
 
 For each job:
 - intent: one of REQUEST, DELIVER, CONFIRM, CHASE, QUERY, INTRODUCE
-- description: one plain English sentence describing the job. Include who, what, and when if known. When the person performing or being asked to perform the action is the user (identified by the connected address in the user message), refer to them as "you" rather than by name. For all other parties, use their name.
+- description: the action in under 12 words. Write what needs to happen -- not who or when, as the owner and due fields carry those. Active voice. No parenthetical elaborations. No meta-commentary ("should be aware", "needs to know", "is expected to"). When the user is the actor, use "you" not their name or email address. Good: "Send ETA to GMM once departure is confirmed." Bad: "Matt needs to send confirmed ETA for leaving Hellfest to GMM once departure time is known (estimated departure ~01:00, arrival at GMM ~10:00-11:00, approximately 10 hours drive)."
 - owner: email address of the person who needs to act on this job, or null if unclear
 - due: ISO date (YYYY-MM-DD) if a deadline is mentioned, otherwise null
 - confidence: 0-1 score for how confident you are this job was correctly extracted
@@ -89,7 +89,7 @@ For each job:
 For entities:
 - contacts: every person mentioned by name or email address, with their role if stated
 - assets: every file, document, or attachment mentioned, with the likely type and your confidence
-- dates: every specific date mentioned, with the context (what is happening on that date)
+- dates: every specific date mentioned. The context field is a noun phrase under 8 words naming what the date marks. Not a sentence. Not a description of what someone will do. Strip names, organisations, and elaborations -- just the event label. Good: "RF channel handover", "load-in", "show day", "departure". Bad: "GMM's RF coordinator will provide approved radio channels to TesseracT on day of show (DOS); Matt should be aware and expect this on the day."
 - organisations: every company, venue, promoter, or organisation mentioned by name
 
 For room_suggestions: the existing room structure is shown as an indented tree in the user message. Suggest where this email belongs as one or more paths from root to leaf. Each path is an ordered array of strings. Examples: ["TesseracT", "EU Tour 2026", "Hellfest"] or ["Annual Tax Return 2026"]. Rules: reuse exact existing names where they match; do not create new nodes for things that already exist under a slightly different name. Only create new path segments when the email clearly introduces a new project or sub-project not in the tree. If no project is identifiable, return an empty array.
@@ -198,7 +198,8 @@ The status sentence states the single most important thing blocking progress or 
 Be specific: name the blocker, the pending item, or the person it depends on.
 Do not open the status sentence with "The room", "Currently", or "This project".
 Do not use hyphens in place of conjunctions.
-Example: "Carnet submission is blocked on the gear manifest from Siyan, who has a 3-4 working day turnaround once it is received."
+Keep it under 20 words. A single clause is enough.
+Example: "Carnet submission blocked on Siyan's gear manifest -- 3 to 4 days once received."
 
 Return a JSON object with exactly two fields: "summary" (string) and "status" (string).`
 
@@ -241,7 +242,7 @@ export const EXTRACTION_TOOL_SCHEMA = {
             },
             description: {
               type: 'string',
-              description: 'One plain English sentence describing the job.',
+              description: 'The action in under 12 words. What needs to happen, not who or when. No parentheticals.',
             },
             owner: {
               type: ['string', 'null'],
@@ -301,7 +302,7 @@ export const EXTRACTION_TOOL_SCHEMA = {
               type: 'object',
               properties: {
                 date: { type: 'string' },
-                context: { type: 'string' },
+                context: { type: 'string', description: 'A noun phrase under 8 words naming what this date marks. Not a sentence.' },
               },
               required: ['date', 'context'],
             },
