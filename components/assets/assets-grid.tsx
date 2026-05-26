@@ -1,6 +1,16 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { FileText, FileSpreadsheet, FileImage, File, FileCode } from 'lucide-react'
 import type { WorkspaceAsset, AssetGroup, AssetFileType } from '@/lib/queries/assets'
+import { AssetViewerModal } from '@/components/assets/asset-viewer-modal'
+
+interface ViewingAsset {
+  id: string
+  filename: string
+  mimeType: string | null
+}
 
 function formatFileSize(bytes: number | null): string | null {
   if (bytes === null) return null
@@ -20,26 +30,22 @@ function FileIcon({ fileType, className }: { fileType: AssetFileType; className?
   }
 }
 
-function AssetCard({ asset }: { asset: WorkspaceAsset }) {
+function AssetCard({ asset, onOpen }: { asset: WorkspaceAsset; onOpen: (a: ViewingAsset) => void }) {
   const fileSize = formatFileSize(asset.sizeBytes)
-  const downloadHref = `/api/assets/${asset.id}/url`
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-5 py-4 hover:bg-muted/40 transition-colors">
-      {/* Icon + filename (filename is the download link) */}
       <div className="flex items-start gap-3">
         <div className="shrink-0 mt-0.5">
           <FileIcon fileType={asset.fileType} />
         </div>
         <div className="min-w-0 flex-1">
-          <a
-            href={downloadHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold text-foreground hover:text-muted-foreground transition-colors break-words leading-tight line-clamp-2 block"
+          <button
+            onClick={() => onOpen({ id: asset.id, filename: asset.filename, mimeType: asset.mimeType ?? null })}
+            className="text-sm font-semibold text-foreground hover:text-muted-foreground transition-colors break-words leading-tight line-clamp-2 block text-left w-full"
           >
             {asset.filename}
-          </a>
+          </button>
           {asset.likelyType && (
             <p className="text-xs text-muted-foreground mt-0.5 capitalize">
               {asset.likelyType.replace(/_/g, ' ')}
@@ -48,10 +54,8 @@ function AssetCard({ asset }: { asset: WorkspaceAsset }) {
         </div>
       </div>
 
-      {/* Divider */}
       <div className="border-t border-border" />
 
-      {/* Bottom: room + size */}
       <div className="flex items-center justify-between gap-2">
         {asset.roomId && asset.roomName ? (
           <Link
@@ -79,6 +83,8 @@ interface AssetsGridProps {
 }
 
 export function AssetsGrid({ groups, total }: AssetsGridProps) {
+  const [viewingAsset, setViewingAsset] = useState<ViewingAsset | null>(null)
+
   if (groups.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -88,20 +94,31 @@ export function AssetsGrid({ groups, total }: AssetsGridProps) {
   }
 
   return (
-    <div className="space-y-10">
-      {groups.map((group) => (
-        <section key={group.fileType}>
-          <div className="flex items-baseline gap-2 mb-4">
-            <h2 className="text-sm font-semibold text-foreground">{group.label}</h2>
-            <span className="text-xs text-muted-foreground">{group.assets.length}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {group.assets.map((asset) => (
-              <AssetCard key={asset.id} asset={asset} />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="space-y-10">
+        {groups.map((group) => (
+          <section key={group.fileType}>
+            <div className="flex items-baseline gap-2 mb-4">
+              <h2 className="text-sm font-semibold text-foreground">{group.label}</h2>
+              <span className="text-xs text-muted-foreground">{group.assets.length}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {group.assets.map((asset) => (
+                <AssetCard key={asset.id} asset={asset} onOpen={setViewingAsset} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {viewingAsset && (
+        <AssetViewerModal
+          assetId={viewingAsset.id}
+          filename={viewingAsset.filename}
+          mimeType={viewingAsset.mimeType}
+          onClose={() => setViewingAsset(null)}
+        />
+      )}
+    </>
   )
 }

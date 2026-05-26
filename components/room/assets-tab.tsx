@@ -1,11 +1,19 @@
 'use client'
 
-import { FileText, FileSpreadsheet, FileImage, File, Download } from 'lucide-react'
+import { useState } from 'react'
+import { FileText, FileSpreadsheet, FileImage, File } from 'lucide-react'
 import type { RoomAssets, RoomAsset } from '@/lib/rooms/assets'
 import { EmailCitation } from '@/components/room/email-citation'
+import { AssetViewerModal } from '@/components/assets/asset-viewer-modal'
 
 interface AssetsTabProps {
   assets: RoomAssets
+}
+
+interface ViewingAsset {
+  id: string
+  filename: string
+  mimeType: string | null
 }
 
 const STATUS_LABELS: Record<RoomAsset['status'], string> = {
@@ -55,8 +63,7 @@ function formatDate(iso: string): string {
   })
 }
 
-function AssetRow({ asset }: { asset: RoomAsset }) {
-  const downloadHref = `/api/assets/${asset.id}/url`
+function AssetRow({ asset, onOpen }: { asset: RoomAsset; onOpen: (a: ViewingAsset) => void }) {
   const fileSize = formatFileSize(asset.size_bytes)
   const senderLabel = asset.from_name ?? 'Unknown'
 
@@ -65,14 +72,12 @@ function AssetRow({ asset }: { asset: RoomAsset }) {
       <div className="pt-0.5">{getFileIcon(asset.mime_type, asset.filename)}</div>
 
       <div className="min-w-0 flex-1">
-        <a
-          href={downloadHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-foreground hover:text-muted-foreground transition-colors truncate block"
+        <button
+          onClick={() => onOpen({ id: asset.id, filename: asset.filename, mimeType: asset.mime_type ?? null })}
+          className="text-sm font-medium text-foreground hover:text-muted-foreground transition-colors truncate block text-left w-full"
         >
           {asset.filename}
-        </a>
+        </button>
 
         <p className="text-xs text-muted-foreground mt-0.5">
           From {senderLabel}, {formatDate(asset.email_date)}
@@ -87,23 +92,21 @@ function AssetRow({ asset }: { asset: RoomAsset }) {
           </span>
         )}
 
-        <a
-          href={downloadHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          aria-label={`Download ${asset.filename}`}
-        >
-          <Download className="h-3.5 w-3.5" />
-        </a>
-
         <EmailCitation emailId={asset.email_id} />
       </div>
     </div>
   )
 }
 
-function StatusGroup({ status, items }: { status: RoomAsset['status']; items: RoomAsset[] }) {
+function StatusGroup({
+  status,
+  items,
+  onOpen,
+}: {
+  status: RoomAsset['status']
+  items: RoomAsset[]
+  onOpen: (a: ViewingAsset) => void
+}) {
   if (items.length === 0) return null
 
   return (
@@ -113,7 +116,7 @@ function StatusGroup({ status, items }: { status: RoomAsset['status']; items: Ro
       </p>
       <div className="space-y-2">
         {items.map((asset) => (
-          <AssetRow key={asset.id} asset={asset} />
+          <AssetRow key={asset.id} asset={asset} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -121,6 +124,8 @@ function StatusGroup({ status, items }: { status: RoomAsset['status']; items: Ro
 }
 
 export function AssetsTab({ assets }: AssetsTabProps) {
+  const [viewingAsset, setViewingAsset] = useState<ViewingAsset | null>(null)
+
   if (assets.total === 0) {
     return (
       <div className="py-8 text-sm text-muted-foreground">
@@ -130,10 +135,26 @@ export function AssetsTab({ assets }: AssetsTabProps) {
   }
 
   return (
-    <div>
-      {STATUS_ORDER.map((status) => (
-        <StatusGroup key={status} status={status} items={assets[status]} />
-      ))}
-    </div>
+    <>
+      <div>
+        {STATUS_ORDER.map((status) => (
+          <StatusGroup
+            key={status}
+            status={status}
+            items={assets[status]}
+            onOpen={setViewingAsset}
+          />
+        ))}
+      </div>
+
+      {viewingAsset && (
+        <AssetViewerModal
+          assetId={viewingAsset.id}
+          filename={viewingAsset.filename}
+          mimeType={viewingAsset.mimeType}
+          onClose={() => setViewingAsset(null)}
+        />
+      )}
+    </>
   )
 }

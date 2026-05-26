@@ -3,6 +3,7 @@ import type { BlockDefinition, BlockData, RoomReadModel } from './types'
 export interface DocumentItem {
   id: string
   filename: string
+  mime_type: string | null
   likely_type: string | null
   status: string
   storage_path: string | null
@@ -32,6 +33,7 @@ export const documentsBlock: BlockDefinition<DocumentsData> = {
       items.push({
         id: asset.id,
         filename: asset.filename,
+        mime_type: asset.mime_type,
         likely_type: asset.likely_type,
         status: asset.status,
         storage_path: asset.storage_path,
