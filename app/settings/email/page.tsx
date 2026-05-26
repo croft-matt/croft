@@ -72,15 +72,11 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
             </li>
             <li className="flex gap-2">
               <span className="shrink-0 text-muted-foreground">2.</span>
-              Add your Croft address as a forwarding address in Gmail settings.
-            </li>
-            <li className="flex gap-2">
-              <span className="shrink-0 text-muted-foreground">3.</span>
               Your last 7 days of email are imported and processed in the background.
             </li>
             <li className="flex gap-2">
-              <span className="shrink-0 text-muted-foreground">4.</span>
-              New email arrives automatically from that point on.
+              <span className="shrink-0 text-muted-foreground">3.</span>
+              New email and sent items are picked up automatically every 2 minutes.
             </li>
           </ol>
         </div>
@@ -132,7 +128,7 @@ function ConnectedCard({
   inboundAddress: string | null
   justConnected: boolean
 }) {
-  const fullyReady = account.forwarding_configured && account.history_imported
+  const fullyReady = account.history_imported
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 space-y-5">
@@ -163,45 +159,17 @@ function ConnectedCard({
 
       <div className="space-y-2">
         <StatusRow
-          done={account.forwarding_configured}
-          label="Forwarding configured"
-          pending="Forwarding not yet set up"
-        />
-        <StatusRow
           done={account.history_imported}
           label="History imported"
           pending="Importing last 7 days of email..."
         />
       </div>
 
-      {!account.forwarding_configured && inboundAddress && (
-        <ForwardingInstructions inboundAddress={inboundAddress} />
-      )}
-
-      {!fullyReady && account.forwarding_configured && (
+      {!fullyReady && (
         <p className="text-xs text-muted-foreground">
           Setup is running in the background. This page will reflect progress on next refresh.
         </p>
       )}
-    </div>
-  )
-}
-
-function ForwardingInstructions(_props: { inboundAddress: string }) {
-  return (
-    <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4 space-y-3">
-      <p className="text-sm font-medium text-amber-300">Set up email forwarding</p>
-      <p className="text-sm text-muted-foreground">
-        Add the Croft address above as a forwarding address in Gmail settings. Gmail will send
-        a verification email -- Croft confirms it automatically.
-      </p>
-      <ol className="space-y-1 text-xs text-muted-foreground">
-        <li>1. Open Gmail and go to Settings (gear icon) &gt; See all settings</li>
-        <li>2. Click the Forwarding and POP/IMAP tab</li>
-        <li>3. Click Add a forwarding address and paste the address above</li>
-        <li>4. Wait for confirmation -- Croft handles it automatically</li>
-        <li>5. Select Forward a copy of incoming mail and save changes</li>
-      </ol>
     </div>
   )
 }
@@ -234,7 +202,7 @@ async function getAccount(workspaceId: string) {
   const { data } = await supabase
     .from('email_accounts')
     .select(
-      'email_address, access_token_encrypted, refresh_token_encrypted, forwarding_configured, history_imported'
+      'email_address, access_token_encrypted, refresh_token_encrypted, history_imported'
     )
     .eq('workspace_id', workspaceId)
     .eq('provider', 'google')
