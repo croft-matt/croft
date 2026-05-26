@@ -26,7 +26,7 @@ function DateRow({ date }: { date: RoomDate }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 py-3 first:pt-0',
+        'flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3',
         past && 'opacity-50',
       )}
     >
@@ -57,7 +57,7 @@ export function DatesTab({ roomDates }: DatesTabProps) {
         </p>
 
         {deliveryDate ? (
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xl font-semibold text-foreground tabular-nums">
@@ -84,7 +84,7 @@ export function DatesTab({ roomDates }: DatesTabProps) {
           </p>
 
           {dates.length === 0 ? null : (
-            <div className="divide-y divide-border">
+            <div className="space-y-2">
               {dates.map((date) => (
                 <DateRow key={`${date.value}:${date.label}`} date={date} />
               ))}

@@ -157,6 +157,7 @@ interface JobsTabProps {
 
 export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
   const { open: openModal } = useJobModal()
+  const [youExpanded, setYouExpanded] = useState(true)
   const [othersExpanded, setOthersExpanded] = useState(false)
 
   const { yourCourt, theirCourt } = loops
@@ -177,21 +178,25 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
     <div className="space-y-8">
       {/* Awaiting you */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <button
+          type="button"
+          onClick={() => setYouExpanded((v) => !v)}
+          className="flex w-full items-center justify-between mb-4 text-left cursor-pointer"
+        >
           <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             Awaiting you
           </p>
           <span className="text-[13px] text-muted-foreground">{yourCourt.length}</span>
-        </div>
+        </button>
 
-        {yourCourt.length === 0 ? (
+        {youExpanded && (yourCourt.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {totalOpen === 0
               ? 'All jobs in this room are closed.'
               : 'Nothing is waiting on you here.'}
           </p>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="space-y-2">
             {rankedYourCourt.map((loop) => {
               const intent = intentConfig[loop.intent as JobIntent]
               const chaseCount = chaseCountMap.get(loop.id) ?? 0
@@ -203,7 +208,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                   tabIndex={0}
                   onClick={() => openModal(loop)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openModal(loop) }}
-                  className="flex w-full items-start gap-3 py-3 first:pt-0 text-left hover:opacity-80 transition-opacity cursor-pointer"
+                  className="flex w-full items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <span
                     className={cn(
@@ -244,7 +249,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
               )
             })}
           </div>
-        )}
+        ))}
       </section>
 
       {/* Awaiting others */}
@@ -276,9 +281,9 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                         {heading}
                         <span className="ml-1.5 opacity-60">{group.loops.length}</span>
                       </p>
-                      <div className="divide-y divide-border">
+                      <div className="space-y-2">
                         {group.loops.map((loop) => (
-                          <div key={loop.id} className="flex items-start gap-3 py-3 first:pt-0">
+                          <div key={loop.id} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm text-foreground leading-snug mb-0.5">
                                 {loop.description}
@@ -306,7 +311,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                   })
                   .map((loop) => (
-                    <div key={loop.id} className="flex items-start gap-3 py-3 first:pt-0 border-b border-border last:border-0">
+                    <div key={loop.id} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-foreground leading-snug mb-0.5">
                           {loop.description}
