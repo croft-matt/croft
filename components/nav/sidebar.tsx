@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Settings, ChevronDown, ChevronRight, Zap, Users, Paperclip } from 'lucide-react'
+import { Settings, ChevronDown, ChevronRight, Home, Users, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RoomsTree } from '@/components/nav/rooms-tree'
 import type { RoomWithOverdue } from '@/lib/queries/cockpit'
@@ -14,7 +14,7 @@ interface SidebarProps {
 }
 
 const topNavItems = [
-  { href: '/', label: 'Urgent', icon: Zap },
+  { href: '/', label: 'Home', icon: Home },
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/assets', label: 'Assets', icon: Paperclip },
 ]

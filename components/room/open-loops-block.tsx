@@ -41,7 +41,7 @@ function LoopRow({ loop, showOwner }: { loop: OpenLoop; showOwner: boolean }) {
       <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(loop.due))} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start gap-2 mb-0.5">
-          <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
+          <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide', intent.className)}>
             {intent.label}
           </span>
           <span className="text-sm font-medium text-foreground leading-snug">{loop.description}</span>
@@ -84,7 +84,7 @@ function AwaitingOthersGrouped({ groups }: { groups: OwnerGroup[] }) {
             : (group.name ?? group.displayAddress ?? group.personKey)
         return (
           <div key={group.personKey}>
-            <p className="text-[10px] font-medium text-muted-foreground mb-1 truncate">{heading}</p>
+            <p className="text-[13px] font-medium text-muted-foreground mb-1 truncate">{heading}</p>
             <div className="divide-y divide-border">
               {group.loops.map((loop) => (
                 <LoopRow key={loop.id} loop={loop} showOwner={false} />
@@ -107,7 +107,7 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Open loops</p>
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Open loops</p>
         <p className="text-sm text-muted-foreground">No open loops in this room.</p>
       </div>
     )
@@ -115,11 +115,11 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Open loops</p>
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Open loops</p>
 
       {data.yourCourt.length > 0 && (
         <div className="mb-4">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Your court</p>
+          <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Your court</p>
           <div className="divide-y divide-border">
             {data.yourCourt.map((loop) => {
               const intent = intentConfig[loop.intent as JobIntent]
@@ -132,7 +132,7 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
                   <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(loop.due))} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start gap-2 mb-0.5">
-                      <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
+                      <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide', intent.className)}>
                         {intent.label}
                       </span>
                       <span className="text-sm font-medium text-foreground leading-snug">{loop.description}</span>
@@ -150,7 +150,7 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
 
       {data.theirCourt.length > 0 && (
         <div className={cn(data.yourCourt.length > 0 && 'border-t border-border pt-4')}>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Awaiting others</p>
+          <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Awaiting others</p>
           {data.theirCourtByPerson && data.theirCourtByPerson.length > 0 ? (
             <AwaitingOthersGrouped groups={data.theirCourtByPerson} />
           ) : (

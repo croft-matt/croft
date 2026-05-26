@@ -15,7 +15,7 @@ export function SuggestionsRail({ suggestions, roomId }: SuggestionsRailProps) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested</p>
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested</p>
       <div className="flex flex-col gap-2">
         {suggestions.map((s) => (
           <SuggestionCard key={s.type} suggestion={s} roomId={roomId} />

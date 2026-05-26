@@ -28,7 +28,10 @@ export async function fetchAndStoreAttachments(
     throw new Error(`fetchAttachments: Resend API error for email ${emailId}: ${error.message}`)
   }
 
-  const attachments = listResponse?.data ?? []
+  // Exclude inline attachments (Outlook tracking pixels, embedded images, CID references).
+  const attachments = (listResponse?.data ?? []).filter(
+    (a) => a.content_disposition !== 'inline' && !a.content_id,
+  )
   const now = new Date().toISOString()
 
   for (const attachment of attachments) {

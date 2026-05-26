@@ -75,7 +75,7 @@ export function JobsList({ jobs }: JobsListProps) {
                   <div className="flex items-start gap-2 flex-wrap">
                     <span
                       className={cn(
-                        'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide',
+                        'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide',
                         intent.className
                       )}
                     >

@@ -8,7 +8,6 @@ import type { CrossReference } from '@/lib/queries/rooms'
 import type { OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
-import { OverdueAlert } from '@/components/room/overdue-alert'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { JobsTab } from '@/components/room/jobs-tab'
@@ -108,11 +107,26 @@ export function RoomShell({
 
         <CrossReferenceCards crossRefs={crossRefs} />
 
-        {overdueJobs.length > 0 && room.alert_text && (
-          <OverdueAlert alertText={room.alert_text} />
-        )}
+        {/* Tab bar: full width, flush under header */}
+        <div className="flex border-b border-border px-6">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'mr-6 pb-3 pt-3 text-sm transition-colors',
+                activeTab === tab.id
+                  ? 'border-b-2 border-primary text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Centered content column: AI summary above tabs, tabs below. */}
+        {/* Centered content column */}
         <div className="flex-1 px-6 py-6">
           <div className="max-w-3xl mx-auto w-full">
             {room.room_summary && (
@@ -120,26 +134,6 @@ export function RoomShell({
                 {room.room_summary}
               </p>
             )}
-
-            {/* Tab bar: five fixed tabs, always rendered. */}
-            <div className="flex border-b border-border mb-6">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    'mr-6 pb-3 pt-3 text-sm transition-colors',
-                    activeTab === tab.id
-                      ? 'border-b-2 border-primary text-foreground font-medium'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
             {renderTab()}
           </div>
         </div>

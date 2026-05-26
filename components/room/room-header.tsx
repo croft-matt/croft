@@ -45,17 +45,6 @@ export function RoomHeader({ room, parent, jobs, childRooms }: RoomHeaderProps) 
         </div>
       </div>
 
-      {hasProgress && isLeaf && (
-          <div className="mt-3 flex items-center gap-3">
-          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <span className="shrink-0 text-xs text-muted-foreground">{progressPct}%</span>
-        </div>
-      )}
     </div>
   )
 }

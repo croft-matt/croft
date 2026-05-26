@@ -17,7 +17,7 @@ export function EmailCitation({ emailId, label = 'source' }: EmailCitationProps)
         e.stopPropagation()
         open(emailId)
       }}
-      className="shrink-0 text-[11px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+      className="shrink-0 text-[13px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
     >
       {label}
     </button>

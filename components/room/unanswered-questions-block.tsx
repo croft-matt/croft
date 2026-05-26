@@ -20,7 +20,7 @@ export function UnansweredQuestionsBlock({ data }: UnansweredQuestionsBlockProps
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Unanswered questions
         </p>
         <p className="text-sm text-muted-foreground">No open questions here.</p>
@@ -30,13 +30,13 @@ export function UnansweredQuestionsBlock({ data }: UnansweredQuestionsBlockProps
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Unanswered questions
       </p>
 
       {data.awaitingYou.length > 0 && (
         <div className="mb-4">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
+          <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
             Awaiting you
           </p>
           <div className="divide-y divide-border">
@@ -49,7 +49,7 @@ export function UnansweredQuestionsBlock({ data }: UnansweredQuestionsBlockProps
 
       {data.awaitingOthers.length > 0 && (
         <div className={data.awaitingYou.length > 0 ? 'border-t border-border pt-4' : ''}>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
+          <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2">
             Awaiting others
           </p>
           <div className="divide-y divide-border">

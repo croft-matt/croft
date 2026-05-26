@@ -20,10 +20,10 @@ export const generateRoomSummaryTask = task({
     const supabase = createAdminClient()
     const startedAt = Date.now()
 
-    // Fetch room name and workspace.
+    // Fetch room name and workspace (including the user's receiving address for summary orientation).
     const { data: room } = await supabase
       .from('rooms')
-      .select('name, workspace_id, room_data')
+      .select('name, workspace_id, room_data, workspaces(receiving_address)')
       .eq('id', roomId)
       .single()
 
@@ -101,8 +101,12 @@ export const generateRoomSummaryTask = task({
       return { roomId, skipped: true }
     }
 
+    const workspace = Array.isArray(room.workspaces) ? room.workspaces[0] : room.workspaces
+    const userEmail = workspace?.receiving_address ?? null
+
     const input = JSON.stringify({
       roomName: room.name,
+      userEmail,
       openJobs: openJobs.map((j) => ({
         description: j.description,
         intent: j.intent,

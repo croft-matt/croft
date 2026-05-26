@@ -79,7 +79,7 @@ export function ToField({ recipients, onChange }: ToFieldProps) {
           className="flex-1 min-w-24 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">Press Enter or comma to add</p>
+      <p className="mt-1 text-[13px] text-muted-foreground">Press Enter or comma to add</p>
     </div>
   )
 }

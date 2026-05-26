@@ -91,7 +91,7 @@ export function EmailProcessingProvider({
           <div className="w-[42%] shrink-0 space-y-4">
             {keyDates.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Key dates
                 </p>
                 <div className="divide-y divide-border">

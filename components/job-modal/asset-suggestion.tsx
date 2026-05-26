@@ -31,7 +31,7 @@ export function AssetSuggestionCard({ suggestion, onAttach }: AssetSuggestionCar
     <div>
       <div className="mb-1.5 flex items-center gap-1.5">
         <Sparkles className="h-3 w-3 text-muted-foreground" />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
           Suggested
         </span>
       </div>

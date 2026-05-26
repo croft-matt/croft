@@ -147,7 +147,7 @@ function TimelineRibbon({ items, anchor, highlighted, onHover, onClick }: Ribbon
   const endCapContent = (
     <div className="flex flex-col items-center gap-0.5">
       <span className="w-3.5 h-3.5 rounded-full bg-foreground ring-2 ring-background shrink-0" />
-      <span className="text-[10px] text-foreground max-w-[80px] text-center leading-tight line-clamp-2 hidden sm:block">
+      <span className="text-[13px] text-foreground max-w-[80px] text-center leading-tight line-clamp-2 hidden sm:block">
         {anchor.label}
       </span>
     </div>
@@ -256,7 +256,7 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Timeline
         </p>
         <p className="text-sm text-muted-foreground">No dated events in this room yet.</p>
@@ -269,7 +269,7 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Timeline
       </p>
 
@@ -299,7 +299,7 @@ export function TimelineBlock({ data }: TimelineBlockProps) {
         {past.length > 0 && upcoming.length > 0 && (
           <div className="flex items-center gap-2 py-2">
             <div className="h-px flex-1 bg-border" />
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
               Now
             </span>
             <div className="h-px flex-1 bg-border" />

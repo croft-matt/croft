@@ -19,7 +19,7 @@ interface DecisionsBlockProps {
 export function DecisionsBlock({ data }: DecisionsBlockProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Decisions
       </p>
 
@@ -46,7 +46,7 @@ export function DecisionsBlock({ data }: DecisionsBlockProps) {
                     )}
                     <Link
                       href={`/emails/${decision.email_id}`}
-                      className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
                     >
                       source
                     </Link>

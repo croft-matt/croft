@@ -33,7 +33,7 @@ export function EmailHeader({ email, jobs, rooms }: EmailHeaderProps) {
   const timeStr = formatRelativeTime(email.received_at)
 
   return (
-    <div className="border-b border-border px-6 py-5">
+    <div className="px-6 py-5">
       <div className="flex items-start gap-4 justify-between">
         <div className="flex items-start gap-3 min-w-0">
           <div
