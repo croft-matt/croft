@@ -286,6 +286,7 @@ export type Database = {
           forwarding_configured: boolean
           history_imported: boolean
           id: string
+          last_history_id: string | null
           last_used_at: string | null
           provider: string
           refresh_token_encrypted: string | null
@@ -301,6 +302,7 @@ export type Database = {
           forwarding_configured?: boolean
           history_imported?: boolean
           id?: string
+          last_history_id?: string | null
           last_used_at?: string | null
           provider: string
           refresh_token_encrypted?: string | null
@@ -316,6 +318,7 @@ export type Database = {
           forwarding_configured?: boolean
           history_imported?: boolean
           id?: string
+          last_history_id?: string | null
           last_used_at?: string | null
           provider?: string
           refresh_token_encrypted?: string | null
