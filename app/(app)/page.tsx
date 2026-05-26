@@ -1,6 +1,12 @@
 import { requireUser, getWorkspaceId } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
-import { getWaitingEmails, getOverdueJobs, getHotEmails } from '@/lib/queries/home'
+import {
+  getWaitingEmails,
+  getOverdueJobs,
+  getHotEmails,
+  getWaitingOnOthers,
+  getHomeCounts,
+} from '@/lib/queries/home'
 import { getProcessingCount } from '@/lib/queries/cockpit'
 import { HomeRealtime } from '@/components/home/home-realtime'
 
@@ -23,12 +29,15 @@ export default async function HomePage() {
     .eq('id', workspaceId)
     .single()
 
-  const [waiting, overdue, hot, counts] = await Promise.all([
-    getWaitingEmails(workspaceId),
-    getOverdueJobs(workspaceId),
-    getHotEmails(workspaceId),
-    getProcessingCount(workspaceId),
-  ])
+  const [waiting, overdue, hot, counts, waitingOnOthers, homeCounts] =
+    await Promise.all([
+      getWaitingEmails(workspaceId),
+      getOverdueJobs(workspaceId),
+      getHotEmails(workspaceId),
+      getProcessingCount(workspaceId),
+      getWaitingOnOthers(workspaceId),
+      getHomeCounts(workspaceId),
+    ])
 
   return (
     <HomeRealtime
@@ -39,6 +48,8 @@ export default async function HomePage() {
       initialHot={hot}
       initialProcessing={counts.processing}
       initialFailed={counts.failed}
+      initialWaitingOnOthers={waitingOnOthers}
+      initialCounts={homeCounts}
     />
   )
 }
