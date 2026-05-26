@@ -116,3 +116,71 @@ export async function archiveRoom(roomId: string): Promise<RoomActionResult> {
   revalidatePath('/', 'layout')
   return { success: true }
 }
+
+// Hard-removes a room by setting status = 'deleted' and archived_at.
+// The room disappears from the sidebar (archived_at filter) and is excluded
+// from status-based queries. Does not cascade to child rooms or emails.
+export async function removeRoom(roomId: string): Promise<RoomActionResult> {
+  await requireUser()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('rooms')
+    .update({
+      status: 'deleted',
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', roomId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
+// Merges the source room into the target room by moving all room_emails associations.
+// Emails already in the target room are skipped (on conflict ignore).
+// The source room is removed after the move.
+export async function mergeRoom(
+  sourceRoomId: string,
+  targetRoomId: string,
+): Promise<RoomActionResult> {
+  await requireUser()
+
+  if (sourceRoomId === targetRoomId) {
+    return { success: false, error: 'Cannot merge a room into itself.' }
+  }
+
+  const supabase = await createClient()
+
+  // Fetch source room_emails to move.
+  const { data: sourceEmails, error: fetchError } = await supabase
+    .from('room_emails')
+    .select('email_id, source')
+    .eq('room_id', sourceRoomId)
+
+  if (fetchError) return { success: false, error: fetchError.message }
+
+  if (sourceEmails && sourceEmails.length > 0) {
+    // Insert source emails into target, ignoring conflicts (email already in target).
+    const rows = sourceEmails.map((row) => ({
+      room_id: targetRoomId,
+      email_id: row.email_id,
+      source: row.source,
+    }))
+
+    const { error: insertError } = await supabase
+      .from('room_emails')
+      .upsert(rows, { onConflict: 'room_id,email_id', ignoreDuplicates: true })
+
+    if (insertError) return { success: false, error: insertError.message }
+  }
+
+  // Remove the source room.
+  const removeResult = await removeRoom(sourceRoomId)
+  if (!removeResult.success) return removeResult
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
