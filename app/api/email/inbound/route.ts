@@ -5,6 +5,7 @@ import { storeEmailMetadata } from '@/lib/email/ingest'
 import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
 import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
 import { confirmGmailForwardingTask } from '@/trigger/jobs/confirm-gmail-forwarding'
+import { processFirstPartyTask } from '@/trigger/jobs/process-first-party'
 import { inboundRatelimit } from '@/lib/ratelimit'
 
 // This handler does three things:
@@ -73,7 +74,17 @@ export async function POST(request: NextRequest) {
     const result = await storeEmailMetadata(parsed.data.data)
 
     if (result) {
-      await fetchBodyTask.trigger({ emailId: result.emailId })
+      if (result.source === 'inbound') {
+        // Standard path: fetch body, then tier-1 noise gate, then tier-2 urgency.
+        await fetchBodyTask.trigger({ emailId: result.emailId })
+      } else {
+        // First-party path: skip tier-1 and tier-2 entirely.
+        await processFirstPartyTask.trigger({
+          emailId: result.emailId,
+          source: result.source,
+          workspaceId: result.workspaceId,
+        })
+      }
     }
   } catch (err) {
     console.error('[inbound] failed to store email:', err)

@@ -40,6 +40,7 @@ interface RoomShellProps {
   parent: Pick<Room, 'id' | 'name'> | null
   roomAssets: RoomAssets
   roomPeople: RoomPeople
+  allRooms: Array<{ id: string; name: string; parent_room_id: string | null }>
 }
 
 export function RoomShell({
@@ -52,6 +53,7 @@ export function RoomShell({
   parent,
   roomAssets,
   roomPeople,
+  allRooms,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('jobs')
   const { isOpen } = useEmailSidePanel()
@@ -103,7 +105,7 @@ export function RoomShell({
           isOpen ? 'lg:w-1/2 w-0 overflow-hidden' : 'w-full',
         )}
       >
-        <RoomHeader room={room} parent={parent} jobs={jobs} childRooms={childRooms} />
+        <RoomHeader room={room} parent={parent} jobs={jobs} childRooms={childRooms} allRooms={allRooms} />
 
         <CrossReferenceCards crossRefs={crossRefs} />
 

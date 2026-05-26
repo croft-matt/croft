@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { ResendInboundEvent } from '@/lib/validators/email-inbound'
 import type { AttachmentMeta } from '@/lib/types/database'
 import type { Json } from '@/lib/types/database'
+import { detectSource, type EmailSource } from '@/lib/email/first-party'
 
 export interface GmailMessageData {
   workspaceId: string
@@ -116,31 +117,72 @@ export async function resolveThreadId(
 export interface IngestResult {
   emailId: string
   workspaceId: string
+  source: EmailSource
 }
+
+const FIRST_PARTY_ADDRESS = (process.env.CROFT_FIRST_PARTY_ADDRESS ?? '').toLowerCase()
 
 export async function storeEmailMetadata(
   data: ResendInboundEvent['data']
 ): Promise<IngestResult | null> {
   const supabase = createAdminClient()
 
-  // Find the workspace whose receiving_address matches one of the `to` addresses.
-  // The `to` array may include the workspace inbound address and forwarded recipients.
+  // Find the workspace whose receiving_address matches one of the recipient addresses.
+  // Check both `to` and `cc` -- for user_cc emails Croft's address is in `cc`, not `to`.
   const toAddresses = data.to.map((a) => a.toLowerCase())
+  const ccAddresses = data.cc.map((a) => a.toLowerCase())
+  const allRecipients = [...toAddresses, ...ccAddresses]
 
-  const { data: workspace } = await supabase
+  // Path 1: existing lookup by workspace receiving_address (Gmail forwarding + standard inbound).
+  let workspace = await supabase
     .from('workspaces')
-    .select('id')
-    .in('receiving_address', toAddresses)
+    .select('id, receiving_address')
+    .in('receiving_address', allRecipients)
     .eq('active', true)
     .maybeSingle()
+    .then((r) => r.data)
+
+  let resolvedViaAddress: string = workspace?.receiving_address ?? ''
+
+  // Path 2: friendly address lookup. If the friendly address is in TO or CC and
+  // no workspace was found by receiving_address, find workspace by FROM address.
+  if (!workspace && FIRST_PARTY_ADDRESS && allRecipients.includes(FIRST_PARTY_ADDRESS)) {
+    const { name: _, address: fromAddr } = parseFromAddress(data.from)
+
+    const { data: account } = await supabase
+      .from('email_accounts')
+      .select('workspace_id')
+      .eq('email_address', fromAddr)
+      .maybeSingle()
+
+    if (account) {
+      const { data: ws } = await supabase
+        .from('workspaces')
+        .select('id, receiving_address')
+        .eq('id', account.workspace_id)
+        .eq('active', true)
+        .maybeSingle()
+
+      workspace = ws ?? null
+      if (workspace) resolvedViaAddress = FIRST_PARTY_ADDRESS
+    }
+  }
 
   if (!workspace) {
-    // No workspace found for this receiving address. Log and drop gracefully.
-    console.warn('[ingest] no workspace found for to addresses:', toAddresses)
+    console.warn('[ingest] no workspace found for recipients:', allRecipients)
     return null
   }
 
   const { name: fromName, address: fromAddress } = parseFromAddress(data.from)
+
+  const source = await detectSource(
+    workspace.id,
+    fromAddress,
+    toAddresses,
+    ccAddresses,
+    resolvedViaAddress,
+    supabase
+  )
 
   // Exclude inline attachments (Outlook tracking pixels, embedded images, CID references).
   // These are not user-facing files and should never appear as assets.
@@ -168,6 +210,7 @@ export async function storeEmailMetadata(
       received_at: data.created_at,
       processing_state: 'received',
       attachments: attachments as unknown as Json,
+      source,
     })
     .select('id')
     .single()
@@ -181,7 +224,7 @@ export async function storeEmailMetadata(
     throw new Error(`[ingest] failed to store email: ${error.message}`)
   }
 
-  return { emailId: email.id, workspaceId: workspace.id }
+  return { emailId: email.id, workspaceId: workspace.id, source }
 }
 
 // Stores a single email fetched from the Gmail history API.
@@ -248,5 +291,5 @@ export async function storeGmailMessage(
     throw new Error(`[ingest] storeGmailMessage failed: ${error.message}`)
   }
 
-  return { emailId: email.id, workspaceId: data.workspaceId }
+  return { emailId: email.id, workspaceId: data.workspaceId, source: 'inbound' as const }
 }

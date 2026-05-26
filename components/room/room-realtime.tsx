@@ -23,6 +23,7 @@ interface RoomRealtimeProps {
   initialConnectedAddresses: string[]
   initialTheirCourtByPerson: OwnerGroup[]
   parent: Pick<Room, 'id' | 'name'> | null
+  initialAllRooms: Array<{ id: string; name: string; parent_room_id: string | null }>
 }
 
 // Pure helper: builds OpenLoops from already-fetched data.
@@ -87,6 +88,7 @@ export function RoomRealtimeProvider({
   initialConnectedAddresses,
   initialTheirCourtByPerson,
   parent,
+  initialAllRooms,
 }: RoomRealtimeProps) {
   const [room, setRoom] = useState(initialRoom)
   const [jobs, setJobs] = useState(initialJobs)
@@ -233,6 +235,7 @@ export function RoomRealtimeProvider({
       parent={parent}
       roomAssets={initialRoomAssets}
       roomPeople={initialRoomPeople}
+      allRooms={initialAllRooms}
     />
   )
 }

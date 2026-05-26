@@ -395,6 +395,7 @@ export type Database = {
           requires_response: boolean | null
           resend_email_id: string | null
           response_by: string | null
+          source: string
           subject: string | null
           subject_summary: string | null
           thread_id: string | null
@@ -426,6 +427,7 @@ export type Database = {
           requires_response?: boolean | null
           resend_email_id?: string | null
           response_by?: string | null
+          source?: string
           subject?: string | null
           subject_summary?: string | null
           thread_id?: string | null
@@ -457,6 +459,7 @@ export type Database = {
           requires_response?: boolean | null
           resend_email_id?: string | null
           response_by?: string | null
+          source?: string
           subject?: string | null
           subject_summary?: string | null
           thread_id?: string | null

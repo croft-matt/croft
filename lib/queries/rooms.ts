@@ -127,6 +127,21 @@ export interface CrossReference {
   linked_room_name: string
 }
 
+// Returns a lightweight list of all active rooms for the workspace.
+// Used by the move-room dialog and room header menu to populate the room picker.
+export async function getAllActiveRooms(
+  workspaceId: string,
+): Promise<Array<{ id: string; name: string; parent_room_id: string | null }>> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('rooms')
+    .select('id, name, parent_room_id')
+    .eq('workspace_id', workspaceId)
+    .is('archived_at', null)
+    .order('name')
+  return data ?? []
+}
+
 // Returns cross-references for a room. Safe to call before the
 // room_cross_references table exists — returns [] on any error.
 export async function getCrossReferences(roomId: string): Promise<CrossReference[]> {

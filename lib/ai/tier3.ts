@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Tool } from '@anthropic-ai/sdk/resources'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
+import { FIRST_PARTY_TIER3_SYSTEM_PROMPT, buildFirstPartyEmailContent } from '@/lib/ai/prompts-first-party'
 import { type ReconciliationContext } from '@/lib/ai/reconciliation-context'
 import { buildRoomTree, type RoomRecord, type RoomTreeNode } from '@/lib/rooms/tree'
 import type { Email, Extraction, AttachmentMeta } from '@/lib/types/database'
@@ -139,6 +140,89 @@ export async function runFullClassification(
         {
           role: 'user',
           content: buildEmailContent(email, context),
+        },
+      ],
+      tools: [EXTRACTION_TOOL_SCHEMA as unknown as Tool],
+      tool_choice: { type: 'tool', name: 'extract_email_data' },
+    }).withResponse()
+
+    const rateLimitHeaders: RateLimitHeaders = {
+      tokensRemaining: parseIntHeader(raw.headers.get('anthropic-ratelimit-input-tokens-remaining')),
+      tokensReset: raw.headers.get('anthropic-ratelimit-input-tokens-reset'),
+      retryAfter: parseIntHeader(raw.headers.get('retry-after')),
+    }
+
+    const usage = response.usage as unknown as Record<string, unknown>
+    const cacheReadTokens = (usage.cache_read_input_tokens as number) ?? 0
+    const cacheWriteTokens = (usage.cache_creation_input_tokens as number) ?? 0
+
+    await supabase.from('email_processing_log').insert({
+      email_id: email.id,
+      tier: 3,
+      model: 'claude-sonnet-4-6',
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_read_tokens: cacheReadTokens,
+      cache_write_tokens: cacheWriteTokens,
+      duration_ms: Date.now() - startedAt,
+      error: null,
+    })
+
+    const toolUse = response.content.find((c) => c.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      throw new Error('Model did not return tool use output')
+    }
+
+    const extraction = toolUse.input as Extraction
+
+    return {
+      extraction,
+      extraction_complete: extraction.extraction_complete,
+      subject_summary: extraction.subject_summary,
+      rateLimitHeaders,
+    }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    await supabase.from('email_processing_log').insert({
+      email_id: email.id,
+      tier: 3,
+      model: 'claude-sonnet-4-6',
+      input_tokens: null,
+      output_tokens: null,
+      cache_read_tokens: null,
+      cache_write_tokens: null,
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
+    throw err
+  }
+}
+
+// First-party Tier 3 classification for CC-seeded emails (source = 'user_cc').
+// Uses the first-party system prompt and omits urgency scoring.
+// The context is built from the matched room only -- no cross-thread reconciliation.
+export async function runFirstPartyClassification(
+  email: Email,
+  context: ReconciliationContext,
+): Promise<ClassificationResult> {
+  const startedAt = Date.now()
+  const supabase = createAdminClient()
+
+  try {
+    const { data: response, response: raw } = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      system: [
+        {
+          type: 'text',
+          text: FIRST_PARTY_TIER3_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [
+        {
+          role: 'user',
+          content: buildFirstPartyEmailContent(email, context),
         },
       ],
       tools: [EXTRACTION_TOOL_SCHEMA as unknown as Tool],

@@ -8,6 +8,7 @@ import {
   getContactsForRoom,
   getEmailsForRoom,
   getCrossReferences,
+  getAllActiveRooms,
 } from '@/lib/queries/rooms'
 import { getRoomAssets } from '@/lib/rooms/assets'
 import { getRoomPeople } from '@/lib/rooms/people'
@@ -31,7 +32,7 @@ export default async function RoomPage({
   // avoid three redundant room_emails round-trips per page load.
   const emailIds = await getEmailIdsForRoom(id)
 
-  const [parent, childRooms, jobs, roomAssetsData, roomPeopleData, contacts, emails, crossRefs] =
+  const [parent, childRooms, jobs, roomAssetsData, roomPeopleData, contacts, emails, crossRefs, allRooms] =
     await Promise.all([
       room.parent_room_id ? getRoomById(room.parent_room_id) : Promise.resolve(null),
       getChildRooms(id),
@@ -41,6 +42,7 @@ export default async function RoomPage({
       getContactsForRoom(id),
       getEmailsForRoom(id, 50, emailIds),
       getCrossReferences(id),
+      getAllActiveRooms(workspaceId),
     ])
 
   // assembleReadModel fetches connected addresses. connectedAddresses is
@@ -67,6 +69,7 @@ export default async function RoomPage({
       initialConnectedAddresses={readModel.connectedAddresses}
       initialTheirCourtByPerson={readModel.theirCourtByPerson ?? []}
       parent={parent ? { id: parent.id, name: parent.name } : null}
+      initialAllRooms={allRooms}
     />
   )
 }

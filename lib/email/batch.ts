@@ -119,7 +119,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
   }
 }
 
-async function writeExtractionResults(
+export async function writeExtractionResults(
   emailId: string,
   workspaceId: string,
   extraction: Extraction,
