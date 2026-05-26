@@ -459,7 +459,7 @@ type CommandRoom = {
 type CommandContext = {
   workspaceId: string
   to: string
-  replySubject: string
+  subject: string
   inReplyTo: string | undefined
 }
 
@@ -481,7 +481,7 @@ export async function handleCommand(emailId: string, workspaceId: string): Promi
     const ctx: CommandContext = {
       workspaceId,
       to: email.from_address,
-      replySubject: `Re: ${email.subject ?? '(no subject)'}`,
+      subject: `Re: ${email.subject ?? '(no subject)'}`,
       inReplyTo: email.message_id ?? undefined,
     }
 
@@ -511,7 +511,7 @@ export async function handleCommand(emailId: string, workspaceId: string): Promi
       .single()
 
     const room: CommandRoom | null = roomData
-      ? { ...(roomData as { id: string; name: string; parent_room_id: string | null }), status: (roomStatusRow as { status?: string } | null)?.status ?? 'active' }
+      ? { ...(roomData as unknown as { id: string; name: string; parent_room_id: string | null }), status: (roomStatusRow as { status?: string } | null)?.status ?? 'active' }
       : null
 
     if (!room) {

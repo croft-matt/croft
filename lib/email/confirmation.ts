@@ -39,7 +39,7 @@ export async function sendConfirmation(params: ConfirmationParams): Promise<void
   const { error } = await resend.emails.send({
     from: workspace.croft_email_address,
     to: [to],
-    reply_to: to,
+    replyTo: to,
     subject,
     text: body,
     ...(Object.keys(headers).length ? { headers } : {}),
