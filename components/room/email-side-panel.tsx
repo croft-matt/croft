@@ -119,7 +119,7 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
   }
 
   return (
-    <div className="bg-background flex flex-col pt-4">
+    <div className="bg-background flex flex-col flex-1 pt-4 overflow-hidden">
       {/* To field */}
       <div className="px-6 pb-2">
         <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
@@ -143,9 +143,9 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
       </div>
 
       {/* Body */}
-      <div className="px-6 pb-3 relative">
+      <div className="px-6 pb-3 flex-1 flex flex-col">
         {suggestionLoading ? (
-          <div className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-2 min-h-[120px]">
+          <div className="flex-1 rounded-md border border-border bg-muted/20 px-3 py-3 space-y-2 min-h-[120px]">
             <div className="h-3 rounded bg-muted animate-pulse w-3/4" />
             <div className="h-3 rounded bg-muted animate-pulse w-full" />
             <div className="h-3 rounded bg-muted animate-pulse w-1/2" />
@@ -155,9 +155,8 @@ function ComposeArea({ email, roomId, onClose, onSent }: ComposeAreaProps) {
             ref={textareaRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={6}
             placeholder="Write your reply..."
-            className="w-full rounded-md border border-border bg-muted/20 px-3 py-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-border resize-none leading-relaxed"
+            className="flex-1 w-full rounded-md border border-border bg-muted/20 px-3 py-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-border resize-none leading-relaxed"
             aria-label="Reply body"
           />
         )}
@@ -423,7 +422,7 @@ export function EmailSidePanel() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <ComposeArea
               email={data.email}
               roomId={roomId}
