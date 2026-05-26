@@ -26,7 +26,7 @@ export function ContactsList({ contacts }: ContactsListProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
         Contacts
       </p>
       <div className="space-y-3">
@@ -34,7 +34,7 @@ export function ContactsList({ contacts }: ContactsListProps) {
           <div key={i} className="flex items-center gap-3">
             <div
               className={cn(
-                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white',
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white',
                 hashNeutral(contact.email ?? contact.name)
               )}
             >

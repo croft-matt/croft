@@ -180,7 +180,7 @@ export function CockpitRealtimeProvider({
         {/* Left column: urgent + overdue */}
         <div className="w-[42%] shrink-0 space-y-6">
           <div>
-            <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
               Urgent
             </p>
             <UrgentList emails={urgentEmails} roomNames={roomNames} />
@@ -190,7 +190,7 @@ export function CockpitRealtimeProvider({
 
         {/* Right column: rooms */}
         <div className="flex-1 min-w-0">
-          <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             Rooms
           </p>
           {rooms.length === 0 ? (

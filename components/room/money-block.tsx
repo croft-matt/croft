@@ -14,7 +14,7 @@ export function MoneyBlock({ data }: MoneyBlockProps) {
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Money
         </p>
         <p className="text-sm text-muted-foreground">No figures in this room yet.</p>
@@ -25,10 +25,10 @@ export function MoneyBlock({ data }: MoneyBlockProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-baseline justify-between mb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
           Money
         </p>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           {data.lines.length} {data.lines.length === 1 ? 'figure' : 'figures'}
         </p>
       </div>

@@ -142,11 +142,15 @@ export async function storeEmailMetadata(
 
   const { name: fromName, address: fromAddress } = parseFromAddress(data.from)
 
-  const attachments: AttachmentMeta[] = data.attachments.map((a) => ({
-    filename: a.filename ?? 'untitled',
-    size: 0,
-    mime_type: a.content_type,
-  }))
+  // Exclude inline attachments (Outlook tracking pixels, embedded images, CID references).
+  // These are not user-facing files and should never appear as assets.
+  const attachments: AttachmentMeta[] = data.attachments
+    .filter((a) => a.content_disposition !== 'inline' && !a.content_id)
+    .map((a) => ({
+      filename: a.filename ?? 'untitled',
+      size: 0,
+      mime_type: a.content_type,
+    }))
 
   // thread_id is resolved in the fetch-body job once reply headers are available.
   // The webhook handler must stay lean and not make extra DB reads.

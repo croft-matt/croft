@@ -81,7 +81,7 @@ Do NOT use hardcoded object types like "rider" or "contract" in the intent field
 
 For each job:
 - intent: one of REQUEST, DELIVER, CONFIRM, CHASE, QUERY, INTRODUCE
-- description: one plain English sentence describing the job. Include who, what, and when if known.
+- description: one plain English sentence describing the job. Include who, what, and when if known. When the person performing or being asked to perform the action is the user (identified by the connected address in the user message), refer to them as "you" rather than by name. For all other parties, use their name.
 - owner: email address of the person who needs to act on this job, or null if unclear
 - due: ISO date (YYYY-MM-DD) if a deadline is mentioned, otherwise null
 - confidence: 0-1 score for how confident you are this job was correctly extracted
@@ -173,11 +173,15 @@ Set \`relates_to_job_id\` to null when \`relation\` is \`new\`.
 
 Use the extract_email_data tool to return your structured output.`
 
-export const ROOM_SUMMARY_SYSTEM_PROMPT = `You are summarising a project email room for a professional.
-Write 2 to 3 sentences only.
-State: what the project is, who the key contact is, the current status.
-Be specific: use names, dates, and numbers where available.
-Do not use lists. Do not use dashes in place of conjunctions.
+export const ROOM_SUMMARY_SYSTEM_PROMPT = `You are summarising a project email room for the person reading it.
+The input includes a userEmail field identifying who that person is. Write the summary from their point of view.
+Refer to them as "you" throughout. Never refer to them in the third person or by name.
+Everyone else in the thread is a named third party.
+Write exactly 2 or 3 sentences. No more than 3.
+Cover: what the project is, who the key contact is, the current status from the user's perspective.
+Be specific with names, dates, and figures where they help orient the reader.
+Do not include addresses, billing details, account numbers, or any granular line-item fact — those belong in the Record tab, not here.
+Do not use lists. Do not use em-dashes (—), en-dashes (–), or hyphens in place of conjunctions.
 Do not begin with "This is", "The room", or "This room".
 Start from the substance.`
 

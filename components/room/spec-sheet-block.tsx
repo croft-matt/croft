@@ -15,14 +15,14 @@ export function SpecSheetBlock({ data }: SpecSheetBlockProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Project record
       </p>
 
       <div className="space-y-4">
         {data.groups.map(({ category, rows }) => (
           <div key={category}>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
               {formatLabel(category)}
             </p>
             <div className="divide-y divide-border">

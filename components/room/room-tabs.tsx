@@ -43,7 +43,7 @@ export function RoomTabs({ defaultTab, overview, assets, contacts, emails }: Roo
             className={cn(
               'mr-6 pb-3 pt-3 text-sm transition-colors',
               activeTab === tab.id
-                ? 'border-b-2 border-foreground text-foreground font-medium'
+                ? 'border-b-2 border-primary text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >

@@ -82,7 +82,7 @@ function AssetRow({ asset }: { asset: RoomAsset }) {
 
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
         {asset.likely_type && (
-          <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+          <span className="rounded px-1.5 py-0.5 text-[13px] font-medium bg-muted text-muted-foreground">
             {asset.likely_type}
           </span>
         )}
@@ -108,7 +108,7 @@ function StatusGroup({ status, items }: { status: RoomAsset['status']; items: Ro
 
   return (
     <div className="mb-6 last:mb-0">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-2 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
         {STATUS_LABELS[status]} ({items.length})
       </p>
       <div className="space-y-2">

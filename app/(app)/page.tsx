@@ -1,15 +1,10 @@
 import { requireUser, getWorkspaceId } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
-import {
-  getUrgentEmails,
-  getEmailRoomNames,
-  getOverdueJobs,
-  getActiveRooms,
-  getProcessingCount,
-} from '@/lib/queries/cockpit'
-import { CockpitRealtimeProvider } from '@/components/cockpit/cockpit-realtime'
+import { getWaitingEmails, getOverdueJobs, getHotEmails } from '@/lib/queries/home'
+import { getProcessingCount } from '@/lib/queries/cockpit'
+import { HomeRealtime } from '@/components/home/home-realtime'
 
-export default async function CockpitPage() {
+export default async function HomePage() {
   await requireUser()
   const workspaceId = await getWorkspaceId()
 
@@ -28,23 +23,20 @@ export default async function CockpitPage() {
     .eq('id', workspaceId)
     .single()
 
-  const [urgentEmails, overdueJobs, activeRooms, counts] = await Promise.all([
-    getUrgentEmails(workspaceId),
+  const [waiting, overdue, hot, counts] = await Promise.all([
+    getWaitingEmails(workspaceId),
     getOverdueJobs(workspaceId),
-    getActiveRooms(workspaceId),
+    getHotEmails(workspaceId),
     getProcessingCount(workspaceId),
   ])
 
-  const roomNames = await getEmailRoomNames(urgentEmails.map((e) => e.id))
-
   return (
-    <CockpitRealtimeProvider
+    <HomeRealtime
       workspaceId={workspaceId}
       workspaceName={workspace?.name ?? 'Croft'}
-      initialUrgentEmails={urgentEmails}
-      initialRoomNames={roomNames}
-      initialOverdueJobs={overdueJobs}
-      initialRooms={activeRooms}
+      initialWaiting={waiting}
+      initialOverdue={overdue}
+      initialHot={hot}
       initialProcessing={counts.processing}
       initialFailed={counts.failed}
     />

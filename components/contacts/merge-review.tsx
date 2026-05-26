@@ -189,7 +189,7 @@ function IdentityRow({ identity }: { identity: MergedIdentity }) {
       <div className="flex items-center gap-2 mb-3">
         <p className="text-sm font-medium text-foreground">{heading}</p>
         {identity.name_locked && (
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
+          <span className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
             Locked
           </span>
         )}
@@ -222,7 +222,7 @@ export function MergeReview({ candidates, identities }: MergeReviewProps) {
     <div className="space-y-8">
       <section>
         <div className="mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
             Possible duplicates
           </p>
           <p className="text-xs text-muted-foreground">
@@ -243,7 +243,7 @@ export function MergeReview({ candidates, identities }: MergeReviewProps) {
       {identities.length > 0 && (
         <section>
           <div className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
               Merged people
             </p>
             <p className="text-xs text-muted-foreground">

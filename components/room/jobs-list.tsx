@@ -49,7 +49,7 @@ export function JobsList({ jobs }: JobsListProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Jobs</p>
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Jobs</p>
         {openJobs.length > 0 && (
           <span className="text-xs text-muted-foreground">{openJobs.length} open</span>
         )}
@@ -67,7 +67,7 @@ export function JobsList({ jobs }: JobsListProps) {
               <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(job))} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-start gap-2 mb-0.5">
-                  <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', intent.className)}>
+                  <span className={cn('inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide', intent.className)}>
                     {intent.label}
                   </span>
                   <span className="text-sm font-medium text-foreground leading-snug">{job.description}</span>

@@ -23,7 +23,7 @@ export function LogisticsBlock({ data }: LogisticsBlockProps) {
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Logistics
         </p>
         <p className="text-sm text-muted-foreground">No locations in this room yet.</p>
@@ -33,7 +33,7 @@ export function LogisticsBlock({ data }: LogisticsBlockProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Logistics
       </p>
       <div className="divide-y divide-border">
@@ -59,7 +59,7 @@ function PlaceRow({ place }: { place: Place }) {
   return (
     <div className="flex items-start justify-between gap-3 py-3 first:pt-0">
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
+        <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
           {formatLabel(place.label)}
         </p>
         <p className="text-sm text-foreground">{place.value}</p>

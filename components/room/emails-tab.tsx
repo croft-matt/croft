@@ -49,7 +49,7 @@ export function EmailsTab({ emails, roomId }: EmailsTabProps) {
 
             <div className="shrink-0 flex items-center gap-3 text-right">
               {openJobCount > 0 && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400">
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[13px] font-medium text-amber-400">
                   {openJobCount} jobs
                 </span>
               )}

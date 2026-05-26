@@ -45,7 +45,7 @@ export function ExpiriesBlock({ data }: ExpiriesBlockProps) {
   if (data.isEmpty) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Expiries
         </p>
         <p className="text-sm text-muted-foreground">No expiring credentials in this room.</p>
@@ -55,7 +55,7 @@ export function ExpiriesBlock({ data }: ExpiriesBlockProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Expiries
       </p>
 

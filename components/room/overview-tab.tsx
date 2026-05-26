@@ -26,7 +26,7 @@ function ChildRoomCard({ room }: { room: Room }) {
           <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-foreground transition-all" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
+          <span className="text-[13px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
         </div>
       )}
       <p className="text-xs text-muted-foreground">
@@ -44,7 +44,7 @@ export function OverviewTab({ roomId, childRooms, stack, suggestions }: Overview
     <div className="space-y-6">
       {isParent && (
         <div>
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             Sub-rooms
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

@@ -55,7 +55,7 @@ export function RoomCard({ room }: RoomCardProps) {
       <div className="flex items-start justify-between gap-2 mb-2.5">
         <p className="text-sm font-semibold text-foreground leading-snug truncate">{room.name}</p>
         {room.has_overdue && (
-          <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400">
+          <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[13px] font-medium text-red-400">
             overdue
           </span>
         )}
@@ -69,7 +69,7 @@ export function RoomCard({ room }: RoomCardProps) {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-[11px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
+          <span className="text-[13px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
         </div>
       )}
 

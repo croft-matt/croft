@@ -14,7 +14,7 @@ export function OverdueList({ jobs }: OverdueListProps) {
 
   return (
     <div>
-      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
         Overdue
       </p>
       <div className="space-y-0.5">

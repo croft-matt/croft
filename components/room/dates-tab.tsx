@@ -52,7 +52,7 @@ export function DatesTab({ roomDates }: DatesTabProps) {
     <div className="space-y-8">
       {/* Delivery date anchor: always rendered. */}
       <section>
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
           Delivery date
         </p>
 
@@ -79,7 +79,7 @@ export function DatesTab({ roomDates }: DatesTabProps) {
       {/* Date list: all time-kind dates excluding the delivery date. */}
       {!isEmpty && (
         <section>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             All dates
           </p>
 

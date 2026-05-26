@@ -178,10 +178,10 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
       {/* Awaiting you */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             Awaiting you
           </p>
-          <span className="text-[11px] text-muted-foreground">{yourCourt.length}</span>
+          <span className="text-[13px] text-muted-foreground">{yourCourt.length}</span>
         </div>
 
         {yourCourt.length === 0 ? (
@@ -215,7 +215,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                     <div className="flex flex-wrap items-start gap-2 mb-1">
                       <span
                         className={cn(
-                          'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide',
+                          'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide',
                           intent.className,
                         )}
                       >
@@ -233,7 +233,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
                         .filter(Boolean)
                         .join(' · ')}
                       {chaseCount > 0 && (
-                        <span className="ml-2 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="ml-2 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[13px] font-medium text-muted-foreground">
                           restated {chaseCount}x
                         </span>
                       )}
@@ -255,10 +255,10 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
             onClick={() => setOthersExpanded((v) => !v)}
             className="flex w-full items-center justify-between mb-4 text-left"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
               Awaiting others
             </p>
-            <span className="text-[11px] text-muted-foreground">{theirCourt.length}</span>
+            <span className="text-[13px] text-muted-foreground">{theirCourt.length}</span>
           </button>
 
           {othersExpanded && (
@@ -272,7 +272,7 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
 
                   return (
                     <div key={group.personKey}>
-                      <p className="text-[11px] font-medium text-muted-foreground mb-2 truncate">
+                      <p className="text-[13px] font-medium text-muted-foreground mb-2 truncate">
                         {heading}
                         <span className="ml-1.5 opacity-60">{group.loops.length}</span>
                       </p>
