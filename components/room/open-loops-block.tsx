@@ -126,7 +126,7 @@ export function OpenLoopsBlock({ data }: OpenLoopsBlockProps) {
               return (
                 <button
                   key={loop.id}
-                  onClick={() => open(loop)}
+                  onClick={() => open(loop.id)}
                   className="flex w-full items-start gap-3 py-3 first:pt-0 text-left hover:opacity-80 transition-opacity"
                 >
                   <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(loop.due))} />

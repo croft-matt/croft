@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ import { assembleDates } from '@/lib/rooms/dates'
 import type { RoomAssets } from '@/lib/rooms/assets'
 import type { RoomPeople } from '@/lib/rooms/people'
 import { PeopleTab } from '@/components/room/people-tab'
+import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { RecordTab } from '@/components/room/record-tab'
 import { assembleRecord } from '@/lib/rooms/record'
 
@@ -64,6 +66,22 @@ export function RoomShell({
   workspaceId,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('brief')
+  const { isOpen: isEmailPanelOpen } = useEmailSidePanel()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+
+  const tabStyle = useMemo(() => ({
+    active: {
+      boxShadow: isDark
+        ? '0px 0px 0px 0.5px rgba(255, 255, 255, 0.16)'
+        : '0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)',
+    },
+    inactive: {
+      boxShadow: isDark
+        ? '0px 1px 1px rgba(0, 0, 0, 0.08), 0px 4px 4px -1px rgba(0, 0, 0, 0.04), 0px 0px 0px 0.5px rgba(255, 255, 255, 0.14)'
+        : '0px 1px 1px rgba(0, 0, 0, 0.05), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.08)',
+    },
+  }), [isDark])
 
   // Read ?tab= from the URL on mount so cross-room views can link directly to a tab.
   useEffect(() => {
@@ -181,8 +199,10 @@ export function RoomShell({
         return <DatesTab roomDates={assembleDates(readModel)} />
       case 'assets':
         return <AssetsTab assets={roomAssets} roomId={room.id} />
-      case 'people':
-        return <PeopleTab people={roomPeople} />
+      case 'people': {
+        const introduceJobs = jobs.filter((j) => j.intent === 'INTRODUCE')
+        return <PeopleTab people={roomPeople} introduceJobs={introduceJobs} />
+      }
       case 'record':
         return <RecordTab record={assembleRecord(readModel)} />
     }
@@ -219,14 +239,10 @@ export function RoomShell({
               className={cn(
                 'h-[27px] px-[10px] text-xs font-medium rounded-full transition-colors inline-flex items-center cursor-pointer',
                 activeTab === tab.id
-                  ? 'bg-[#202021] text-white'
-                  : 'bg-[#141415] text-[#949496] hover:text-white',
+                  ? 'dark:bg-[#202021] bg-secondary dark:text-white text-foreground'
+                  : 'dark:bg-[#141415] bg-muted dark:text-[#949496] text-muted-foreground dark:hover:text-white hover:text-foreground',
               )}
-              style={
-                activeTab === tab.id
-                  ? { boxShadow: '0px 0px 0px 0.5px rgba(255, 255, 255, 0.16)' }
-                  : { boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.08), 0px 4px 4px -1px rgba(0, 0, 0, 0.04), 0px 0px 0px 0.5px rgba(255, 255, 255, 0.14)' }
-              }
+              style={activeTab === tab.id ? tabStyle.active : tabStyle.inactive}
             >
               {tab.label}
             </button>
@@ -235,8 +251,14 @@ export function RoomShell({
 
         {/* Centered content column.
             The Brief tab manages its own max-width and centering internally.
-            All other tabs use the wider max-w-3xl container. */}
-        <div className={cn('flex-1 px-6', activeTab === 'brief' ? 'py-6' : 'py-6')}>
+            All other tabs use the wider max-w-3xl container.
+            Dims when the email side panel is open so focus stays on the panel. */}
+        <div
+          className={cn(
+            'flex-1 px-6 py-6 transition-opacity ease-out',
+            isEmailPanelOpen ? 'opacity-50 duration-[120ms]' : 'opacity-100 duration-[120ms]',
+          )}
+        >
           {activeTab === 'brief' ? (
             renderTab()
           ) : (

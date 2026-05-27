@@ -24,6 +24,20 @@ export const noiseGateTask = task({
 
     if (!email) throw new Error(`noise-gate: email ${emailId} not found`)
 
+    // Sent emails are always work-relevant — skip the model call entirely.
+    // The user deliberately sent this email, so there is no spam/noise risk.
+    if (email.source === 'user_sent') {
+      await supabase
+        .from('emails')
+        .update({ processing_state: 'urgency_scanned' })
+        .eq('id', emailId)
+
+      await maybebroadcastFilterProgress(supabase, email.workspace_id)
+      await urgencyTask.trigger({ emailId })
+
+      return { emailId, relevant: true }
+    }
+
     const result = await runNoiseGate(email)
 
     if (!result.relevant) {

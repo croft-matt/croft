@@ -11,6 +11,7 @@ export interface RoomRecord {
   id: string
   name: string
   parent_room_id: string | null
+  description?: string | null
 }
 
 export interface RoomTreeNode extends RoomRecord {

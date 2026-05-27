@@ -22,6 +22,8 @@ export interface AttachmentMeta {
   mime_type: string
   size: number
   gmail_attachment_id?: string
+  content_disposition?: string
+  content_id?: string
 }
 
 export interface ExtractedContact {

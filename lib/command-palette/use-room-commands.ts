@@ -280,7 +280,7 @@ function buildRoomCommands(params: UseRoomCommandsParams): CommandDefinition[] {
           context: 'in-room' as const,
           action: () => {
             closePalette()
-            openJobModal(loop as Job)
+            openJobModal(loop.id)
           },
         }))
         pushSubStep({ prompt: 'Which job is done?', commands: candidates })

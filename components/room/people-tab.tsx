@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { RoomPeople, RoomPerson, PendingMerge } from '@/lib/rooms/people'
+import type { Job } from '@/lib/types/database'
 import { EmailCitation } from '@/components/room/email-citation'
 import { MergeSuggestion } from '@/components/room/merge-suggestion'
 
 interface PeopleTabProps {
   people: RoomPeople
+  introduceJobs?: Job[]
 }
 
 function hashNeutral(str: string): string {
@@ -28,50 +30,67 @@ function getInitials(name: string | null, fallback: string): string {
   return fallback.slice(0, 2).toUpperCase()
 }
 
-function PersonRow({ roomPerson }: { roomPerson: RoomPerson }) {
+function formatIntroDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function PersonRow({ roomPerson, introNote }: { roomPerson: RoomPerson; introNote: Job | null }) {
   const { person, firstEmailId } = roomPerson
   const displayName = person.name ?? person.addresses[0] ?? ''
   const avatarSeed = person.addresses[0] ?? displayName
   const initials = getInitials(person.name, avatarSeed)
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
-      <div
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white',
-          hashNeutral(avatarSeed),
-        )}
-      >
-        {initials}
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-4 px-4 py-3">
+        <div
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white',
+            hashNeutral(avatarSeed),
+          )}
+        >
+          {initials}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+          {(person.organisation || person.addresses.length > 1) && (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {[
+                person.organisation,
+                person.addresses.length > 1 ? person.addresses.join(', ') : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          {person.addresses.length === 1 && (
+            <span className="text-xs text-muted-foreground hidden sm:block">
+              {person.addresses[0]}
+            </span>
+          )}
+          <EmailCitation emailId={firstEmailId} label="first email" />
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-        {(person.organisation || person.addresses.length > 1) && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {[
-              person.organisation,
-              person.addresses.length > 1 ? person.addresses.join(', ') : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        )}
-      </div>
-
-      <div className="flex shrink-0 items-center gap-3">
-        {person.addresses.length === 1 && (
-          <span className="text-xs text-muted-foreground hidden sm:block">
-            {person.addresses[0]}
-          </span>
-        )}
-        <EmailCitation emailId={firstEmailId} label="first email" />
-      </div>
+      {introNote && (
+        <div className="border-t border-border px-4 pb-3 pt-2">
+          <p className="text-xs text-muted-foreground">{introNote.description}</p>
+          <p className="text-xs text-muted-foreground/60 mt-0.5">{formatIntroDate(introNote.created_at)}</p>
+        </div>
+      )}
     </div>
   )
 }
 
-export function PeopleTab({ people }: PeopleTabProps) {
+export function PeopleTab({ people, introduceJobs = [] }: PeopleTabProps) {
   const [persons, setPersons] = useState<RoomPerson[]>(people.persons)
   const [pendingMerges, setPendingMerges] = useState<PendingMerge[]>(people.pendingMerges)
 
@@ -137,6 +156,17 @@ export function PeopleTab({ people }: PeopleTabProps) {
     )
   }
 
+  // Build a quick lookup: address -> first INTRODUCE job for that person.
+  const introByAddress = new Map<string, Job>()
+  for (const job of introduceJobs) {
+    if (job.owner) {
+      const addr = job.owner.toLowerCase()
+      if (!introByAddress.has(addr)) {
+        introByAddress.set(addr, job)
+      }
+    }
+  }
+
   // Build a set of candidateIds that have already been rendered to avoid duplicates
   // when both persons in a pair are iterated.
   const renderedMerges = new Set<string>()
@@ -148,6 +178,12 @@ export function PeopleTab({ people }: PeopleTabProps) {
         const merge = roomPerson.pendingMergeWith
           ? pendingMerges.find((m) => m.candidateId === roomPerson.pendingMergeWith)
           : null
+
+        // Find an introduction note for this person by matching any of their addresses.
+        const introNote =
+          roomPerson.person.addresses
+            .map((addr) => introByAddress.get(addr.toLowerCase()))
+            .find(Boolean) ?? null
 
         // Determine whether to render the suggestion after this row.
         let suggestion: React.ReactNode = null
@@ -179,7 +215,7 @@ export function PeopleTab({ people }: PeopleTabProps) {
 
         return (
           <div key={personKey}>
-            <PersonRow roomPerson={roomPerson} />
+            <PersonRow roomPerson={roomPerson} introNote={introNote} />
             {suggestion}
           </div>
         )

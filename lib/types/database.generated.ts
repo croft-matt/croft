@@ -44,6 +44,7 @@ export type Database = {
           confidence: number | null
           created_at: string
           email_id: string | null
+          extracted_text: string | null
           filename: string
           id: string
           likely_type: string | null
@@ -60,6 +61,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           email_id?: string | null
+          extracted_text?: string | null
           filename: string
           id?: string
           likely_type?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           email_id?: string | null
+          extracted_text?: string | null
           filename?: string
           id?: string
           likely_type?: string | null
@@ -583,6 +586,71 @@ export type Database = {
           },
           {
             foreignKeyName: "jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          email_id: string | null
+          id: string
+          job_id: string | null
+          read_at: string | null
+          room_id: string | null
+          summary: string
+          type: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_id?: string | null
+          id?: string
+          job_id?: string | null
+          read_at?: string | null
+          room_id?: string | null
+          summary: string
+          type: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email_id?: string | null
+          id?: string
+          job_id?: string | null
+          read_at?: string | null
+          room_id?: string | null
+          summary?: string
+          type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

@@ -39,10 +39,14 @@ export async function getConnectedAddresses(workspaceId: string): Promise<string
 
 // Pure function: builds OpenLoops from pre-fetched jobs, an email->from_name map,
 // and the set of connected addresses. No DB calls. Safe to call on client or server.
+// fromAddressMap: email_id -> from_address. Used to suppress from_name when the
+// source email was sent by the workspace user (self-commitments), so that YOUR COURT
+// doesn't show "Matt @ Ordinary World" on jobs Matt committed to himself.
 export function buildOpenLoops(
   jobs: Job[],
   fromNameMap: Map<string, string | null>,
   connectedAddresses: Set<string>,
+  fromAddressMap: Map<string, string | null> = new Map(),
 ): OpenLoops {
   const now = new Date()
 
@@ -51,10 +55,12 @@ export function buildOpenLoops(
     .map((job) => {
       const createdAt = new Date(job.created_at)
       const age_days = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      const senderAddress = fromAddressMap.get(job.email_id)?.toLowerCase()
+      const isSelf = senderAddress ? connectedAddresses.has(senderAddress) : false
       return {
         ...job,
         age_days,
-        from_name: fromNameMap.get(job.email_id) ?? null,
+        from_name: isSelf ? null : (fromNameMap.get(job.email_id) ?? null),
         source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
       }
     })

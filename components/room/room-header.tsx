@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreHorizontal } from 'lucide-react'
 import type { Room, Job } from '@/lib/types/database'
-import { renameRoom, archiveRoom } from '@/lib/rooms/actions'
+import { renameRoom, archiveRoom, updateRoomDescription } from '@/lib/rooms/actions'
 import { useCommandPalette } from '@/stores/command-palette-store'
 import { MoveRoomDialog } from '@/components/room/move-room-dialog'
 import { ConfirmDialog } from '@/components/room/confirm-dialog'
@@ -37,6 +37,12 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
   const [renamePending, startRenameTransition] = useTransition()
   const renameInputRef = useRef<HTMLInputElement>(null)
 
+  // Description edit state
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const [descriptionValue, setDescriptionValue] = useState(room.description ?? '')
+  const [descriptionPending, startDescriptionTransition] = useTransition()
+  const descriptionInputRef = useRef<HTMLInputElement>(null)
+
   const [actionPending, startActionTransition] = useTransition()
 
   // Move dialog state
@@ -55,6 +61,38 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
     }
   }, [isRenaming])
 
+  // Focus description input when entering edit mode.
+  useEffect(() => {
+    if (isEditingDescription) {
+      descriptionInputRef.current?.focus()
+      descriptionInputRef.current?.select()
+    }
+  }, [isEditingDescription])
+
+  function handleDescriptionConfirm() {
+    const trimmed = descriptionValue.trim()
+    if (trimmed === (room.description ?? '')) {
+      setIsEditingDescription(false)
+      return
+    }
+    startDescriptionTransition(async () => {
+      await updateRoomDescription(room.id, trimmed || null)
+      setIsEditingDescription(false)
+    })
+  }
+
+  function handleDescriptionKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleDescriptionConfirm()
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setDescriptionValue(room.description ?? '')
+      setIsEditingDescription(false)
+    }
+  }
+
   // Respond to rename trigger from the command palette.
   useEffect(() => {
     if (triggerRenameRoomId === room.id) {
@@ -67,6 +105,11 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
   useEffect(() => {
     setRenameValue(room.name)
   }, [room.name])
+
+  // Keep description value in sync if room prop changes.
+  useEffect(() => {
+    setDescriptionValue(room.description ?? '')
+  }, [room.description])
 
   function handleRenameConfirm() {
     const trimmed = renameValue.trim()
@@ -141,6 +184,29 @@ export function RoomHeader({ room, parent, jobs, childRooms, allRooms }: RoomHea
               {renameValue}
             </button>
           )}
+          <div className="mt-0.5">
+            {isEditingDescription ? (
+              <input
+                ref={descriptionInputRef}
+                value={descriptionValue}
+                onChange={(e) => setDescriptionValue(e.target.value.slice(0, 120))}
+                onBlur={handleDescriptionConfirm}
+                onKeyDown={handleDescriptionKeyDown}
+                disabled={descriptionPending}
+                maxLength={120}
+                className="w-full text-[13px] text-muted-foreground bg-transparent border-b border-border focus:outline-none focus:border-primary disabled:opacity-50"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditingDescription(true)}
+                className="text-[13px] text-left transition-opacity hover:opacity-70"
+                style={{ color: descriptionValue ? undefined : 'var(--muted-foreground)', opacity: descriptionValue ? undefined : 0.4 }}
+              >
+                {descriptionValue || 'Add a description'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">

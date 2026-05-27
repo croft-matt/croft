@@ -19,13 +19,40 @@ export async function assembleReadModel(
   const connectedAddresses = await getConnectedAddresses(workspaceId)
   const connectedSet = new Set(connectedAddresses)
 
-  // Build from_name lookup from pre-fetched emails.
-  // Jobs from older emails (outside the initial 50) will have from_name: null — acceptable.
+  // Build from_name and from_address lookups seeded from pre-fetched emails.
+  // Topped up below for any job email_ids not in the initial prefetch.
+  // fromAddressMap is used to suppress from_name on self-sent emails (self-commitments).
   const fromNameMap = new Map<string, string | null>(
     emails.map((e) => [e.id, e.from_name ?? null]),
   )
+  const fromAddressMap = new Map<string, string | null>(
+    emails.map((e) => [e.id, e.from_address ?? null]),
+  )
 
-  const openLoops = buildOpenLoops(jobs, fromNameMap, connectedSet)
+  // Fill in any job email_ids not covered by the initial email prefetch.
+  // This ensures every job card shows its source sender, regardless of how many
+  // emails the room has. We query only the missing ids — typically a small set.
+  const prefetchedEmailIds = new Set(emails.map((e) => e.id))
+  const missingEmailIds = [
+    ...new Set(
+      jobs
+        .map((j) => j.email_id)
+        .filter((id): id is string => !!id && !prefetchedEmailIds.has(id)),
+    ),
+  ]
+  if (missingEmailIds.length > 0) {
+    const supabase = await createClient()
+    const { data: missingEmails } = await supabase
+      .from('emails')
+      .select('id, from_name, from_address')
+      .in('id', missingEmailIds)
+    for (const e of missingEmails ?? []) {
+      fromNameMap.set(e.id, e.from_name ?? null)
+      fromAddressMap.set(e.id, e.from_address ?? null)
+    }
+  }
+
+  const openLoops = buildOpenLoops(jobs, fromNameMap, connectedSet, fromAddressMap)
   const theirCourtByPerson = await groupTheirCourtByPerson(workspaceId, openLoops.theirCourt)
 
   // All non-cancelled jobs enriched with from_name. openLoops is the ranked open subset.

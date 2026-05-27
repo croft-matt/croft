@@ -1,38 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { useJobModal } from '@/stores/job-modal-store'
 import { EmailCitation } from '@/components/room/email-citation'
-import type { JobIntent } from '@/lib/types/database'
+import { JobRow } from '@/components/jobs/job-row'
 import type { OpenLoops, OpenLoop, OwnerGroup } from '@/lib/jobs/open-loops'
-
-const intentConfig: Record<JobIntent, { label: string; className: string }> = {
-  REQUEST: { label: 'REQUEST', className: 'bg-amber-500/10 text-amber-400' },
-  DELIVER: { label: 'DELIVER', className: 'bg-blue-500/10 text-blue-400' },
-  CONFIRM: { label: 'CONFIRM', className: 'bg-muted text-foreground' },
-  CHASE: { label: 'CHASE', className: 'bg-red-500/10 text-red-400' },
-  QUERY: { label: 'QUERY', className: 'bg-muted text-muted-foreground' },
-  INTRODUCE: { label: 'INTRODUCE', className: 'bg-purple-500/10 text-purple-400' },
-}
-
-function getStatusDot(due: string | null): string {
-  if (!due) return 'bg-muted-foreground/40'
-  const d = new Date(due)
-  const now = new Date()
-  if (d < now) return 'bg-red-500'
-  if (d < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)) return 'bg-amber-500'
-  return 'bg-muted-foreground/40'
-}
-
-function formatDue(due: string): string {
-  const d = new Date(due)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays > 0) return `${diffDays}d overdue`
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}
 
 // Rank yourCourt: overdue oldest first, due-soon soonest first, no-due oldest first.
 // Within each tier, higher chase count (loops pointing to this job as parent) ranks first.
@@ -156,14 +127,12 @@ interface JobsTabProps {
 }
 
 export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
-  const { open: openModal } = useJobModal()
   const [youExpanded, setYouExpanded] = useState(true)
   const [othersExpanded, setOthersExpanded] = useState(false)
 
   const { yourCourt, theirCourt } = loops
   const totalOpen = yourCourt.length + theirCourt.length
 
-  // Derive chase counts from parent_job_id relationships within yourCourt.
   const chaseCountMap = new Map<string, number>()
   for (const loop of yourCourt) {
     if (loop.parent_job_id) {
@@ -198,54 +167,21 @@ export function JobsTab({ loops, ownerGroups }: JobsTabProps) {
         ) : (
           <div className="space-y-2">
             {rankedYourCourt.map((loop) => {
-              const intent = intentConfig[loop.intent as JobIntent]
-              const chaseCount = chaseCountMap.get(loop.id) ?? 0
-
+              const now = new Date()
               return (
-                <div
+                <JobRow
                   key={loop.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openModal(loop)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openModal(loop) }}
-                  className="flex w-full items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
-                >
-                  <span
-                    className={cn(
-                      'mt-[5px] h-2 w-2 shrink-0 rounded-full',
-                      getStatusDot(loop.due),
-                    )}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start gap-2 mb-1">
-                      <span
-                        className={cn(
-                          'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide',
-                          intent.className,
-                        )}
-                      >
-                        {intent.label}
-                      </span>
-                      <span className="text-sm font-medium text-foreground leading-snug">
-                        {loop.description}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {[
-                        loop.from_name,
-                        loop.due ? formatDue(loop.due) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                      {chaseCount > 0 && (
-                        <span className="ml-2 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[13px] font-medium text-muted-foreground">
-                          restated {chaseCount}x
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <EmailCitation emailId={loop.email_id} />
-                </div>
+                  job={{
+                    id: loop.id,
+                    description: loop.description,
+                    owner: loop.from_name ?? loop.owner ?? null,
+                    due: loop.due ?? null,
+                    emailId: loop.email_id,
+                    status: loop.status,
+                    isOverdue: !!loop.due && new Date(loop.due) < now,
+                  }}
+                  chaseCount={chaseCountMap.get(loop.id)}
+                />
               )
             })}
           </div>

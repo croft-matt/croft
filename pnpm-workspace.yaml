@@ -1,5 +1,6 @@
 allowBuilds:
   '@sentry/cli': true
+  canvas: true
   msw: true
   protobufjs: false
   sharp: true

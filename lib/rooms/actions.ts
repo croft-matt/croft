@@ -9,6 +9,63 @@ export interface RoomActionResult {
   error?: string
 }
 
+// Creates a new room manually. Sets created_by to the authenticated user's ID.
+// The description is stored as a routing hint for Tier 3.
+export async function createRoom(
+  workspaceId: string,
+  name: string,
+  description: string | null,
+): Promise<RoomActionResult & { roomId?: string }> {
+  const user = await requireUser()
+  const trimmedName = name.trim()
+  if (!trimmedName) return { success: false, error: 'Name cannot be empty.' }
+
+  const supabase = await createClient()
+  const now = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('rooms')
+    .insert({
+      workspace_id: workspaceId,
+      name: trimmedName,
+      description: description?.trim() || null,
+      created_by: user.id,
+      room_data: {},
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+    })
+    .select('id')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/', 'layout')
+  return { success: true, roomId: data.id }
+}
+
+// Update the description on a room. Passing null or empty string clears it.
+export async function updateRoomDescription(
+  roomId: string,
+  description: string | null,
+): Promise<RoomActionResult> {
+  await requireUser()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('rooms')
+    .update({
+      description: description?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', roomId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
 // Rename a room. Trims whitespace. Rejects an empty name.
 export async function renameRoom(
   roomId: string,

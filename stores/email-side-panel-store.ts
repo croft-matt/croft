@@ -7,7 +7,11 @@ interface EmailSidePanelState {
   emailId: string | null
   history: string[]
   roomScrollY: number
+  // Job IDs to pre-attach when compose opens (Resolve path).
+  pendingResolveJobIds: string[]
   open: (emailId: string) => void
+  openWithResolve: (emailId: string, jobId: string) => void
+  consumePendingResolveJobIds: () => string[]
   navigateTo: (emailId: string) => void
   goBack: () => void
   close: () => void
@@ -18,10 +22,22 @@ export const useEmailSidePanel = create<EmailSidePanelState>((set, get) => ({
   emailId: null,
   history: [],
   roomScrollY: 0,
+  pendingResolveJobIds: [],
 
   open: (emailId) => {
     const scrollY = document.querySelector('main')?.scrollTop ?? 0
-    set({ isOpen: true, emailId, history: [], roomScrollY: scrollY })
+    set({ isOpen: true, emailId, history: [], roomScrollY: scrollY, pendingResolveJobIds: [] })
+  },
+
+  openWithResolve: (emailId, jobId) => {
+    const scrollY = document.querySelector('main')?.scrollTop ?? 0
+    set({ isOpen: true, emailId, history: [], roomScrollY: scrollY, pendingResolveJobIds: [jobId] })
+  },
+
+  consumePendingResolveJobIds: () => {
+    const ids = get().pendingResolveJobIds
+    if (ids.length > 0) set({ pendingResolveJobIds: [] })
+    return ids
   },
 
   navigateTo: (emailId) => {
@@ -42,7 +58,7 @@ export const useEmailSidePanel = create<EmailSidePanelState>((set, get) => ({
 
   close: () => {
     const { roomScrollY } = get()
-    set({ isOpen: false, emailId: null, history: [], roomScrollY: 0 })
+    set({ isOpen: false, emailId: null, history: [], roomScrollY: 0, pendingResolveJobIds: [] })
     const main = document.querySelector('main')
     if (main) main.scrollTop = roomScrollY
   },

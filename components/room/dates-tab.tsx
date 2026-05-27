@@ -14,6 +14,10 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function formatLabel(label: string): string {
+  return label.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function isPast(iso: string): boolean {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -37,7 +41,7 @@ function DateRow({ date }: { date: RoomDate }) {
           </span>
           <ConfidenceDot confidence={date.confidence} />
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{date.label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{formatLabel(date.label)}</p>
       </div>
       {date.email_id && <EmailCitation emailId={date.email_id} />}
     </div>
@@ -65,7 +69,7 @@ export function DatesTab({ roomDates }: DatesTabProps) {
                 </span>
                 <ConfidenceDot confidence={deliveryDate.confidence} />
               </div>
-              <p className="text-sm text-muted-foreground mt-1">{deliveryDate.label}</p>
+              <p className="text-sm text-muted-foreground mt-1">{formatLabel(deliveryDate.label)}</p>
             </div>
             {deliveryDate.email_id && (
               <EmailCitation emailId={deliveryDate.email_id} />
@@ -85,8 +89,8 @@ export function DatesTab({ roomDates }: DatesTabProps) {
 
           {dates.length === 0 ? null : (
             <div className="space-y-2">
-              {dates.map((date) => (
-                <DateRow key={`${date.value}:${date.label}`} date={date} />
+              {dates.map((date, i) => (
+                <DateRow key={`${date.value}:${date.label}:${i}`} date={date} />
               ))}
             </div>
           )}

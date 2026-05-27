@@ -23,13 +23,13 @@ function urgencyDot(due: string | null): string {
 }
 
 function urgencyBadge(due: string | null): { label: string; className: string } | null {
-  if (!due) return { label: 'no deadline', className: 'bg-white/5 text-muted-foreground/60' }
+  if (!due) return { label: 'no deadline', className: 'bg-muted text-muted-foreground' }
   const d = new Date(due)
   const now = new Date()
   const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays > 0) return { label: `${diffDays}d overdue`, className: 'bg-red-500/10 text-red-300' }
+  if (diffDays > 0) return { label: `${diffDays}d overdue`, className: 'bg-red-500/10 text-red-400' }
   const daysUntil = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  if (daysUntil <= 7) return { label: `due in ${daysUntil}d`, className: 'bg-amber-500/10 text-amber-300' }
+  if (daysUntil <= 7) return { label: `due in ${daysUntil}d`, className: 'bg-amber-500/10 text-amber-400' }
   return null
 }
 
@@ -47,7 +47,7 @@ function SectionHeading({ label, count }: { label: string; count: number }) {
       <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-muted-foreground/60">
         {label}
       </p>
-      <span className="text-[10px] text-muted-foreground/60 border border-white/5 bg-white/[0.04] px-1.5 py-px rounded-full leading-none">
+      <span className="text-[10px] text-muted-foreground border border-border bg-muted/50 px-1.5 py-px rounded-full leading-none">
         {count}
       </span>
     </div>
@@ -101,9 +101,9 @@ export function BriefTab({ brief, parentName, roomSummary }: BriefTabProps) {
                     key={loop.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => openModal(loop)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openModal(loop) }}
-                    className="flex w-full items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left hover:bg-white/[0.04] hover:border-white/[0.09] transition-colors cursor-pointer"
+                    onClick={() => openModal(loop.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openModal(loop.id) }}
+                    className="flex w-full items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <span className={cn('mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full', urgencyDot(loop.due))} />
                     <div className="min-w-0 flex-1">
@@ -144,13 +144,13 @@ export function BriefTab({ brief, parentName, roomSummary }: BriefTabProps) {
                 return (
                   <div
                     key={group.personKey}
-                    className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3"
+                    className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3"
                   >
                     <div
-                      className="shrink-0 rounded-full flex items-center justify-center"
-                      style={{ width: 24, height: 24, background: '#1e1e22', border: '1px solid rgba(255,255,255,0.07)', marginTop: 1 }}
+                      className="shrink-0 rounded-full flex items-center justify-center bg-muted border border-border"
+                      style={{ width: 24, height: 24, marginTop: 1 }}
                     >
-                      <span style={{ fontSize: 9, fontWeight: 500, color: '#71717a' }}>{initials}</span>
+                      <span className="text-muted-foreground" style={{ fontSize: 9, fontWeight: 500 }}>{initials}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13.5px] text-foreground leading-snug mb-0.5 truncate">{nameLabel}</p>
@@ -180,7 +180,7 @@ export function BriefTab({ brief, parentName, roomSummary }: BriefTabProps) {
             <div className="space-y-1.5">
               {brief.whatsComing.map((item) => (
                 <div key={item.jobId} className="flex items-center gap-3 py-2">
-                  <span className="shrink-0 rounded-full" style={{ width: 5, height: 5, background: '#3f3f46' }} />
+                  <span className="shrink-0 rounded-full bg-muted-foreground/40" style={{ width: 5, height: 5 }} />
                   <p className="min-w-0 flex-1 text-[13.5px] text-muted-foreground/60 leading-snug">
                     {item.description}
                   </p>

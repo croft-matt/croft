@@ -2,7 +2,6 @@ import { CheckCircle, Circle, AlertTriangle, Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { CopyAddressButton } from './copy-address-button'
 
 interface PageProps {
   searchParams: Promise<{ connected?: string; error?: string }>
@@ -22,10 +21,6 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
 
   const account = membership
     ? await getAccount(membership.workspace_id)
-    : null
-
-  const inboundAddress = membership
-    ? await getInboundAddress(membership.workspace_id)
     : null
 
   const isRevoked =
@@ -56,7 +51,6 @@ export default async function EmailSettingsPage({ searchParams }: PageProps) {
         ) : (
           <ConnectedCard
             account={account}
-            inboundAddress={inboundAddress}
             justConnected={params.connected === '1'}
           />
         )}
@@ -121,11 +115,9 @@ function NotConnectedCard({ isRevoked }: { isRevoked: boolean; justConnected: bo
 
 function ConnectedCard({
   account,
-  inboundAddress,
   justConnected,
 }: {
   account: NonNullable<Awaited<ReturnType<typeof getAccount>>>
-  inboundAddress: string | null
   justConnected: boolean
 }) {
   const fullyReady = account.history_imported
@@ -146,16 +138,6 @@ function ConnectedCard({
           </span>
         )}
       </div>
-
-      {inboundAddress && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted px-3 py-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground mb-0.5">Croft address</p>
-            <p className="truncate font-mono text-xs text-foreground">{inboundAddress}</p>
-          </div>
-          <CopyAddressButton address={inboundAddress} />
-        </div>
-      )}
 
       <div className="space-y-2">
         <StatusRow
@@ -211,12 +193,3 @@ async function getAccount(workspaceId: string) {
   return data
 }
 
-async function getInboundAddress(workspaceId: string): Promise<string | null> {
-  const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('workspaces')
-    .select('receiving_address')
-    .eq('id', workspaceId)
-    .single()
-  return data?.receiving_address ?? null
-}

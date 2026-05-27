@@ -41,7 +41,7 @@ export function UnansweredQuestionsBlock({ data }: UnansweredQuestionsBlockProps
           </p>
           <div className="divide-y divide-border">
             {data.awaitingYou.map((q) => (
-              <AwaitingYouRow key={q.id} question={q} onOpen={() => open(q.loop)} />
+              <AwaitingYouRow key={q.id} question={q} onOpen={() => open(q.loop.id)} />
             ))}
           </div>
         </div>

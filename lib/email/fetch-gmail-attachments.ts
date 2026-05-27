@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getValidAccessToken } from '@/lib/email/google-client'
+import { extractAttachmentText } from '@/lib/email/extract-attachment-text'
 import type { AttachmentMeta } from '@/lib/types/database'
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me'
@@ -75,6 +76,15 @@ export async function fetchAndStoreGmailAttachments(
         return
       }
 
+      // Extract text for backfill / retry cases where pre-classification extraction missed this file.
+      // Non-fatal: extraction failure must not block the storage upload.
+      let extractedText: string | null = null
+      try {
+        extractedText = await extractAttachmentText(bytes, attachment.mime_type, attachment.filename)
+      } catch (err) {
+        console.error(`fetchGmailAttachments: text extraction failed for ${attachment.filename}:`, err)
+      }
+
       const ext = attachment.filename.includes('.') ? attachment.filename.split('.').pop() : 'bin'
       const storagePath = `${workspaceId}/${emailId}/${attachment.gmail_attachment_id}.${ext}`
 
@@ -103,6 +113,14 @@ export async function fetchAndStoreGmailAttachments(
         .maybeSingle()
 
       if (existing) {
+        // Patch storage fields. Also backfill extracted_text if not already set
+        // (the pre-classification step normally writes this, but may have failed).
+        const { data: currentAsset } = await supabase
+          .from('assets')
+          .select('extracted_text')
+          .eq('id', existing.id)
+          .single()
+
         const { error: updateError } = await supabase
           .from('assets')
           .update({
@@ -110,6 +128,8 @@ export async function fetchAndStoreGmailAttachments(
             size_bytes: attachment.size,
             mime_type: attachment.mime_type,
             status_updated_at: now,
+            // Only backfill extracted_text if not already populated.
+            ...(!currentAsset?.extracted_text && extractedText ? { extracted_text: extractedText } : {}),
           })
           .eq('id', existing.id)
 
@@ -127,6 +147,7 @@ export async function fetchAndStoreGmailAttachments(
           storage_path: storagePath,
           mime_type: attachment.mime_type,
           size_bytes: attachment.size,
+          extracted_text: extractedText,
           status: 'received',
         })
 

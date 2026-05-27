@@ -1,8 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runFullClassification, type RateLimitHeaders } from '@/lib/ai/tier3'
 import { getReconciliationContext } from '@/lib/ai/reconciliation-context'
+import { fetchAttachmentTexts } from '@/lib/email/fetch-attachment-texts'
 import { generateEmbedding } from '@/lib/ai/embeddings'
 import { fileEmailToRooms } from '@/lib/rooms/file'
+import { writeNotifications } from '@/lib/notifications/write'
 import { tasks } from '@trigger.dev/sdk/v3'
 import type { synthesiseRoomTask } from '@/trigger/jobs/synthesise-room'
 import type { fetchAttachmentsTask } from '@/trigger/jobs/fetch-attachments'
@@ -49,7 +51,26 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
 
     const context = await getReconciliationContext(email, embedding)
     const candidateJobIds = new Set(context.openJobs.map((j) => j.id))
-    const result = await runFullClassification(email, context)
+
+    // Fetch and extract attachment text before Tier 3 so the model can read full
+    // attachment content (PDFs, DOCX, plain text) during classification.
+    // Non-fatal: extraction failures return an empty array, never block classification.
+    const storedAttachmentsForExtraction = email.attachments as unknown as AttachmentMeta[]
+    let attachmentTexts: import('@/lib/email/fetch-attachment-texts').AttachmentText[] = []
+    if (storedAttachmentsForExtraction.length > 0) {
+      try {
+        attachmentTexts = await fetchAttachmentTexts(
+          emailId,
+          email.workspace_id,
+          email.resend_email_id ?? null,
+          email.gmail_message_id ?? null,
+        )
+      } catch (err) {
+        console.error(`classifyEmail: attachment text extraction failed for ${emailId}:`, err)
+      }
+    }
+
+    const result = await runFullClassification(email, context, attachmentTexts)
 
     const rateLimitHeaders = result.rateLimitHeaders
 
@@ -57,6 +78,20 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
     // `processing` until all derived writes complete so that the sweeper can recover
     // it if the worker is killed between classification and the derived writes.
     const { matchedRoomIds } = await writeExtractionResults(emailId, email.workspace_id, result.extraction, candidateJobIds, email.attachments as unknown as AttachmentMeta[])
+
+    // Fire notifications non-fatally — must not affect email processing state.
+    writeNotifications({
+      workspaceId: email.workspace_id,
+      emailId,
+      fromName: email.from_name ?? null,
+      fromAddress: email.from_address,
+      extraction: result.extraction,
+      matchedRoomIds,
+      candidateJobs: context.openJobs.map((j) => ({ id: j.id, description: j.description })),
+      candidateJobIds,
+    }).catch((err: unknown) => {
+      console.error(`classifyEmail: writeNotifications failed for ${emailId}:`, err)
+    })
 
     await supabase
       .from('emails')
@@ -82,7 +117,7 @@ export async function classifyEmail(emailId: string): Promise<ClassifyEmailResul
 
     // Download attachment bytes and upload to Storage.
     // Non-fatal: attachment fetch failure must not affect the email's processing state.
-    const storedAttachments = email.attachments as unknown as AttachmentMeta[]
+    const storedAttachments = storedAttachmentsForExtraction
     if (storedAttachments.length > 0) {
       if (email.resend_email_id) {
         tasks
@@ -141,7 +176,7 @@ export async function writeExtractionResults(
     owner: string | null
     due: string | null
     confidence: number
-    status: 'open'
+    status: 'open' | 'noted'
     parent_job_id: string | null
   }> = []
   const updatesNeeded: Array<{ id: string; description: string; due: string | null }> = []
@@ -167,7 +202,7 @@ export async function writeExtractionResults(
       owner: j.owner ?? null,
       due: j.due ?? null,
       confidence: j.confidence,
-      status: 'open' as const,
+      status: (j.intent === 'INTRODUCE' ? 'noted' : 'open') as 'open' | 'noted',
     }
 
     switch (relation) {

@@ -21,7 +21,7 @@ Use the classify_relevance tool to return your answer.`
 export const TIER_2_SYSTEM_PROMPT = `You are an urgency classifier for a professional email intelligence system. An email has already been determined to be relevant. Your job is to assess how urgently it requires attention.
 
 URGENCY SCORE GUIDELINES (0-10):
-- 9-10: Requires action today. Explicit deadline today or tomorrow, "urgent", "ASAP", third-time follow-up, or any email from a VIP sender.
+- 9-10: Requires action today. Explicit deadline today or tomorrow, "urgent", "ASAP", third-time follow-up, or an escalating thread with multiple unanswered follow-ups.
 - 7-8: Should be addressed soon. Clear question awaiting response, follow-up on an open item, deadline within the next 3 days.
 - 5-6: Needs attention this week. New request or delivery that needs acknowledgement, upcoming deadline within 7 days.
 - 3-4: Low urgency. Informational, no clear action required, soft deadline.
@@ -51,23 +51,30 @@ After extracting, perform a self-check: re-read the email and ask yourself "have
 
 Every job has exactly one intent. Choose the most accurate one:
 
-REQUEST: Someone is asking for something to be provided, sent, done, or decided.
-Examples: "Can you send me the rider?", "I need the contract by Friday", "Could you confirm the load-in time?"
+REQUEST: Someone needs to take a specific action -- provide, send, complete, or decide something that has not happened yet.
+Examples: "Can you send me the signed contract?", "I need the report by Friday", "It would be great to have the proposal by end of week"
+NOT a REQUEST: "Confirming receipt of the documents", "Just letting you know the files are attached", "Thanks, all noted"
+Test: Does the owner need to do something that has not happened yet? If yes, it is a REQUEST. If the email is confirming, acknowledging, or reporting something that already happened, it is not.
 
 DELIVER: Someone is providing, sending, or sharing something.
-Examples: "Please find attached the stage plot", "Here is the updated rider", "Sending over the invoice"
+Examples: "Please find attached the project brief", "Here is the updated schedule", "Sending over the invoice"
+Note: DELIVER does not create an open job. Its role is to populate closes_jobs for the REQUEST it fulfils.
 
 CONFIRM: Someone is confirming that something has happened, is agreed, or is correct.
 Examples: "Confirming our call for Tuesday at 2pm", "Just to confirm receipt of the contract", "Confirmed for the 14th"
+Note: CONFIRM does not create an open job. Its role is to populate closes_jobs for the REQUEST or QUERY it resolves.
 
 CHASE: Someone is following up on something they previously requested that has not yet arrived.
-Examples: "Following up on my email from last week", "Still waiting for the tech spec", "Third time asking for the guest list"
+Examples: "Following up on my email from last week", "Still waiting for the final report", "Third time asking for the sign-off"
 
-QUERY: Someone is asking a question to understand something, not requesting a deliverable.
-Examples: "What is the capacity of the venue?", "Do you know if parking is available?", "Any update on the schedule?"
+QUERY: Someone is asking a question that expects a factual answer -- a time, a status, a yes/no, a number.
+Examples: "What time are you expecting to arrive?", "Do you know if parking is available?", "Has the budget been approved yet?"
+Note: If the expected answer is a file, document, or completed action, it is a REQUEST not a QUERY.
 
-INTRODUCE: Someone is introducing a new person or party into the correspondence.
-Examples: "Meet Sarah, she will be handling your accommodation", "I would like to introduce our new production manager"
+INTRODUCE: Someone new has been added to the thread or introduced as a point of contact.
+Extract their name, role, and area of responsibility from the email.
+Write the description as: "[Name] introduced -- [role or responsibility]". If no role is stated, write "[Name] added to the thread".
+Do not treat this as an action item. It is a record of who entered the conversation and why.
 
 ## CHASE handling
 
@@ -75,24 +82,24 @@ A CHASE is a follow-up on an existing unanswered REQUEST. When you detect a CHAS
 
 ## Object types
 
-Do NOT use hardcoded object types like "rider" or "contract" in the intent field. Intent is always one of the six above. Object type belongs in the description as plain English. "REQUEST for stage plot" is correct. A standalone intent of "RIDER_REQUEST" is wrong.
+Do NOT use hardcoded object types in the intent field. Intent is always one of the six above. Object type belongs in the description as plain English. "REQUEST for proposal" is correct. A standalone intent of "PROPOSAL_REQUEST" is wrong.
 
 ## Extraction output fields
 
 For each job:
 - intent: one of REQUEST, DELIVER, CONFIRM, CHASE, QUERY, INTRODUCE
-- description: the action in under 12 words. Write what needs to happen -- not who or when, as the owner and due fields carry those. Active voice. No parenthetical elaborations. No meta-commentary ("should be aware", "needs to know", "is expected to"). When the user is the actor, use "you" not their name or email address. Good: "Send ETA to GMM once departure is confirmed." Bad: "Matt needs to send confirmed ETA for leaving Hellfest to GMM once departure time is known (estimated departure ~01:00, arrival at GMM ~10:00-11:00, approximately 10 hours drive)."
-- owner: email address of the person who needs to act on this job, or null if unclear
+- description: the action in under 12 words. Write what needs to happen -- not who or when, as the owner and due fields carry those. Active voice. No parenthetical elaborations. No meta-commentary ("should be aware", "needs to know", "is expected to"). When the user is the actor, use "you" not their name or email address. Good: "Send revised quote to client." Bad: "Matt needs to send the revised cost breakdown document to the client showing all updated line items and the new total before the end of the working week on Friday."
+- owner: email address of the person who must act on this job, or null if unclear. Direction rule: if an inbound email is asking you to act, you are the owner (use your connected address). If you sent this email asking someone else to act, they are the owner (use their address). Always assign to the person who must act, never to the person asking.
 - due: ISO date (YYYY-MM-DD) if a deadline is mentioned, otherwise null
 - confidence: 0-1 score for how confident you are this job was correctly extracted
 
 For entities:
 - contacts: every person mentioned by name or email address, with their role if stated
 - assets: every file, document, or attachment mentioned, with the likely type and your confidence
-- dates: every specific date mentioned. The context field is a noun phrase under 8 words naming what the date marks. Not a sentence. Not a description of what someone will do. Strip names, organisations, and elaborations -- just the event label. Good: "RF channel handover", "load-in", "show day", "departure". Bad: "GMM's RF coordinator will provide approved radio channels to TesseracT on day of show (DOS); Matt should be aware and expect this on the day."
-- organisations: every company, venue, promoter, or organisation mentioned by name
+- dates: every specific date mentioned. The context field is a noun phrase under 8 words naming what the date marks. Not a sentence. Not a description of what someone will do. Strip names, organisations, and elaborations -- just the event label. Good: "contract signing", "site handover", "submission deadline", "review meeting". Bad: "The vendor will deliver the approved documents to the client on the project deadline; Matt should be aware and expect this on the day."
+- organisations: every company, client, supplier, or organisation mentioned by name
 
-For room_suggestions: the existing room structure is shown as an indented tree in the user message. Suggest where this email belongs as one or more paths from root to leaf. Each path is an ordered array of strings. Examples: ["TesseracT", "EU Tour 2026", "Hellfest"] or ["Annual Tax Return 2026"]. Rules: reuse exact existing names where they match; do not create new nodes for things that already exist under a slightly different name. Only create new path segments when the email clearly introduces a new project or sub-project not in the tree. If no project is identifiable, return an empty array.
+For room_suggestions: the existing room structure is shown as an indented tree in the user message. Suggest where this email belongs as one or more paths from root to leaf. Each path is an ordered array of strings. Examples: ["Acme Ltd", "Brand Refresh 2026", "Phase 1"] or ["Annual Tax Return 2026"]. Rules: reuse exact existing names where they match; do not create new nodes for things that already exist under a slightly different name. Only create new path segments when the email clearly introduces a new project or sub-project not in the tree. If no project is identifiable, return an empty array.
 
 For closes_jobs: if this email appears to resolve or close a previously open request, include the job IDs here. Only use ids that appear in the open jobs list you were given. Do not invent ids. If none, return an empty array.
 
@@ -104,9 +111,9 @@ confidence (top level): your overall confidence in the extraction as a whole, fr
 
 ## What you must NOT do
 
-- Do not add an intent to the email itself. Intent belongs on each individual job.
+- Do not assign a single intent to the whole email. Every job has its own intent.
 - Do not invent jobs that are not in the email.
-- Do not combine two separate jobs into one.
+- Do not combine two separate jobs into one unless they are a single indivisible action -- same owner, same deadline, inseparable in practice.
 - Do not return fewer jobs than exist in the email because some seem minor.
 - Do not guess at due dates. If no date is mentioned, return null.
 
@@ -144,13 +151,14 @@ A stale value must not persist beside its correction. Using the exact same categ
 
 DELIVER and CONFIRM are events, not standing actions. They do not create open jobs.
 
-- REQUEST, CHASE, QUERY, and INTRODUCE create open jobs.
+- REQUEST, CHASE, and QUERY create open jobs.
+- INTRODUCE is recorded as a note, not an open job. Status will be set to noted automatically.
 - DELIVER and CONFIRM do not create open jobs. Their role is to populate \`closes_jobs\` for the job they resolve and to contribute facts.
 - The single exception: a DELIVER that genuinely requires the user to act, such as a document that must be reviewed and returned, should be expressed as a REQUEST owned by the user, not as a DELIVER.
 
 ## User commitments
 
-When the sender of this email (the user) promises to deliver, confirm, or follow up on something ("the stage plot will be with you soon", "I will confirm the riser sizes"), extract that as a REQUEST owned by the user's connected address, with the description written as the thing the user has promised to do.
+When the sender of this email (the user) promises to deliver, confirm, or follow up on something ("the report will be with you soon", "I will confirm the final numbers"), extract that as a REQUEST owned by the user's connected address, with the description written as the thing the user has promised to do.
 
 Closing rule: a counterparty acknowledgement ("noted", "thanks", "all set") closes the request that counterparty made of the user. It does not close a self-commitment the user made. A self-commitment closes only when the user actually delivers it.
 
@@ -178,6 +186,121 @@ The user message may include a "Watch context matched rooms" section. These room
 Treat watch context matched rooms with the same confidence as a thread match when the sender and subject are coherent with the room name and seed facts. Route this email into the watch context room via room_suggestions using its exact name. Do not create a duplicate room for the same project.
 
 Watch context candidates are prospective, not historical. There will be no prior thread emails linking them to this email. Use the room name and the coherence of subject and sender to judge fit.
+
+## Examples
+
+The following show correct extractions for the most important patterns. Match this precision on every email.
+
+### Example 1: Dense inbound -- multiple confirmation requests and one deliverable ask
+
+Email:
+From: [Coordinator] <coordinator@client.com>
+To: [User]
+Subject: Advance information -- [Project]
+
+Hi, please provide the following:
+We have your initial specification. Can you also send [Document A], [Document B], and [Document C]?
+Travel party number?
+You will travel with one large and one support vehicle, correct?
+You bring your own equipment, correct?
+You have your own operator for [System], correct?
+You won't use any additional [equipment type], correct?
+[Hospitality Contact] in copy is your hospitality contact.
+
+Correct extraction:
+jobs: [
+  { "intent": "REQUEST", "description": "Send [Document A], [Document B], and [Document C]", "owner": "[user_address]", "due": null, "confidence": 0.98, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm travel party number", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm travel with one large and one support vehicle", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm bringing own equipment", "owner": "[user_address]", "due": null, "confidence": 0.96, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm own operator for [System]", "owner": "[user_address]", "due": null, "confidence": 0.96, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm no additional [equipment type] in use", "owner": "[user_address]", "due": null, "confidence": 0.95, "relation": "new", "relates_to_job_id": null },
+  { "intent": "INTRODUCE", "description": "[Hospitality Contact] introduced -- hospitality contact at [Client]", "owner": null, "due": null, "confidence": 0.95, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: []
+Each question is a separate job. All owned by [user_address] because the inbound email is asking you to act.
+
+### Example 2: User outbound reply -- deliveries close open jobs, promises open new ones
+
+Email:
+From: [User]
+To: [Coordinator]
+Subject: Re: Advance information -- [Project]
+
+Hi,
+[Document A] attached. Travel party document attached.
+Travel with one large and one support vehicle: correct.
+Own equipment: correct. Own [System] operator: correct.
+[Document B] will be with you soon.
+I will confirm [equipment] specifications once finalised.
+
+Correct extraction:
+jobs: [
+  { "intent": "DELIVER", "description": "[Document A] sent to [Client]", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null },
+  { "intent": "CONFIRM", "description": "Confirmed travel with one large and one support vehicle", "owner": null, "due": null, "confidence": 0.96, "relation": "new", "relates_to_job_id": null },
+  { "intent": "CONFIRM", "description": "Confirmed own equipment and [System] operator", "owner": null, "due": null, "confidence": 0.96, "relation": "new", "relates_to_job_id": null },
+  { "intent": "REQUEST", "description": "Send [Document B] to [Client]", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null },
+  { "intent": "REQUEST", "description": "Confirm [equipment] specifications to [Client]", "owner": "[user_address]", "due": null, "confidence": 0.95, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: ["[id of REQUEST for Document A]", "[id of QUERY for travel party]", "[id of QUERY for vehicle travel]", "[id of QUERY for own equipment]", "[id of QUERY for System operator]"]
+Promises in outbound emails ("will be with you soon", "once finalised") become open REQUESTs owned by [user_address]. CONFIRMs close QUERYs but create no new open jobs themselves.
+
+### Example 3: Inbound clarification -- discrepancy queries and a chase
+
+Email:
+From: [Coordinator]
+To: [User]
+Subject: Re: Advance information -- [Project]
+
+Hi,
+Still waiting on your ETAs.
+We reviewed your technical document. Page 1 states [Specification A] but page 3 states [Specification B] -- could you clarify which is correct?
+Your initial submission requested [Requirement X] but your latest document states [Requirement Y]. Could you confirm which applies?
+
+Correct extraction:
+jobs: [
+  { "intent": "CHASE", "description": "Provide ETAs to [Client]", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "chase_of", "relates_to_job_id": "[id of original ETA request]" },
+  { "intent": "QUERY", "description": "Clarify [Specification A] vs [Specification B] discrepancy", "owner": "[user_address]", "due": null, "confidence": 0.96, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm correct requirement -- [X] or [Y]", "owner": "[user_address]", "due": null, "confidence": 0.95, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: []
+
+### Example 4: Pure acknowledgement -- closes jobs, zero new open items
+
+Email:
+From: [Coordinator]
+To: [User]
+Subject: Re: Advance information -- [Project]
+
+Hi,
+Thanks -- [Document A], [Document B], and travel details all received.
+We will confirm logistics details one week before the project date.
+
+Correct extraction:
+jobs: [
+  { "intent": "CONFIRM", "description": "[Document A], [Document B], and travel details received", "owner": null, "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: ["[id of REQUEST for Document A]", "[id of REQUEST for Document B]", "[id of QUERY for travel details]"]
+This email requires no action. Zero new open jobs. closes_jobs captures what it resolves. Do not invent REQUESTs from thank-you or acknowledgement language.
+
+### Example 5: User outbound asking counterparty to act -- owner is them, not you
+
+Email:
+From: [User]
+To: [Counterparty] <name@supplier.com>
+Subject: Outstanding items -- [Project]
+
+Hi [Name],
+Could you send over the signed agreement by end of week?
+Can you also confirm your team's availability for the site visit on the 15th?
+
+Correct extraction:
+jobs: [
+  { "intent": "REQUEST", "description": "Send signed agreement", "owner": "name@supplier.com", "due": "[end of week date]", "confidence": 0.98, "relation": "new", "relates_to_job_id": null },
+  { "intent": "QUERY", "description": "Confirm team availability for site visit on 15th", "owner": "name@supplier.com", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: []
+Owner is the counterparty's address on both jobs -- not [user_address]. These are awaiting others. The person asking is never the owner.
 
 Use the extract_email_data tool to return your structured output.\``
 
@@ -214,7 +337,7 @@ export const EXTRACTION_TOOL_SCHEMA = {
         description: 'Paths describing where this email belongs in the room hierarchy. Each path is an ordered array of strings from the most general (root) to the most specific (leaf). The email is filed at the leaf. A single-item path is a root-level room. Use exact names from the existing room tree where they match. Follow the naming conventions of the existing tree for any new nodes.',
         items: {
           type: 'array',
-          description: 'A single path from root to leaf, e.g. ["TesseracT", "EU Tour 2026", "Hellfest"] or ["Annual Tax Return 2026"].',
+          description: 'A single path from root to leaf, e.g. ["Acme Ltd", "Brand Refresh 2026", "Phase 1"] or ["Annual Tax Return 2026"].',
           items: { type: 'string' },
           minItems: 1,
         },

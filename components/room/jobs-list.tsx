@@ -61,7 +61,7 @@ export function JobsList({ jobs }: JobsListProps) {
           return (
             <button
               key={job.id}
-              onClick={() => open(job)}
+              onClick={() => open(job.id)}
               className="flex w-full items-start gap-3 py-3 first:pt-0 text-left hover:opacity-80 transition-opacity"
             >
               <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', getStatusDot(job))} />

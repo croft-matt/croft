@@ -27,6 +27,8 @@ export interface ReconciliationContext {
     received_at: string
     subject: string | null
     body_text: string | null
+    // Extracted text from attachments on this thread email (PDF, DOCX, etc.)
+    attachmentTexts: Array<{ filename: string; text: string }>
   }>
   // Full room records (id, name, parent_room_id) so tier3 can render the hierarchy tree.
   rooms: RoomRecord[]
@@ -63,6 +65,22 @@ export async function getReconciliationContext(
     if (siblings && siblings.length > 0) {
       threadEmailIds = siblings.map((s) => s.id)
 
+      // Load any extracted attachment text for thread siblings.
+      // Grouped by email_id so we can join them to each thread email entry.
+      const { data: siblingAssets } = await supabase
+        .from('assets')
+        .select('email_id, filename, extracted_text')
+        .in('email_id', threadEmailIds)
+        .not('extracted_text', 'is', null)
+
+      const assetsByEmailId = new Map<string, Array<{ filename: string; text: string }>>()
+      for (const asset of siblingAssets ?? []) {
+        if (!asset.extracted_text || !asset.email_id) continue
+        const existing = assetsByEmailId.get(asset.email_id) ?? []
+        existing.push({ filename: asset.filename, text: asset.extracted_text })
+        assetsByEmailId.set(asset.email_id, existing)
+      }
+
       for (const sibling of siblings) {
         threadEmails.push({
           from: sibling.from_name
@@ -71,6 +89,7 @@ export async function getReconciliationContext(
           received_at: sibling.received_at,
           subject: sibling.subject,
           body_text: sibling.body_text,
+          attachmentTexts: assetsByEmailId.get(sibling.id) ?? [],
         })
       }
 
@@ -145,9 +164,10 @@ export async function getReconciliationContext(
   }
 
   // Full room records: used by tier3 to render the hierarchy tree for room_suggestions.
+  // description is included so manually created rooms show routing hints in the tree.
   const { data: allRooms } = await supabase
     .from('rooms')
-    .select('id, name, parent_room_id')
+    .select('id, name, parent_room_id, description')
     .eq('workspace_id', workspaceId)
     .is('archived_at', null)
 
@@ -155,6 +175,7 @@ export async function getReconciliationContext(
     id: r.id,
     name: r.name,
     parent_room_id: r.parent_room_id,
+    description: r.description,
   }))
 
   // Layer 3: Semantic. Top open jobs from emails nearest to this one by embedding.

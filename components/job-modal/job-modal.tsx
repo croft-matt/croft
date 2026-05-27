@@ -2,170 +2,241 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { X, Mail, RotateCcw, CheckCheck, RefreshCw, AlertCircle } from 'lucide-react'
 import { useJobModal } from '@/stores/job-modal-store'
-import { JobHeader } from '@/components/job-modal/job-header'
-import { ToField, type Recipient } from '@/components/job-modal/to-field'
-import { AssetField } from '@/components/job-modal/asset-field'
-import { NoteField } from '@/components/job-modal/note-field'
-import { ActionBar } from '@/components/job-modal/action-bar'
-import { AssetSuggestionCard } from '@/components/job-modal/asset-suggestion'
-import { generateNote } from '@/lib/jobs/note-template'
-import { completeJob } from '@/lib/jobs/complete'
-import { getJobContext, type JobContext } from '@/lib/jobs/get-job-context'
-import { suggestAsset, type AssetSuggestion } from '@/lib/jobs/suggest-asset'
+import { useEmailSidePanel } from '@/stores/email-side-panel-store'
+import type { JobActivityData, JobActivityEvent } from '@/lib/queries/job-activity'
+
+const INTENT_LABEL: Record<string, string> = {
+  REQUEST: 'Request',
+  DELIVER: 'Deliver',
+  CONFIRM: 'Confirm',
+  CHASE: 'Chase',
+  QUERY: 'Query',
+  INTRODUCE: 'Introduce',
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function EventIcon({ type }: { type: JobActivityEvent['type'] }) {
+  const cls = 'h-3.5 w-3.5'
+  switch (type) {
+    case 'created': return <Mail className={cls} />
+    case 'chased': return <AlertCircle className={cls} />
+    case 'updated': return <RefreshCw className={cls} />
+    case 'closed': return <CheckCheck className={cls} />
+  }
+}
+
+function eventLabel(type: JobActivityEvent['type']): string {
+  switch (type) {
+    case 'created': return 'Created'
+    case 'chased': return 'Chased'
+    case 'updated': return 'Updated'
+    case 'closed': return 'Resolved'
+  }
+}
+
+interface TimelineEventProps {
+  event: JobActivityEvent
+  onOpenEmail: (emailId: string) => void
+  isLast: boolean
+}
+
+function TimelineEvent({ event, onOpenEmail, isLast }: TimelineEventProps) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+          <EventIcon type={event.type} />
+        </div>
+        {!isLast && <div className="w-px flex-1 bg-border mt-1" />}
+      </div>
+      <div className="pb-5 min-w-0 flex-1">
+        <div className="flex items-baseline gap-2 mb-0.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {eventLabel(event.type)}
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            {formatDate(event.receivedAt)} · {formatTime(event.receivedAt)}
+          </span>
+        </div>
+        <p className="text-sm text-foreground leading-snug mb-1">
+          {event.subjectSummary ?? 'Email'}
+        </p>
+        <p className="text-xs text-muted-foreground mb-2">
+          {event.fromName ?? event.fromAddress}
+        </p>
+        <button
+          onClick={() => onOpenEmail(event.emailId)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Mail className="h-3 w-3" />
+          View email
+        </button>
+      </div>
+    </div>
+  )
+}
+
+async function reopenJob(jobId: string): Promise<void> {
+  const res = await fetch(`/api/jobs/${jobId}/reopen`, { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to reopen job')
+}
 
 export function JobModal() {
-  const { job, close } = useJobModal()
+  const { jobId, close } = useJobModal()
+  const { open: openEmail } = useEmailSidePanel()
   const [mounted, setMounted] = useState(false)
-  const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [file, setFile] = useState<File | null>(null)
-  const [note, setNote] = useState('')
+  const [data, setData] = useState<JobActivityData | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [context, setContext] = useState<JobContext | null>(null)
-  const [suggestion, setSuggestion] = useState<AssetSuggestion | null>(null)
+  const [reopening, setReopening] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Reset form and fetch context when job changes
   useEffect(() => {
-    if (!job) {
-      setRecipients([])
-      setFile(null)
-      setNote('')
-      setError(null)
-      setContext(null)
+    if (!jobId) {
+      setData(null)
       return
     }
-
-    setContext(null)
-    setSuggestion(null)
-
-    suggestAsset(job.description).then((s) => {
-      setSuggestion(s)
-    })
-
-    getJobContext(job.id).then((ctx) => {
-      setContext(ctx)
-
-      // Pre-populate recipients based on intent
-      const workspaceAddresses = new Set<string>()
-      let preselected: Recipient[] = []
-
-      const allParticipants = [
-        ...(ctx.toAddresses ?? []),
-        ...(ctx.ccAddresses ?? []),
-      ].filter((a) => !workspaceAddresses.has(a))
-
-      if (job.intent === 'REQUEST' && ctx.senderEmail) {
-        preselected = [{ name: ctx.senderName ?? ctx.senderEmail.split('@')[0], email: ctx.senderEmail }]
-      } else if (job.intent === 'CHASE' && job.owner && job.owner.includes('@')) {
-        preselected = [{ name: job.owner.split('@')[0], email: job.owner }]
-      } else if (ctx.senderEmail) {
-        preselected = [
-          { name: ctx.senderName ?? ctx.senderEmail.split('@')[0], email: ctx.senderEmail },
-          ...allParticipants
-            .filter((a) => a !== ctx.senderEmail)
-            .map((a) => ({ name: a.split('@')[0], email: a })),
-        ]
-      } else if (job.owner && job.owner.includes('@')) {
-        preselected = [{ name: job.owner.split('@')[0], email: job.owner }]
-      }
-
-      const unique = preselected.filter(
-        (r, i, arr) => arr.findIndex((x) => x.email === r.email) === i
-      )
-      setRecipients(unique)
-
-      const recipientName = unique[0]?.name ?? 'there'
-      setNote(generateNote(job, recipientName))
-    })
-  }, [job?.id])
-
-  // Update note template when the first recipient name changes (user edits TO field).
-  // Only fires after context has loaded to avoid clobbering the initial populate.
-  useEffect(() => {
-    if (!job || !context) return
-    const first = recipients[0]
-    if (first) {
-      setNote(generateNote(job, first.name))
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipients[0]?.name])
-
-  async function handleSubmit() {
-    if (!job) return
-    if (recipients.length === 0) {
-      setError('Add at least one recipient.')
-      return
-    }
-
     setLoading(true)
-    setError(null)
+    fetch(`/api/jobs/${jobId}/activity`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: JobActivityData | null) => setData(d))
+      .finally(() => setLoading(false))
+  }, [jobId])
 
+  function handleOpenEmail(emailId: string) {
+    openEmail(emailId)
+    close()
+  }
+
+  async function handleReopen() {
+    if (!jobId) return
+    setReopening(true)
     try {
-      const formData = new FormData()
-      formData.append('jobId', job.id)
-      formData.append('to', JSON.stringify(recipients.map((r) => r.email)))
-      formData.append('bodyText', note)
-      if (file) formData.append('asset', file)
-
-      const result = await completeJob(formData)
-      if (!result.success) {
-        setError(result.error ?? 'Something went wrong.')
-        return
-      }
+      await reopenJob(jobId)
       close()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } catch {
+      // silent
     } finally {
-      setLoading(false)
+      setReopening(false)
     }
   }
 
-  function handleClose() {
-    if (!loading) close()
-  }
+  if (!mounted || !jobId) return null
 
-  if (!mounted || !job) return null
+  const isClosed = data?.status === 'closed'
+  const sourceEmailId = data?.timeline.find((e) => e.type === 'created')?.emailId ?? null
 
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
+      onClick={(e) => { if (e.target === e.currentTarget) close() }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-[560px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
-        <JobHeader job={job} roomName={context?.roomName ?? null} senderName={context?.senderName ?? null} />
+      <div className="relative w-full max-w-[520px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
 
-        <div className="flex flex-col gap-5 px-5 py-5 overflow-y-auto max-h-[60vh]">
-          <ToField recipients={recipients} onChange={setRecipients} />
-          {suggestion && !file && (
-            <AssetSuggestionCard
-              suggestion={suggestion}
-              onAttach={(s) => {
-                // Convert suggestion to a File-like placeholder so the
-                // existing upload path stays simple. Store the suggestion
-                // ID separately so complete.ts skips re-uploading.
-                setSuggestion(null)
-                // Signal the suggestion was attached via a flag file name
-                const blob = new Blob([], { type: 'application/octet-stream' })
-                const fakeFile = new File([blob], s.filename, { type: 'application/octet-stream' })
-                Object.defineProperty(fakeFile, '__suggestionId', { value: s.id })
-                setFile(fakeFile)
-              }}
-            />
-          )}
-          <AssetField file={file} onChange={setFile} />
-          <NoteField value={note} onChange={setNote} />
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-border">
+          <div className="min-w-0 flex-1">
+            {data && (
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wide">
+                  {INTENT_LABEL[data.intent] ?? data.intent}
+                </span>
+                {data.roomName && (
+                  <span className="text-[11px] text-muted-foreground">{data.roomName}</span>
+                )}
+                {isClosed && (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">
+                    Closed
+                  </span>
+                )}
+              </div>
+            )}
+            <p className="text-sm font-medium text-foreground leading-snug">
+              {loading ? 'Loading…' : (data?.description ?? '—')}
+            </p>
+            {data?.owner && (
+              <p className="mt-1 text-xs text-muted-foreground">{data.owner}</p>
+            )}
+          </div>
+          <button
+            onClick={close}
+            className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        <ActionBar
-          onCancel={handleClose}
-          onSubmit={handleSubmit}
-          loading={loading}
-          error={error}
-        />
+        {/* Timeline */}
+        <div className="px-5 py-5 overflow-y-auto max-h-[55vh]">
+          {loading && (
+            <p className="text-sm text-muted-foreground">Loading activity…</p>
+          )}
+          {!loading && data && data.timeline.length === 0 && (
+            <p className="text-sm text-muted-foreground">No email activity found for this job.</p>
+          )}
+          {!loading && data && data.timeline.length > 0 && (
+            <div>
+              {data.timeline.map((event, i) => (
+                <TimelineEvent
+                  key={event.emailId + event.type}
+                  event={event}
+                  onOpenEmail={handleOpenEmail}
+                  isLast={i === data.timeline.length - 1}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {data && (
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-border">
+            <div className="flex items-center gap-2">
+              {isClosed ? (
+                <button
+                  onClick={handleReopen}
+                  disabled={reopening}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {reopening ? 'Reopening…' : 'Reopen'}
+                </button>
+              ) : sourceEmailId ? (
+                <button
+                  onClick={() => handleOpenEmail(sourceEmailId)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Go to email
+                </button>
+              ) : null}
+            </div>
+            <button
+              onClick={close}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

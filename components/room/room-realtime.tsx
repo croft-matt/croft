@@ -35,6 +35,7 @@ function buildOpenLoopsLocal(
   connectedAddresses: string[],
 ): OpenLoops {
   const fromNameMap = new Map(emails.map((e) => [e.id, e.from_name ?? null]))
+  const fromAddressMap = new Map(emails.map((e) => [e.id, e.from_address ?? null]))
   const connectedSet = new Set(connectedAddresses)
   const now = new Date()
 
@@ -43,10 +44,12 @@ function buildOpenLoopsLocal(
     .map((job) => {
       const createdAt = new Date(job.created_at)
       const age_days = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      const senderAddress = fromAddressMap.get(job.email_id)?.toLowerCase()
+      const isSelf = senderAddress ? connectedSet.has(senderAddress) : false
       return {
         ...job,
         age_days,
-        from_name: fromNameMap.get(job.email_id) ?? null,
+        from_name: isSelf ? null : (fromNameMap.get(job.email_id) ?? null),
         source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
       }
     })
@@ -104,25 +107,31 @@ export function RoomRealtimeProvider({
   const readModel = useMemo((): RoomReadModel => {
     const roomData = (room.room_data ?? {}) as Record<string, unknown>
     const fromNameMap = new Map(emails.map((e) => [e.id, e.from_name ?? null]))
+    const fromAddressMap = new Map(emails.map((e) => [e.id, e.from_address ?? null]))
+    const connectedSet = new Set(initialConnectedAddresses)
     const openLoops = buildOpenLoopsLocal(jobs, emails, initialConnectedAddresses)
     const facts = flattenFacts(roomData)
 
     const roomJobs: RoomJob[] = jobs
       .filter((j) => j.status !== 'cancelled')
-      .map((j) => ({
-        id: j.id,
-        intent: j.intent as RoomJob['intent'],
-        description: j.description,
-        owner: j.owner,
-        due: j.due,
-        status: j.status as RoomJob['status'],
-        closed_at: j.closed_at,
-        closed_by_email_id: j.closed_by_email_id,
-        parent_job_id: j.parent_job_id,
-        email_id: j.email_id,
-        from_name: fromNameMap.get(j.email_id) ?? null,
-        created_at: j.created_at,
-      }))
+      .map((j) => {
+        const senderAddress = fromAddressMap.get(j.email_id)?.toLowerCase()
+        const isSelf = senderAddress ? connectedSet.has(senderAddress) : false
+        return {
+          id: j.id,
+          intent: j.intent as RoomJob['intent'],
+          description: j.description,
+          owner: j.owner,
+          due: j.due,
+          status: j.status as RoomJob['status'],
+          closed_at: j.closed_at,
+          closed_by_email_id: j.closed_by_email_id,
+          parent_job_id: j.parent_job_id,
+          email_id: j.email_id,
+          from_name: isSelf ? null : (fromNameMap.get(j.email_id) ?? null),
+          created_at: j.created_at,
+        }
+      })
 
     return {
       workspaceId,

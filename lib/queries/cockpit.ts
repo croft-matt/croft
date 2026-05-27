@@ -188,6 +188,29 @@ export async function getProcessingCount(
   return { processing: processing ?? 0, failed: failed ?? 0 }
 }
 
+export interface MyRoom {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+}
+
+// Returns rooms the user created manually (created_by is not null), ordered newest first.
+// These appear in the "My rooms" section of the sidebar.
+export async function getMyRooms(workspaceId: string): Promise<MyRoom[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('rooms')
+    .select('id, name, description, created_at')
+    .eq('workspace_id', workspaceId)
+    .not('created_by', 'is', null)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false })
+
+  return (data ?? []) as MyRoom[]
+}
+
 export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue[]> {
   const supabase = await createClient()
   const now = new Date().toISOString()

@@ -1,11 +1,13 @@
 'use client'
 
-import type { Job, JobIntent } from '@/lib/types/database'
+import { Paperclip } from 'lucide-react'
+import type { Job, Asset, JobIntent } from '@/lib/types/database'
 import { cn } from '@/lib/utils'
 import { useJobModal } from '@/stores/job-modal-store'
 
 interface JobsListProps {
   jobs: Job[]
+  assets?: Asset[]
 }
 
 const intentConfig: Record<JobIntent, { label: string; className: string }> = {
@@ -14,18 +16,18 @@ const intentConfig: Record<JobIntent, { label: string; className: string }> = {
   CONFIRM: { label: 'CONFIRM', className: 'bg-muted text-foreground' },
   CHASE: { label: 'CHASE', className: 'bg-red-500/10 text-red-400' },
   QUERY: { label: 'QUERY', className: 'bg-muted text-muted-foreground' },
-  INTRODUCE: { label: 'INTRODUCE', className: 'bg-purple-500/10 text-purple-400' },
+  INTRODUCE: { label: 'Introduced', className: 'bg-muted text-muted-foreground' },
 }
 
 function getStatusDot(job: Job): string {
-  if (job.status !== 'open') return 'bg-muted-foreground'
-  if (!job.due) return 'bg-muted-foreground'
+  if (job.status !== 'open') return 'bg-muted-foreground/40'
+  if (!job.due) return 'bg-muted-foreground/40'
   const dueDate = new Date(job.due)
   const now = new Date()
   if (dueDate < now) return 'bg-red-500'
   const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
   if (dueDate < sevenDays) return 'bg-amber-500'
-  return 'bg-muted-foreground'
+  return 'bg-muted-foreground/40'
 }
 
 function formatDue(due: string): string {
@@ -36,10 +38,32 @@ function formatDue(due: string): string {
   })
 }
 
-export function JobsList({ jobs }: JobsListProps) {
+// Lightweight check: does any asset plausibly relate to this job description?
+// Splits both strings into words and looks for a common keyword of 4+ characters.
+function assetMatchesJob(job: Job, assets: Asset[]): boolean {
+  const descWords = new Set(
+    job.description
+      .toLowerCase()
+      .split(/[\s_\-./]+/)
+      .filter((w) => w.length >= 4),
+  )
+  for (const asset of assets) {
+    const assetText = `${asset.filename ?? ''} ${asset.likely_type ?? ''}`.toLowerCase()
+    const assetWords = assetText.split(/[\s_\-./]+/).filter((w) => w.length >= 4)
+    for (const word of assetWords) {
+      if (descWords.has(word)) return true
+    }
+  }
+  return false
+}
+
+export function JobsList({ jobs, assets = [] }: JobsListProps) {
   const { open } = useJobModal()
   const openJobs = jobs.filter((j) => j.status === 'open')
-  const closedJobs = jobs.filter((j) => j.status !== 'open')
+  const notedJobs = jobs.filter((j) => j.status === 'noted')
+  const closedJobs = jobs.filter((j) => j.status === 'closed')
+
+  const allRendered = [...openJobs, ...notedJobs, ...closedJobs]
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -54,29 +78,34 @@ export function JobsList({ jobs }: JobsListProps) {
         <p className="text-sm text-muted-foreground">No jobs extracted from this email.</p>
       ) : (
         <div className="divide-y divide-border">
-          {[...openJobs, ...closedJobs].map((job) => {
-            const intent = intentConfig[job.intent as JobIntent]
+          {allRendered.map((job) => {
+            const intent = intentConfig[job.intent as JobIntent] ?? {
+              label: job.intent,
+              className: 'bg-muted text-muted-foreground',
+            }
+            const isNoted = job.status === 'noted'
+            const isClosed = job.status === 'closed'
+            const isClickable = !isNoted && !isClosed
             const dotClass = getStatusDot(job)
-            const isClosed = job.status !== 'open'
+            const showPaperclip = isClickable && assets.length > 0 && assetMatchesJob(job, assets)
 
             return (
               <div
                 key={job.id}
-                onClick={isClosed ? undefined : () => open(job)}
+                onClick={isClickable ? () => open(job.id) : undefined}
                 className={cn(
                   'flex items-start gap-3 py-3 first:pt-0 last:pb-0',
-                  isClosed ? 'opacity-40' : 'cursor-pointer hover:opacity-80 transition-opacity'
+                  isClosed && 'opacity-40',
+                  isClickable && 'cursor-pointer hover:opacity-80 transition-opacity',
                 )}
               >
-                <div
-                  className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', dotClass)}
-                />
+                <div className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', dotClass)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-2 flex-wrap">
                     <span
                       className={cn(
                         'inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[13px] font-semibold tracking-wide',
-                        intent.className
+                        intent.className,
                       )}
                     >
                       {intent.label}
@@ -84,7 +113,8 @@ export function JobsList({ jobs }: JobsListProps) {
                     <p
                       className={cn(
                         'text-sm font-medium leading-snug',
-                        isClosed ? 'line-through text-muted-foreground' : 'text-foreground'
+                        isClosed ? 'line-through text-muted-foreground' : 'text-foreground',
+                        isNoted && 'text-muted-foreground',
                       )}
                     >
                       {job.description}
@@ -92,12 +122,13 @@ export function JobsList({ jobs }: JobsListProps) {
                   </div>
                   {(job.owner || job.due) && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {[job.owner, job.due ? formatDue(job.due) : null]
-                        .filter(Boolean)
-                        .join(' · ')}
+                      {[job.owner, job.due ? formatDue(job.due) : null].filter(Boolean).join(' · ')}
                     </p>
                   )}
                 </div>
+                {showPaperclip && (
+                  <Paperclip className="mt-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                )}
               </div>
             )
           })}

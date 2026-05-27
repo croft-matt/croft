@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { extractAttachmentText } from '@/lib/email/extract-attachment-text'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -51,6 +52,15 @@ export async function fetchAndStoreAttachments(
       continue
     }
 
+    // Extract text for backfill / retry cases where pre-classification extraction missed this file.
+    // Non-fatal: extraction failure must not block the storage upload.
+    let extractedText: string | null = null
+    try {
+      extractedText = await extractAttachmentText(bytes, attachment.content_type, filename)
+    } catch (err) {
+      console.error(`fetchAttachments: text extraction failed for ${filename}:`, err)
+    }
+
     // Derive a stable storage path from the attachment's Resend ID so that
     // re-running this job is safe (upsert: true prevents duplicate uploads).
     const ext = filename.includes('.') ? filename.split('.').pop() : 'bin'
@@ -82,6 +92,14 @@ export async function fetchAndStoreAttachments(
       .maybeSingle()
 
     if (existing) {
+      // Patch storage fields. Also backfill extracted_text if not already set
+      // (the pre-classification step normally writes this, but may have failed).
+      const { data: currentAsset } = await supabase
+        .from('assets')
+        .select('extracted_text')
+        .eq('id', existing.id)
+        .single()
+
       const { error: updateError } = await supabase
         .from('assets')
         .update({
@@ -89,6 +107,8 @@ export async function fetchAndStoreAttachments(
           size_bytes: attachment.size,
           mime_type: attachment.content_type,
           status_updated_at: now,
+          // Only backfill extracted_text if not already populated.
+          ...(!currentAsset?.extracted_text && extractedText ? { extracted_text: extractedText } : {}),
         })
         .eq('id', existing.id)
 
@@ -107,6 +127,7 @@ export async function fetchAndStoreAttachments(
         storage_path: storagePath,
         mime_type: attachment.content_type,
         size_bytes: attachment.size,
+        extracted_text: extractedText,
         status: 'received',
       })
 

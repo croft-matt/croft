@@ -5,7 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { generateReplySuggestion } from '@/lib/ai/reply-suggestion'
 import { getWorkspaceAssetsGrouped } from '@/lib/queries/assets'
+import { getWorkspaceId } from '@/lib/auth/helpers'
 import type { AssetGroup } from '@/lib/queries/assets'
+import type { Job } from '@/lib/types/database'
 
 export async function sendReply(params: {
   roomId: string
@@ -13,6 +15,7 @@ export async function sendReply(params: {
   to: string[]
   body: string
   selectedAssetIds: string[]
+  closingJobIds?: string[]
 }): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const {
@@ -62,8 +65,10 @@ export async function sendReply(params: {
     }
   }
 
+  let sentResendId: string | null = null
+
   try {
-    await sendEmail({
+    const result = await sendEmail({
       workspaceId: room.workspace_id,
       to: params.to,
       subject,
@@ -77,11 +82,38 @@ export async function sendReply(params: {
       attachedAssetIds:
         params.selectedAssetIds.length > 0 ? params.selectedAssetIds : undefined,
     })
+    sentResendId = result.messageId
   } catch (err) {
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to send.',
     }
+  }
+
+  // Close attached jobs atomically after a successful send.
+  // Jobs are never closed if sendEmail throws -- the try/catch above prevents reaching here.
+  if (params.closingJobIds?.length && sentResendId) {
+    const adminSupabase = createAdminClient()
+
+    // Find the DB row for the sent email by its Resend ID.
+    const { data: sentEmailRow } = await adminSupabase
+      .from('emails')
+      .select('id')
+      .eq('resend_email_id', sentResendId)
+      .single()
+
+    const sentEmailId = sentEmailRow?.id ?? null
+
+    await adminSupabase
+      .from('jobs')
+      .update({
+        status: 'closed',
+        closed_by_email_id: sentEmailId,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', params.closingJobIds)
+      .eq('workspace_id', room.workspace_id)
+      .eq('status', 'open')
   }
 
   return { success: true }
@@ -115,4 +147,54 @@ export async function fetchWorkspaceAssetsForCompose(): Promise<AssetGroup[]> {
 
   if (!membership) return []
   return getWorkspaceAssetsGrouped(membership.workspace_id)
+}
+
+// Returns open jobs from the same thread and workspace as the given email,
+// excluding any job IDs in excludeJobIds. Used to populate the job picker in compose.
+export async function fetchOpenJobsForThread(
+  emailId: string,
+  excludeJobIds: string[],
+): Promise<Job[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const workspaceId = await getWorkspaceId()
+  if (!workspaceId) return []
+
+  // Get the thread_id for this email.
+  const { data: emailRow } = await supabase
+    .from('emails')
+    .select('thread_id')
+    .eq('id', emailId)
+    .single()
+
+  if (!emailRow?.thread_id) return []
+
+  // Find all email IDs in this workspace with the same thread_id.
+  const { data: threadEmails } = await supabase
+    .from('emails')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .eq('thread_id', emailRow.thread_id)
+
+  const threadEmailIds = (threadEmails ?? []).map((e) => e.id)
+  if (threadEmailIds.length === 0) return []
+
+  // Fetch open jobs from those emails.
+  let query = supabase
+    .from('jobs')
+    .select('*')
+    .in('email_id', threadEmailIds)
+    .eq('status', 'open')
+    .order('created_at', { ascending: true })
+
+  if (excludeJobIds.length > 0) {
+    query = query.not('id', 'in', `(${excludeJobIds.join(',')})`)
+  }
+
+  const { data: jobs } = await query
+  return (jobs ?? []) as Job[]
 }

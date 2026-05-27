@@ -6,6 +6,7 @@ import { FIRST_PARTY_TIER3_SYSTEM_PROMPT, buildFirstPartyEmailContent } from '@/
 import { type ReconciliationContext } from '@/lib/ai/reconciliation-context'
 import { buildRoomTree, type RoomRecord, type RoomTreeNode } from '@/lib/rooms/tree'
 import type { Email, Extraction, AttachmentMeta } from '@/lib/types/database'
+import type { AttachmentText } from '@/lib/email/fetch-attachment-texts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -18,7 +19,9 @@ export function formatRoomTree(rooms: RoomRecord[]): string {
 
   function renderNode(node: RoomTreeNode, depth: number): string {
     const indent = '  '.repeat(depth)
-    const lines: string[] = [`${indent}${node.name}`]
+    const desc = (node as unknown as Record<string, unknown>)['description']
+    const label = desc && typeof desc === 'string' ? `${node.name} -- ${desc}` : node.name
+    const lines: string[] = [`${indent}${label}`]
     for (const child of node.children) {
       lines.push(renderNode(child, depth + 1))
     }
@@ -41,8 +44,12 @@ export interface ClassificationResult {
   rateLimitHeaders: RateLimitHeaders
 }
 
-function buildEmailContent(email: Email, context: ReconciliationContext): string {
-  const body = (email.body_text ?? '').split(/\s+/).slice(0, 2000).join(' ')
+function buildEmailContent(
+  email: Email,
+  context: ReconciliationContext,
+  attachmentTexts: AttachmentText[] = [],
+): string {
+  const body = email.body_text ?? ''
   const attachments = (email.attachments as unknown as AttachmentMeta[] | null) ?? []
   const attachmentList = attachments.length > 0
     ? `\nAttachments: ${attachments.map((a) => a.filename).join(', ')}`
@@ -60,13 +67,29 @@ Date: ${email.received_at}${attachmentList}
 ${body}`,
   )
 
-  // Prior emails in the thread, most recent 5 only, oldest first.
-  // Capping at 5 keeps context useful without runaway token cost on long threads.
+  // Full text content from attachments (PDF, DOCX, plain text).
+  // Each attachment is rendered as its own section so the model can attribute
+  // specific facts, deadlines, and jobs to the correct document.
+  if (attachmentTexts.length > 0) {
+    for (const att of attachmentTexts) {
+      parts.push(`## Attachment: ${att.filename}\n\n${att.text}`)
+    }
+  }
+
+  // All prior emails in the thread, oldest first. Full body text -- no cap.
+  // The model needs full thread history for closes_jobs reconciliation on long threads.
+  // Attachment texts extracted from prior emails are appended inline so the model
+  // can trace facts (deliverables, deadlines, signatures) back to the email they arrived with.
   if (context.thread.length > 0) {
-    const recent = context.thread.slice(-5)
-    const entries = recent.map((prior) => {
-      const snippet = (prior.body_text ?? '').split(/\s+/).slice(0, 150).join(' ')
-      return `From: ${prior.from}\nDate: ${prior.received_at}\nSubject: ${prior.subject ?? '(no subject)'}\n\n${snippet}`
+    const entries = context.thread.map((prior) => {
+      const snippet = prior.body_text ?? ''
+      const header = `From: ${prior.from}\nDate: ${prior.received_at}\nSubject: ${prior.subject ?? '(no subject)'}`
+      const body = `${header}\n\n${snippet}`
+      if (prior.attachmentTexts.length === 0) return body
+      const attSections = prior.attachmentTexts
+        .map((a) => `### Attachment: ${a.filename}\n\n${a.text}`)
+        .join('\n\n')
+      return `${body}\n\n${attSections}`
     })
     parts.push(`## Prior emails in this thread\n\n${entries.join('\n\n---\n\n')}`)
   }
@@ -133,6 +156,7 @@ function parseIntHeader(value: string | null): number | null {
 export async function runFullClassification(
   email: Email,
   context: ReconciliationContext,
+  attachmentTexts: AttachmentText[] = [],
 ): Promise<ClassificationResult> {
   const startedAt = Date.now()
   const supabase = createAdminClient()
@@ -140,7 +164,7 @@ export async function runFullClassification(
   try {
     const { data: response, response: raw } = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: [
         {
           type: 'text',
@@ -151,7 +175,7 @@ export async function runFullClassification(
       messages: [
         {
           role: 'user',
-          content: buildEmailContent(email, context),
+          content: buildEmailContent(email, context, attachmentTexts),
         },
       ],
       tools: [EXTRACTION_TOOL_SCHEMA as unknown as Tool],
@@ -223,7 +247,7 @@ export async function runFirstPartyClassification(
   try {
     const { data: response, response: raw } = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: [
         {
           type: 'text',
