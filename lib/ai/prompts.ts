@@ -76,6 +76,10 @@ Extract their name, role, and area of responsibility from the email.
 Write the description as: "[Name] introduced -- [role or responsibility]". If no role is stated, write "[Name] added to the thread".
 Do not treat this as an action item. It is a record of who entered the conversation and why.
 
+## Closing sign-offs
+
+A closing offer of further help is not a job. Phrases like "do you need anything else from me?", "let me know if I can help with anything else", "shout if there's anything more you need", "happy to help with anything further", "just say the word if you need more", "let me know if you're missing anything" are delivery sign-offs. They signal the sender considers their obligation fulfilled. Do not extract them as a REQUEST, QUERY, or any other intent. This applies regardless of who sent the email -- the pattern is equally common inbound and outbound, and is never actionable in either direction.
+
 ## CHASE handling
 
 A CHASE is a follow-up on an existing unanswered REQUEST. When you detect a CHASE, set \`relation\` to \`chase_of\` and \`relates_to_job_id\` to the open REQUEST job id from the open jobs list. If you cannot identify the specific REQUEST in the list, set \`relation\` to \`new\` and describe the chase clearly.
@@ -133,6 +137,8 @@ For each fact:
 - kind: the structural shape of this fact. place: a location or address. time: a date, deadline, or window. money: an amount, fee, or price stated in the email. credential: a document or permission with an expiry, such as a passport, visa, insurance, or permit. spec: a measurable property or specification. other: anything that does not fit. Choose the closest. Do not invent values.
 
 Extract facts liberally. A missed fact is a permanent gap in the project record. In long email threads, critical details are often buried in a single line of a reply. Extract them.
+
+Epistemic status: extract facts as they stand in the email, not as implied conclusions. If someone delivers a list ("here are the three names for the guestlist"), those names are submitted -- not confirmed. Confirmation requires a separate acknowledgement from the recipient. Use keys that reflect the actual state: \`names_submitted\` rather than \`names_confirmed\`. A fact is confirmed only when the counterparty explicitly acknowledges it in a later email. The same rule applies inbound: if someone tells you they have booked something, it is booked as stated. If you told them to book it and they have not yet replied, it remains outstanding.
 
 Return an empty array only if the email contains no concrete project facts. Do not invent facts.
 
@@ -301,6 +307,51 @@ jobs: [
 ]
 closes_jobs: []
 Owner is the counterparty's address on both jobs -- not [user_address]. These are awaiting others. The person asking is never the owner.
+
+### Example 6: User outbound delivery with closing sign-off
+
+Email:
+From: [User]
+To: [Coordinator] <coordinator@venue.com>
+Subject: Re: Guestlist -- [Project]
+
+Hi,
+Here are [N] names for the guestlist:
+[Name A] -- [email A]
+[Name B] -- [email B]
+[Name C] -- [email C]
+
+Do you need anything else from me?
+
+Correct extraction:
+jobs: [
+  { "intent": "DELIVER", "description": "[N] guestlist names sent to [Coordinator]", "owner": "[user_address]", "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: ["[id of REQUEST for guestlist names if one exists]"]
+facts: [
+  { "category": "guestlist", "key": "names_submitted", "value": "[Name A], [Name B], [Name C]", "confidence": 0.97, "kind": "other", "relation": "new" }
+]
+"Do you need anything else from me?" is a delivery sign-off. It is not a QUERY or REQUEST for either party. Do not extract it as a job. The names are submitted, not confirmed -- use \`names_submitted\` not \`names_confirmed\`. Confirmation requires a reply from [Coordinator].
+
+### Example 7: Inbound delivery with closing sign-off
+
+Email:
+From: [Coordinator] <coordinator@venue.com>
+To: [User]
+Subject: Re: Advance -- [Project]
+
+Hi,
+Here is the updated schedule as requested. All timings have been confirmed with the venue.
+[Document attached]
+
+Let me know if you need anything else from me.
+
+Correct extraction:
+jobs: [
+  { "intent": "DELIVER", "description": "Updated schedule received from [Coordinator]", "owner": null, "due": null, "confidence": 0.97, "relation": "new", "relates_to_job_id": null }
+]
+closes_jobs: ["[id of REQUEST for updated schedule if one exists]"]
+"Let me know if you need anything else from me" is a delivery sign-off from the counterparty. It is not a job. Do not extract it as a QUERY or REQUEST for you to act on.
 
 Use the extract_email_data tool to return your structured output.\``
 
