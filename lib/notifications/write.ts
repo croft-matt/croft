@@ -61,11 +61,10 @@ export async function writeNotifications(params: WriteNotificationsParams): Prom
 
   // 1. email_received — one notification per matched room.
   for (const roomId of matchedRoomIds) {
-    const roomName = roomNameById.get(roomId) ?? 'a room'
     rows.push({
       workspace_id: workspaceId,
       type: 'email_received',
-      summary: truncate(`New email from ${senderLabel} in ${roomName}`),
+      summary: truncate(`Email from ${senderLabel}`),
       room_id: roomId,
       email_id: emailId,
       job_id: null,
@@ -81,10 +80,14 @@ export async function writeNotifications(params: WriteNotificationsParams): Prom
     if (relation === 'duplicate') continue
     if (relation === 'update') continue // handled separately below
 
+    const jobSummary = relation === 'chase_of'
+      ? truncate(`Chased: ${j.description}`)
+      : truncate(j.description)
+
     rows.push({
       workspace_id: workspaceId,
       type: 'job_created',
-      summary: truncate(`New job: ${j.description}`),
+      summary: jobSummary,
       room_id: primaryRoomId,
       email_id: emailId,
       job_id: null, // inserted job IDs not available here; job_id left null

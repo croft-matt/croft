@@ -126,6 +126,7 @@ export function RoomRealtimeProvider({
           status: j.status as RoomJob['status'],
           closed_at: j.closed_at,
           closed_by_email_id: j.closed_by_email_id,
+          closed_by_from_name: j.closed_by_email_id ? (fromNameMap.get(j.closed_by_email_id) ?? null) : null,
           parent_job_id: j.parent_job_id,
           email_id: j.email_id,
           from_name: isSelf ? null : (fromNameMap.get(j.email_id) ?? null),

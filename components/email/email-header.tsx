@@ -85,12 +85,6 @@ export function EmailHeader({ email, jobs, rooms, onReply, repliedTo }: EmailHea
         </div>
       </div>
 
-      {email.subject && (
-        <p className="mt-3 text-sm font-medium text-foreground">{email.subject}</p>
-      )}
-      {email.subject_summary && email.subject_summary !== email.subject && (
-        <p className="mt-1 text-xs text-muted-foreground">{email.subject_summary}</p>
-      )}
     </div>
   )
 }

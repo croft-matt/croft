@@ -68,6 +68,8 @@ export async function getEmailExtractionData(emailId: string): Promise<EmailExtr
 export interface EmailPanelData {
   email: Email
   jobs: Job[]
+  // Jobs that were closed by this email (closed_by_email_id = emailId).
+  closedByThisEmail: Job[]
   assets: Asset[]
   extractedContacts: ExtractedContact[]
   rooms: Pick<Room, 'id' | 'name'>[]
@@ -86,13 +88,21 @@ export async function getEmailPanelData(emailId: string): Promise<EmailPanelData
   const email = await getEmailById(emailId)
   if (!email) return null
 
-  const [jobs, assets, rooms] = await Promise.all([
+  const supabase = await createClient()
+
+  const [jobs, assets, rooms, closedByResult] = await Promise.all([
     getJobsByEmailId(emailId),
     getAssetsByEmailId(emailId),
     getRoomsForEmail(emailId),
+    supabase
+      .from('jobs')
+      .select('*')
+      .eq('closed_by_email_id', emailId)
+      .order('closed_at', { ascending: false }),
   ])
 
+  const closedByThisEmail = (closedByResult.data ?? []) as Job[]
   const extractedContacts = getContactsMentionedInEmail(email)
 
-  return { email, jobs, assets, extractedContacts, rooms, workspaceId }
+  return { email, jobs, closedByThisEmail, assets, extractedContacts, rooms, workspaceId }
 }

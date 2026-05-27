@@ -66,7 +66,7 @@ export function RoomShell({
   workspaceId,
 }: RoomShellProps) {
   const [activeTab, setActiveTab] = useState<RoomTab>('brief')
-  const { isOpen: isEmailPanelOpen } = useEmailSidePanel()
+  const { isOpen: isEmailPanelOpen, open: openEmailPanel } = useEmailSidePanel()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
@@ -90,6 +90,19 @@ export function RoomShell({
     if (tab && TABS.some((t) => t.id === tab)) {
       setActiveTab(tab)
     }
+  }, [])
+
+  // Read ?email= from the URL on mount and auto-open the side panel.
+  // This lets the activity feed link directly to a room with the relevant email open.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const emailId = params.get('email')
+    if (emailId) {
+      setActiveTab('jobs')
+      openEmailPanel(emailId)
+    }
+  // openEmailPanel is a stable Zustand action
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const router = useRouter()
@@ -187,14 +200,17 @@ export function RoomShell({
         })
         return <BriefTab brief={brief} workspaceId={readModel.workspaceId} parentName={parent?.name ?? null} roomSummary={room.room_summary ?? null} />
       }
-      case 'jobs':
+      case 'jobs': {
+        const closedJobs = readModel.jobs.filter((j) => j.status === 'closed')
         return (
           <JobsTab
             loops={readModel.openLoops}
-            ownerGroups={ownerGroups}
+            connectedAddresses={readModel.connectedAddresses}
             workspaceId={readModel.workspaceId}
+            closedJobs={closedJobs}
           />
         )
+      }
       case 'dates':
         return <DatesTab roomDates={assembleDates(readModel)} />
       case 'assets':

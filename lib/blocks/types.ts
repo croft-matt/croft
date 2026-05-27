@@ -25,6 +25,7 @@ export interface RoomJob {
   status: 'open' | 'closed' | 'cancelled'
   closed_at: string | null
   closed_by_email_id: string | null
+  closed_by_from_name: string | null
   parent_job_id: string | null
   email_id: string
   from_name: string | null

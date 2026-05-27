@@ -57,7 +57,7 @@ function typeLabel(type: NotificationRow['type']): string {
   switch (type) {
     case 'job_closed': return 'Closed'
     case 'job_updated': return 'Updated'
-    case 'job_created': return 'New job'
+    case 'job_created': return 'Job'
     case 'email_received': return 'Email'
   }
 }
@@ -100,7 +100,7 @@ export default async function ActivityPage() {
             <div className="space-y-0">
               {rows.map((n) => {
                 const href = n.room_id
-                  ? `/rooms/${n.room_id}?tab=jobs`
+                  ? `/rooms/${n.room_id}?tab=jobs${n.email_id ? `&email=${n.email_id}` : ''}`
                   : '/activity'
                 return (
                   <Link

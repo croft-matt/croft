@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreHorizontal } from 'lucide-react'
+import { CheckCheck, MoreHorizontal } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,13 @@ export interface JobRowData {
   // Silence in days — for their court rows
   ageDays?: number
   isOverdue?: boolean
+  // Closed job metadata
+  closedAt?: string | null
+  closedByFromName?: string | null
+  // ISO string — row glows when updated within the last 2 hours
+  updatedAt?: string | null
+  // True when the owner is a connected workspace address
+  isYours?: boolean
 }
 
 interface JobRowProps {
@@ -41,11 +48,17 @@ function formatDue(iso: string, isOverdue: boolean): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+function isRecentlyUpdated(updatedAt: string | null | undefined): boolean {
+  if (!updatedAt) return false
+  return Date.now() - new Date(updatedAt).getTime() < 2 * 60 * 60 * 1000
+}
+
 export function JobRow({ job, chaseCount, className }: JobRowProps) {
   const { open: openModal } = useJobModal()
   const { open: openEmail } = useEmailSidePanel()
 
   const isClosed = job.status === 'closed'
+  const isNew = !isClosed && isRecentlyUpdated(job.updatedAt)
 
   function handleRowClick() {
     if (job.emailId) {
@@ -57,23 +70,24 @@ export function JobRow({ job, chaseCount, className }: JobRowProps) {
     <div
       className={cn(
         'group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3',
-        isClosed && 'opacity-60',
         className,
       )}
     >
-      {/* Status dot */}
-      <span
-        className={cn(
-          'h-2 w-2 shrink-0 rounded-full',
-          isClosed
-            ? 'bg-muted-foreground'
-            : job.isOverdue
-            ? 'bg-red-500'
-            : job.due
-            ? 'bg-amber-500'
-            : 'bg-muted-foreground',
-        )}
-      />
+      {/* Status indicator */}
+      {isClosed ? (
+        <CheckCheck className="h-4 w-4 shrink-0 text-emerald-500" />
+      ) : (
+        <span
+          className={cn(
+            'h-2 w-2 shrink-0 rounded-full',
+            job.isOverdue
+              ? 'bg-red-500'
+              : job.due
+              ? 'bg-amber-500'
+              : 'bg-muted-foreground',
+          )}
+        />
+      )}
 
       {/* Main content — clicking opens email side panel */}
       <div
@@ -85,33 +99,57 @@ export function JobRow({ job, chaseCount, className }: JobRowProps) {
         }}
         className="min-w-0 flex-1 cursor-pointer"
       >
-        <p className={cn('text-sm leading-snug', isClosed ? 'line-through text-muted-foreground' : 'text-foreground')}>
+        <p className={cn('text-sm leading-snug', isClosed ? 'text-muted-foreground' : 'text-foreground')}>
           {job.description}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {job.roomName && (
-            <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
-              {job.roomName}
-            </span>
-          )}
-          {job.owner && (
-            <span className="text-xs text-muted-foreground truncate">{job.owner}</span>
-          )}
-          {job.due && (
-            <span className={cn('text-xs', job.isOverdue ? 'text-red-500' : 'text-muted-foreground')}>
-              {formatDue(job.due, job.isOverdue ?? false)}
-            </span>
-          )}
-          {job.ageDays !== undefined && !job.due && (
-            <span className="text-xs text-muted-foreground">
-              silent {job.ageDays}d
-            </span>
+          {isClosed ? (
+            <>
+              {(job.closedByFromName || job.closedAt) && (
+                <span className="text-xs text-muted-foreground">
+                  {[
+                    job.closedByFromName ?? null,
+                    job.closedAt
+                      ? new Date(job.closedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              {job.roomName && (
+                <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                  {job.roomName}
+                </span>
+              )}
+              {job.isYours ? (
+                <span className="text-xs text-muted-foreground/60">you</span>
+              ) : job.owner ? (
+                <span className="text-xs text-muted-foreground truncate">{job.owner}</span>
+              ) : null}
+              {job.due && (
+                <span className={cn('text-xs', job.isOverdue ? 'text-red-500' : 'text-muted-foreground')}>
+                  {formatDue(job.due, job.isOverdue ?? false)}
+                </span>
+              )}
+              {job.ageDays !== undefined && !job.due && (
+                <span className="text-xs text-muted-foreground">
+                  silent {job.ageDays}d
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
 
       {/* Right side */}
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-2">
+        {isNew && (
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+        )}
         {chaseCount && chaseCount > 0 ? (
           <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
             restated {chaseCount}x

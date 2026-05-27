@@ -13,6 +13,8 @@ interface EmailProcessingProviderProps {
   initialJobs: Job[]
   initialAssets: Asset[]
   initialExtractedContacts: ExtractedContact[]
+  // Jobs closed by this email (closed_by_email_id = this email). Static — not updated by Realtime.
+  initialClosedByJobs?: Job[]
   rooms: Pick<Room, 'id' | 'name'>[]
   workspaceId: string
 }
@@ -21,6 +23,7 @@ export function EmailProcessingProvider({
   initialEmail,
   initialJobs,
   initialAssets,
+  initialClosedByJobs = [],
 }: EmailProcessingProviderProps) {
   const [email, setEmail] = useState(initialEmail)
   const [jobs, setJobs] = useState(initialJobs)
@@ -76,7 +79,17 @@ export function EmailProcessingProvider({
     <>
       {isProcessed ? (
         <div className="px-6 py-4 space-y-3">
-          <JobsList jobs={jobs} assets={assets} />
+          {email.subject_summary && (
+            <div className="rounded-lg bg-muted/50 px-4 py-5 mb-6">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Latest
+              </p>
+              <p className="text-sm leading-relaxed text-foreground">
+                {email.subject_summary}
+              </p>
+            </div>
+          )}
+          <JobsList jobs={jobs} assets={assets} closedByThisEmail={initialClosedByJobs} />
           {showFlag && <ExtractionFlag />}
         </div>
       ) : (

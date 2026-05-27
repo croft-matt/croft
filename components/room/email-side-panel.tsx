@@ -684,6 +684,7 @@ export function EmailSidePanel() {
               initialJobs={data.jobs}
               initialAssets={data.assets}
               initialExtractedContacts={data.extractedContacts}
+              initialClosedByJobs={data.closedByThisEmail}
               rooms={data.rooms}
               workspaceId={data.workspaceId}
             />
