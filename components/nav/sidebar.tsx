@@ -110,31 +110,34 @@ export function Sidebar({ rooms, workspaceId, unreadCount }: SidebarProps) {
         <NotificationBell workspaceId={workspaceId} initialCount={unreadCount} />
       </div>
 
-      {/* Middle zone — rooms tree */}
-      <div className="flex-1 overflow-y-auto px-3 pt-4 min-h-0">
-        {/* Rooms section header */}
-        <div className="flex items-center mb-1">
-          <button
-            onClick={() => setRoomsOpen((v) => !v)}
-            className="flex flex-1 items-center rounded-lg px-2 py-1.5 hover:bg-sidebar-accent/50 transition-colors"
-          >
-            <span className="text-xs font-medium" style={{ color: 'var(--sidebar-muted-foreground)' }}>
-              Rooms
-            </span>
-          </button>
-          <button
-            onClick={openDialog}
-            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-accent/50 transition-colors"
-            style={{ color: 'var(--sidebar-muted-foreground)' }}
-            aria-label="Create a room"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
+      {/* Middle zone — rooms */}
+      <div className="flex-1 overflow-y-auto px-3 pt-4 min-h-0 space-y-4">
+
+        {/* Rooms section */}
+        <div>
+          <div className="flex items-center mb-1">
+            <button
+              onClick={() => setRoomsOpen((v) => !v)}
+              className="flex flex-1 items-center rounded-lg px-2 py-1.5 hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <span className="text-xs font-medium" style={{ color: 'var(--sidebar-muted-foreground)' }}>
+                Rooms
+              </span>
+            </button>
+            <button
+              onClick={openDialog}
+              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-sidebar-accent/50 transition-colors"
+              style={{ color: 'var(--sidebar-muted-foreground)' }}
+              aria-label="Create a room"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {roomsOpen && <RoomsTree rooms={rooms} workspaceId={workspaceId} />}
         </div>
 
-        {roomsOpen && <RoomsTree rooms={rooms} />}
-
-        {/* Create room dialog */}
+        {/* Create room dialog (AI rooms section plus button) */}
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog() }}>
           <DialogContent showCloseButton={false} className="sm:max-w-lg">
             <DialogHeader>

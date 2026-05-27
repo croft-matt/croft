@@ -763,6 +763,7 @@ export type Database = {
           room_status_updated_at: string | null
           room_summary: string | null
           room_summary_updated_at: string | null
+          sidebar_order: number | null
           status: string
           updated_at: string
           watch_context: Json | null
@@ -785,6 +786,7 @@ export type Database = {
           room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
+          sidebar_order?: number | null
           status?: string
           updated_at?: string
           watch_context?: Json | null
@@ -807,6 +809,7 @@ export type Database = {
           room_status_updated_at?: string | null
           room_summary?: string | null
           room_summary_updated_at?: string | null
+          sidebar_order?: number | null
           status?: string
           updated_at?: string
           watch_context?: Json | null

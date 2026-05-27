@@ -4,14 +4,21 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_3_SYSTEM_PROMPT, EXTRACTION_TOOL_SCHEMA } from '@/lib/ai/prompts'
 import { FIRST_PARTY_TIER3_SYSTEM_PROMPT, buildFirstPartyEmailContent } from '@/lib/ai/prompts-first-party'
 import { type ReconciliationContext } from '@/lib/ai/reconciliation-context'
-import { buildRoomTree, type RoomRecord, type RoomTreeNode } from '@/lib/rooms/tree'
+import { buildRoomTree, type RoomRecord, type RoomTreeNode, type RoomWithContext } from '@/lib/rooms/tree'
 import type { Email, Extraction, AttachmentMeta } from '@/lib/types/database'
 import type { AttachmentText } from '@/lib/email/fetch-attachment-texts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 3) + '...' : s
+}
+
 // Converts a flat list of rooms (with parent IDs) into an indented string
 // for the model to read as a tree. Two spaces per depth level.
+// When rooms carry RoomWithContext enrichment, each room also shows its open
+// job descriptions and recent inbound email subjects so the model can match
+// confidently even when the incoming email subject is vague.
 export function formatRoomTree(rooms: RoomRecord[]): string {
   if (rooms.length === 0) return 'No rooms created yet.'
 
@@ -19,9 +26,20 @@ export function formatRoomTree(rooms: RoomRecord[]): string {
 
   function renderNode(node: RoomTreeNode, depth: number): string {
     const indent = '  '.repeat(depth)
-    const desc = (node as unknown as Record<string, unknown>)['description']
-    const label = desc && typeof desc === 'string' ? `${node.name} -- ${desc}` : node.name
+    const ctx = node as unknown as RoomWithContext
+    const label = ctx.description ? `${node.name} -- ${ctx.description}` : node.name
     const lines: string[] = [`${indent}${label}`]
+
+    if (ctx.openJobDescriptions && ctx.openJobDescriptions.length > 0) {
+      const items = ctx.openJobDescriptions.map((j) => truncate(j, 70))
+      lines.push(`${indent}  jobs: ${items.join(', ')}`)
+    }
+
+    if (ctx.recentSubjects && ctx.recentSubjects.length > 0) {
+      const items = ctx.recentSubjects.map((s) => `"${truncate(s, 70)}"`)
+      lines.push(`${indent}  emails: ${items.join(', ')}`)
+    }
+
     for (const child of node.children) {
       lines.push(renderNode(child, depth + 1))
     }
@@ -142,7 +160,7 @@ ${body}`,
   // formatRoomTree returns an indented string. Truncate at 3000 chars to cap token cost
   // on large workspaces — the model only needs enough context to match and name rooms.
   const roomTreeText = formatRoomTree(context.rooms)
-  parts.push(`## Existing rooms in this workspace\n\n${roomTreeText.slice(0, 3000)}`)
+  parts.push(`## Existing rooms in this workspace\n\n${roomTreeText.slice(0, 5000)}`)
 
   return parts.join('\n\n---\n\n')
 }

@@ -193,19 +193,21 @@ export interface MyRoom {
   name: string
   description: string | null
   created_at: string
+  sidebar_order: number | null
 }
 
-// Returns rooms the user created manually (created_by is not null), ordered newest first.
-// These appear in the "My rooms" section of the sidebar.
+// Returns rooms the user created manually (created_by is not null).
+// Ordered by sidebar_order first (nulls last), then created_at desc as tiebreak.
 export async function getMyRooms(workspaceId: string): Promise<MyRoom[]> {
   const supabase = await createClient()
 
   const { data } = await supabase
     .from('rooms')
-    .select('id, name, description, created_at')
+    .select('id, name, description, created_at, sidebar_order')
     .eq('workspace_id', workspaceId)
     .not('created_by', 'is', null)
     .is('archived_at', null)
+    .order('sidebar_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
 
   return (data ?? []) as MyRoom[]
@@ -220,6 +222,7 @@ export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue
     .select('*')
     .eq('workspace_id', workspaceId)
     .is('archived_at', null)
+    .order('sidebar_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true })
 
   if (!rooms || rooms.length === 0) return []

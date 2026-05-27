@@ -14,6 +14,14 @@ export interface RoomRecord {
   description?: string | null
 }
 
+// Extends RoomRecord with per-room enrichment for Tier 3 routing.
+// Fields are optional so the sidebar and other non-AI callers of
+// buildRoomTree can keep using plain RoomRecord[] unmodified.
+export interface RoomWithContext extends RoomRecord {
+  openJobDescriptions?: string[]
+  recentSubjects?: string[]
+}
+
 export interface RoomTreeNode extends RoomRecord {
   children: RoomTreeNode[]
   // True if any descendant leaf has an unread indicator.

@@ -9,6 +9,72 @@ export interface RoomActionResult {
   error?: string
 }
 
+// Persists a new sidebar order for a sibling group.
+// orderedIds: all room IDs in the group, in the new display order.
+// parentRoomId: null for root rooms in AI section, the parent's ID for children.
+//   Pass 'my-rooms' as a sentinel for the My rooms section (created_by is not null).
+export async function reorderRooms(
+  workspaceId: string,
+  orderedIds: string[],
+  parentRoomId: string | null | 'my-rooms',
+): Promise<RoomActionResult> {
+  await requireUser()
+  const supabase = await createClient()
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    await supabase
+      .from('rooms')
+      .update({ sidebar_order: i })
+      .eq('id', orderedIds[i])
+      .eq('workspace_id', workspaceId)
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
+// Moves a room under a new parent (or to root) via drag-and-drop.
+// Depth guard: max 2 levels (root + one level of children).
+// If newParentId itself has a parent_room_id, the move is rejected.
+export async function reparentRoom(
+  workspaceId: string,
+  roomId: string,
+  newParentId: string | null,
+): Promise<RoomActionResult> {
+  await requireUser()
+
+  if (newParentId === roomId) {
+    return { success: false, error: 'A room cannot be its own parent.' }
+  }
+
+  const supabase = await createClient()
+
+  // Depth cap: reject if the target parent is itself a child room.
+  if (newParentId !== null) {
+    const { data: target } = await supabase
+      .from('rooms')
+      .select('parent_room_id')
+      .eq('id', newParentId)
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (!target) return { success: false, error: 'Target room not found.' }
+    if (target.parent_room_id !== null) return { success: false, error: 'max_depth' }
+  }
+
+  // Null out sidebar_order so the room lands naturally at the end of its new sibling group.
+  const { error } = await supabase
+    .from('rooms')
+    .update({ parent_room_id: newParentId, sidebar_order: null, updated_at: new Date().toISOString() })
+    .eq('id', roomId)
+    .eq('workspace_id', workspaceId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
 // Creates a new room manually. Sets created_by to the authenticated user's ID.
 // The description is stored as a routing hint for Tier 3.
 export async function createRoom(

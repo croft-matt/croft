@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Email } from '@/lib/types/database'
-import type { RoomRecord } from '@/lib/rooms/tree'
+import type { RoomWithContext } from '@/lib/rooms/tree'
 
 const MAX_OPEN_JOBS = 30
 
@@ -30,8 +30,8 @@ export interface ReconciliationContext {
     // Extracted text from attachments on this thread email (PDF, DOCX, etc.)
     attachmentTexts: Array<{ filename: string; text: string }>
   }>
-  // Full room records (id, name, parent_room_id) so tier3 can render the hierarchy tree.
-  rooms: RoomRecord[]
+  // Full room records with enrichment (jobs, recent subjects) for Tier 3 routing.
+  rooms: RoomWithContext[]
   facts: Record<string, unknown>
   openJobs: ContextJob[]
   connectedAddress: string | null
@@ -171,11 +171,92 @@ export async function getReconciliationContext(
     .eq('workspace_id', workspaceId)
     .is('archived_at', null)
 
-  const allRoomRecords: RoomRecord[] = (allRooms ?? []).map((r) => ({
+  const allRoomIds = (allRooms ?? []).map((r) => r.id)
+
+  // Enrich each room with open job descriptions and recent inbound email subjects.
+  // Both queries run in parallel and are non-fatal -- enrichment failure never
+  // blocks classification.
+  async function fetchSubjectsByRoom(): Promise<Map<string, string[]>> {
+    if (allRoomIds.length === 0) return new Map()
+    try {
+      const { data: rows } = await supabase
+        .from('room_emails')
+        .select('room_id, emails!inner(id, subject, source, received_at)')
+        .in('room_id', allRoomIds)
+        .in('emails.source', ['inbound', 'user_cc'])
+        .order('emails.received_at', { ascending: false })
+        .limit(150)
+
+      const map = new Map<string, string[]>()
+      for (const row of rows ?? []) {
+        const email = row.emails as { subject: string | null } | null
+        if (!email?.subject) continue
+        const list = map.get(row.room_id) ?? []
+        if (list.length < 3) {
+          list.push(email.subject)
+          map.set(row.room_id, list)
+        }
+      }
+      return map
+    } catch {
+      return new Map()
+    }
+  }
+
+  async function fetchJobsByRoom(): Promise<Map<string, string[]>> {
+    if (allRoomIds.length === 0) return new Map()
+    try {
+      const { data: openJobRows } = await supabase
+        .from('jobs')
+        .select('email_id, description')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'open')
+        .not('description', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      if (!openJobRows || openJobRows.length === 0) return new Map()
+
+      const jobEmailIds = [...new Set(openJobRows.map((j) => j.email_id))]
+      const { data: jobRoomLinks } = await supabase
+        .from('room_emails')
+        .select('email_id, room_id')
+        .in('email_id', jobEmailIds)
+        .in('room_id', allRoomIds)
+
+      const emailToRoom = new Map<string, string>()
+      for (const link of jobRoomLinks ?? []) {
+        if (!emailToRoom.has(link.email_id)) emailToRoom.set(link.email_id, link.room_id)
+      }
+
+      const map = new Map<string, string[]>()
+      for (const job of openJobRows) {
+        const roomId = emailToRoom.get(job.email_id)
+        if (!roomId || !job.description) continue
+        const list = map.get(roomId) ?? []
+        if (list.length < 3) {
+          list.push(job.description)
+          map.set(roomId, list)
+        }
+      }
+      return map
+    } catch {
+      return new Map()
+    }
+  }
+
+  const [subjectsByRoom, jobsByRoom] = await Promise.all([
+    fetchSubjectsByRoom(),
+    fetchJobsByRoom(),
+  ])
+
+  const allRoomRecords: RoomWithContext[] = (allRooms ?? []).map((r) => ({
     id: r.id,
     name: r.name,
     parent_room_id: r.parent_room_id,
     description: r.description,
+    openJobDescriptions: jobsByRoom.get(r.id) ?? [],
+    recentSubjects: subjectsByRoom.get(r.id) ?? [],
   }))
 
   // Layer 3: Semantic. Top open jobs from emails nearest to this one by embedding.
