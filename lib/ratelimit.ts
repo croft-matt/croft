@@ -6,14 +6,6 @@ export const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 })
 
-// Inbound webhook: 100 requests per 10 seconds per IP.
-// Generous limit — legitimate forwarding volume should never hit this.
-export const inboundRatelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(100, '10 s'),
-  prefix: 'croft:inbound',
-})
-
 // Outbound sends: 60 per hour per workspace.
 export const sendRatelimit = new Ratelimit({
   redis,

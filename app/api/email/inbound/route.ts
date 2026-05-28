@@ -6,8 +6,6 @@ import { ResendInboundEventSchema } from '@/lib/validators/email-inbound'
 import { fetchBodyTask } from '@/trigger/jobs/fetch-body'
 import type { processFirstPartyTask } from '@/trigger/jobs/process-first-party'
 import { tasks } from '@trigger.dev/sdk/v3'
-import { inboundRatelimit } from '@/lib/ratelimit'
-
 // This handler does three things:
 // 1. Verify the Resend webhook signature
 // 2. Store the raw email metadata to the emails table
@@ -17,12 +15,6 @@ import { inboundRatelimit } from '@/lib/ratelimit'
 // Resend retries on non-200 -- a slow handler causes duplicate emails.
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const { success } = await inboundRatelimit.limit(ip)
-  if (!success) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
-  }
-
   const resend = new Resend(process.env.RESEND_API_KEY)
   const rawBody = await request.text()
 
