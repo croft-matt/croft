@@ -18,7 +18,10 @@ export interface AllJobs {
   theirCourt: AllJobsRow[]
 }
 
-export async function getAllJobs(workspaceId: string): Promise<AllJobs> {
+export async function getAllJobs(
+  workspaceId: string,
+  limit = 50,
+): Promise<AllJobs & { truncated: boolean }> {
   const supabase = await createClient()
   const now = new Date()
 
@@ -30,10 +33,11 @@ export async function getAllJobs(workspaceId: string): Promise<AllJobs> {
       .eq('workspace_id', workspaceId)
       .eq('status', 'open')
       .neq('source', 'anticipated')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(limit),
   ])
 
-  if (!jobs || jobs.length === 0) return { yourCourt: [], theirCourt: [] }
+  if (!jobs || jobs.length === 0) return { yourCourt: [], theirCourt: [], truncated: false }
 
   const connectedSet = new Set(connectedAddresses.map((a) => a.toLowerCase()))
 
@@ -94,5 +98,5 @@ export async function getAllJobs(workspaceId: string): Promise<AllJobs> {
   // Their court: newest first
   theirCourt.sort((a, b) => a.ageDays - b.ageDays)
 
-  return { yourCourt, theirCourt }
+  return { yourCourt, theirCourt, truncated: jobs.length === limit }
 }

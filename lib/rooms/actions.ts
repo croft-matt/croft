@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireUser } from '@/lib/auth/helpers'
 
@@ -30,6 +30,7 @@ export async function reorderRooms(
   }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -72,6 +73,7 @@ export async function reparentRoom(
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -107,6 +109,7 @@ export async function createRoom(
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true, roomId: data.id }
 }
 
@@ -129,6 +132,7 @@ export async function updateRoomDescription(
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -152,6 +156,7 @@ export async function renameRoom(
 
   // Flush the sidebar tree (layout) and the room page in one call.
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -218,6 +223,7 @@ export async function moveRoom(
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -237,6 +243,7 @@ export async function archiveRoom(roomId: string): Promise<RoomActionResult> {
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -259,6 +266,7 @@ export async function removeRoom(roomId: string): Promise<RoomActionResult> {
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }
 
@@ -305,5 +313,6 @@ export async function mergeRoom(
   if (!removeResult.success) return removeResult
 
   revalidatePath('/', 'layout')
+  revalidateTag('rooms-tree', {})
   return { success: true }
 }

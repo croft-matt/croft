@@ -7,7 +7,7 @@ export default async function AllJobsPage() {
   const workspaceId = await getWorkspaceId()
   if (!workspaceId) notFound()
 
-  const { yourCourt, theirCourt } = await getAllJobs(workspaceId)
+  const { yourCourt, theirCourt, truncated } = await getAllJobs(workspaceId)
   const total = yourCourt.length + theirCourt.length
 
   return (
@@ -16,7 +16,9 @@ export default async function AllJobsPage() {
       <p className="text-sm text-muted-foreground mb-10">
         {total === 0
           ? 'No open jobs.'
-          : `${total} open ${total === 1 ? 'job' : 'jobs'} across all rooms`}
+          : truncated
+            ? `Showing the first 50 open jobs across all rooms`
+            : `${total} open ${total === 1 ? 'job' : 'jobs'} across all rooms`}
       </p>
 
       {total === 0 && (

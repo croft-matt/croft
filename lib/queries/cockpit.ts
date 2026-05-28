@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Email, Job, Room } from '@/lib/types/database'
 
 // Room type extended with overdue flag — used by rooms tree and cockpit room cards.
@@ -108,36 +110,28 @@ export async function getActiveRooms(workspaceId: string): Promise<RoomCardRow[]
 
   const roomIds = rooms.map((r) => r.id)
 
-  // Fetch room_email rows for these rooms to compute last_email_at per room.
-  const { data: reRows } = await supabase
+  // Single query replaces the previous two-step fetch (room_emails then emails).
+  // PostgREST traverses the room_emails.email_id FK to pull received_at inline.
+  // The result also provides the email_id needed for overdue room mapping below.
+  const { data: roomEmailDates } = await supabase
     .from('room_emails')
-    .select('room_id, email_id')
+    .select('room_id, email_id, emails!email_id(received_at)')
     .in('room_id', roomIds)
 
-  const allEmailIds = [...new Set((reRows ?? []).map((r) => r.email_id))]
-
-  // Fetch received_at for those emails to compute last_email_at per room.
-  const { data: emailDates } = allEmailIds.length > 0
-    ? await supabase
-        .from('emails')
-        .select('id, received_at')
-        .in('id', allEmailIds)
-    : { data: [] }
-
-  const receivedAtById: Record<string, string> = {}
-  for (const e of emailDates ?? []) receivedAtById[e.id] = e.received_at
-
   const lastEmailByRoom: Record<string, string> = {}
-  for (const re of reRows ?? []) {
-    const t = receivedAtById[re.email_id]
+  const emailToRooms: Record<string, string[]> = {}
+
+  for (const re of roomEmailDates ?? []) {
+    const t = (re.emails as { received_at: string } | null)?.received_at
     if (t && (!lastEmailByRoom[re.room_id] || t > lastEmailByRoom[re.room_id])) {
       lastEmailByRoom[re.room_id] = t
     }
+    if (!emailToRooms[re.email_id]) emailToRooms[re.email_id] = []
+    emailToRooms[re.email_id].push(re.room_id)
   }
 
-  // Find which rooms have overdue open jobs by querying jobs directly by
-  // workspace_id. This avoids an unbounded IN list over all email IDs in the
-  // workspace and uses the existing jobs(workspace_id, status) index instead.
+  // Query overdue jobs directly by workspace_id to avoid an unbounded IN list.
+  // Uses the existing jobs(workspace_id, status) composite index.
   const overdueRoomIds = new Set<string>()
   const { data: overdueJobs } = await supabase
     .from('jobs')
@@ -148,11 +142,6 @@ export async function getActiveRooms(workspaceId: string): Promise<RoomCardRow[]
 
   if (overdueJobs && overdueJobs.length > 0) {
     const overdueEmailIds = new Set(overdueJobs.map((j) => j.email_id))
-    const emailToRooms: Record<string, string[]> = {}
-    for (const re of reRows ?? []) {
-      if (!emailToRooms[re.email_id]) emailToRooms[re.email_id] = []
-      emailToRooms[re.email_id].push(re.room_id)
-    }
     for (const emailId of overdueEmailIds) {
       for (const roomId of emailToRooms[emailId] ?? []) {
         overdueRoomIds.add(roomId)
@@ -213,8 +202,11 @@ export async function getMyRooms(workspaceId: string): Promise<MyRoom[]> {
   return (data ?? []) as MyRoom[]
 }
 
-export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue[]> {
-  const supabase = await createClient()
+// Fetches the rooms tree using the admin client (no cookies needed).
+// Workspace membership is verified in the app layout before this is called,
+// so bypassing RLS here is safe. Called only via the cached wrapper below.
+async function fetchRoomsTree(workspaceId: string): Promise<RoomWithOverdue[]> {
+  const supabase = createAdminClient()
   const now = new Date().toISOString()
 
   const { data: rooms } = await supabase
@@ -229,16 +221,13 @@ export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue
 
   const roomIds = rooms.map((r) => r.id)
 
-  // Fetch room_emails to build the email-to-room mapping used for overdue flagging.
   const { data: reRows } = await supabase
     .from('room_emails')
     .select('room_id, email_id')
     .in('room_id', roomIds)
 
-  // Query overdue jobs directly by workspace_id rather than routing through an
-  // unbounded IN list of all email IDs. This runs on every authenticated page
-  // (app layout) so keeping it index-efficient matters. Uses the existing
-  // jobs(workspace_id, status) composite index.
+  // Query overdue jobs directly by workspace_id to avoid an unbounded IN list.
+  // Uses the existing jobs(workspace_id, status) composite index.
   const overdueRoomIds = new Set<string>()
   const { data: overdueJobs } = await supabase
     .from('jobs')
@@ -265,4 +254,17 @@ export async function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue
     ...r,
     has_overdue: overdueRoomIds.has(r.id),
   }))
+}
+
+// Cached wrapper around fetchRoomsTree.
+// revalidate: 60 provides a time-based fallback for background pipeline writes
+// (synthesiseRoom updates progress_total/progress_closed, fileEmailToRooms
+// creates rooms) which run in Trigger.dev and cannot call revalidateTag.
+// User-initiated room mutations call revalidateTag('rooms-tree') for immediate
+// invalidation without waiting for the TTL.
+export function getRoomsTree(workspaceId: string): Promise<RoomWithOverdue[]> {
+  return unstable_cache(fetchRoomsTree, ['rooms-tree', workspaceId], {
+    tags: ['rooms-tree'],
+    revalidate: 60,
+  })(workspaceId)
 }
