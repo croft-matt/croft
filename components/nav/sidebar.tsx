@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Settings, Home, Users, Paperclip, CheckSquare, Plus } from 'lucide-react'
+import { Settings, Home, Users, Paperclip, CheckSquare, Mail, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RoomsTree } from '@/components/nav/rooms-tree'
 import { NotificationBell } from '@/components/nav/notification-bell'
@@ -22,6 +22,7 @@ interface SidebarProps {
 const topNavItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/all-jobs', label: 'All jobs', icon: CheckSquare },
+  { href: '/all-emails', label: 'All emails', icon: Mail },
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/assets', label: 'Assets', icon: Paperclip },
 ]
