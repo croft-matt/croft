@@ -17,12 +17,7 @@ export function NotificationBell({ workspaceId, initialCount }: NotificationBell
   const [count, setCount] = useState(initialCount)
   const isActive = pathname === '/activity'
 
-  // Reset count to 0 when the user navigates to /activity.
-  useEffect(() => {
-    if (isActive) setCount(0)
-  }, [isActive])
-
-  // Subscribe to new notifications via Supabase Realtime.
+  // Subscribe to notification inserts (increment) and updates (decrement when read).
   useEffect(() => {
     if (!workspaceId) return
 
@@ -38,8 +33,20 @@ export function NotificationBell({ workspaceId, initialCount }: NotificationBell
           filter: `workspace_id=eq.${workspaceId}`,
         },
         () => {
-          if (pathname !== '/activity') {
-            setCount((c) => c + 1)
+          setCount((c) => c + 1)
+        }
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on('postgres_changes' as any, {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        (payload: { new: { read_at: string | null } }) => {
+          // Decrement only when a notification transitions to read.
+          if (payload.new.read_at !== null) {
+            setCount((c) => Math.max(0, c - 1))
           }
         }
       )
@@ -48,7 +55,7 @@ export function NotificationBell({ workspaceId, initialCount }: NotificationBell
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [workspaceId, pathname])
+  }, [workspaceId])
 
   return (
     <Link

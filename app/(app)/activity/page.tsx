@@ -1,19 +1,7 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getWorkspaceId } from '@/lib/auth/helpers'
-import { getNotifications, markAllRead, type NotificationRow } from '@/lib/queries/notifications'
-import { CheckCheck, Mail, Briefcase, RefreshCw, X } from 'lucide-react'
-
-function formatTimeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
+import { getNotifications, type NotificationRow } from '@/lib/queries/notifications'
+import { NotificationItem } from '@/components/notifications/notification-item'
 
 function formatDayLabel(iso: string): string {
   const date = new Date(iso)
@@ -37,41 +25,11 @@ function groupByDay(notifications: NotificationRow[]): Map<string, NotificationR
   return groups
 }
 
-function NotificationIcon({ type }: { type: NotificationRow['type'] }) {
-  const cls = 'h-4 w-4 shrink-0'
-  switch (type) {
-    case 'job_closed':
-      return <CheckCheck className={cls} />
-    case 'job_updated':
-      return <RefreshCw className={cls} />
-    case 'job_created':
-      return <Briefcase className={cls} />
-    case 'email_received':
-      return <Mail className={cls} />
-    default:
-      return <Mail className={cls} />
-  }
-}
-
-function typeLabel(type: NotificationRow['type']): string {
-  switch (type) {
-    case 'job_closed': return 'Closed'
-    case 'job_updated': return 'Updated'
-    case 'job_created': return 'Job'
-    case 'email_received': return 'Email'
-  }
-}
-
 export default async function ActivityPage() {
   const workspaceId = await getWorkspaceId()
   if (!workspaceId) notFound()
 
   const notifications = await getNotifications(workspaceId)
-
-  // Mark all read — fire-and-forget from the server, non-blocking.
-  markAllRead(workspaceId).catch((err: unknown) =>
-    console.error('ActivityPage: markAllRead failed:', err)
-  )
 
   if (notifications.length === 0) {
     return (
@@ -97,41 +55,10 @@ export default async function ActivityPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               {formatDayLabel(rows[0].created_at)}
             </p>
-            <div className="space-y-0">
-              {rows.map((n) => {
-                const href = n.room_id
-                  ? `/rooms/${n.room_id}?tab=jobs${n.email_id ? `&email=${n.email_id}` : ''}`
-                  : '/activity'
-                return (
-                  <Link
-                    key={n.id}
-                    href={href}
-                    className="flex items-start gap-3 py-3 border-b border-border last:border-0 hover:bg-accent/40 -mx-4 px-4 transition-colors rounded-lg group"
-                  >
-                    <span className={`mt-0.5 ${n.read_at ? 'text-muted-foreground' : 'text-foreground'}`}>
-                      <NotificationIcon type={n.type} />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm leading-snug ${n.read_at ? 'text-muted-foreground' : 'text-foreground'}`}>
-                        {n.summary}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {n.room_name && (
-                          <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
-                            {n.room_name}
-                          </span>
-                        )}
-                        <span className="text-[11px] text-muted-foreground">
-                          {formatTimeAgo(n.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                    {!n.read_at && (
-                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
-                    )}
-                  </Link>
-                )
-              })}
+            <div className="space-y-2">
+              {rows.map((n) => (
+                <NotificationItem key={n.id} notification={n} />
+              ))}
             </div>
           </section>
         ))}
