@@ -112,7 +112,7 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
   // round-trip to build an email ID array and the URL length risk of large IN lists.
   const { data: counts } = await supabase.rpc('get_room_job_counts', {
     p_room_id: roomId,
-    p_connected_address: connectedAddress,
+    p_connected_address: connectedAddress ?? undefined,
   })
 
   const countsRow = Array.isArray(counts) ? counts[0] : null
