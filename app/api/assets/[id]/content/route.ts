@@ -49,14 +49,23 @@ export async function GET(
   const contentType = asset.mime_type ?? 'application/octet-stream'
   const filename = asset.filename ?? 'file'
 
+  // RFC 5987 encoding eliminates header injection via special characters in filenames.
+  const encodedFilename = `UTF-8''${encodeURIComponent(filename)}`
+
   const download = new URL(request.url).searchParams.get('download') === 'true'
-  const disposition = download
-    ? `attachment; filename="${filename}"`
-    : `inline; filename="${filename}"`
+
+  // Only serve known-safe types inline. HTML, SVG, and JS execute in the user's
+  // authenticated session if rendered at this origin, so force download for those.
+  const safeInline = /^(image\/(?!svg\+xml)|application\/pdf|video\/|audio\/)/.test(contentType)
+  const forceDownload = download || !safeInline
+
+  const disposition = forceDownload
+    ? `attachment; filename*=${encodedFilename}`
+    : `inline; filename*=${encodedFilename}`
 
   return new NextResponse(fileResponse.body, {
     headers: {
-      'Content-Type': contentType,
+      'Content-Type': forceDownload ? 'application/octet-stream' : contentType,
       'Content-Disposition': disposition,
       'Cache-Control': 'private, max-age=300',
     },
