@@ -52,6 +52,7 @@ export async function sendReply(params: {
       .from('assets')
       .select('id, filename, storage_path')
       .in('id', params.selectedAssetIds)
+      .eq('workspace_id', room.workspace_id)
 
     for (const asset of selectedAssets ?? []) {
       if (!asset.storage_path) continue
