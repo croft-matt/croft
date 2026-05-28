@@ -1,28 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
 import type { WaitingEmail, OverdueJob } from '@/lib/queries/home'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function hashNeutral(str: string): string {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const options = ['bg-neutral-700', 'bg-neutral-600', 'bg-stone-600', 'bg-zinc-600']
-  return options[Math.abs(hash) % options.length]
-}
-
-function getInitials(name: string | null, email: string): string {
-  if (name) {
-    const parts = name.replace(/['"]/g, '').trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return name.slice(0, 2).toUpperCase()
-  }
-  return email.slice(0, 2).toUpperCase()
-}
 
 function daysOverdueFromDue(due: string): number {
   return Math.ceil((Date.now() - new Date(due).getTime()) / 86400000)
@@ -146,38 +125,17 @@ function ItemRow({ item }: { item: AttentionItem }) {
         : `/emails/${item.data.emailId}?from=/`
       : `/emails/${item.data.id}?from=/`
 
-  const displayName =
-    item.kind === 'job'
-      ? item.data.fromName
-      : item.data.fromName
-
-  const address =
-    item.kind === 'job'
-      ? item.data.fromName ?? ''
-      : item.data.fromAddress
-
   const text =
     item.kind === 'job'
       ? item.data.description
       : item.data.subjectSummary ?? item.data.fromAddress
 
-  const initials = getInitials(displayName, address)
-  const avatarBg = hashNeutral(address)
-
   return (
     <Link
       href={href}
-      className="flex items-start gap-2.5 rounded-lg px-1 py-1.5 hover:bg-muted/50 transition-colors"
+      className="block rounded-lg px-1 py-1.5 hover:bg-muted/50 transition-colors"
     >
-      <div
-        className={cn(
-          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white',
-          avatarBg
-        )}
-      >
-        {initials}
-      </div>
-      <p className="text-sm text-foreground leading-relaxed line-clamp-2">{text}</p>
+      <p className="text-sm text-foreground truncate">{text}</p>
     </Link>
   )
 }
@@ -204,11 +162,8 @@ function RoomGroupCard({ group }: { group: RoomGroup }) {
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2 pt-0.5">
+        <div className="shrink-0 pt-0.5">
           <OverdueBadge days={group.worstDaysOverdue} />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
-          </span>
         </div>
       </Link>
 

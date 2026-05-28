@@ -31,8 +31,8 @@ function StatCard({
   success?: boolean
 }) {
   return (
-    <div className="rounded-lg bg-muted/40 px-4 py-3">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <div className="px-4 py-3">
+      <p className="text-xs text-muted-foreground mb-1.5">{label}</p>
       <p
         className={cn(
           'text-2xl font-medium tabular-nums',
@@ -189,7 +189,7 @@ export function HomeRealtime({
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-4 gap-3 border-b border-border px-6 py-4">
+      <div className="grid grid-cols-4 divide-x divide-border border-b border-border px-2 py-1">
         <StatCard
           label="Needs your attention"
           value={homeCounts.attentionCount}

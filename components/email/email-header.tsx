@@ -64,7 +64,8 @@ export function EmailHeader({ email, jobs, rooms, onReply, repliedTo }: EmailHea
             <Link
               key={room.id}
               href={`/rooms/${room.id}`}
-              className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+              className="max-w-[9rem] truncate rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+              title={room.name}
             >
               {room.name}
             </Link>

@@ -122,6 +122,9 @@ export interface OverdueJob {
 export async function getOverdueJobs(workspaceId: string): Promise<OverdueJob[]> {
   const supabase = await createClient()
   const now = new Date().toISOString()
+  // Only surface jobs overdue within the last 30 days. Anything older is stale
+  // data that shouldn't dominate the home view.
+  const floor = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data: jobs } = await supabase
     .from('jobs')
@@ -129,6 +132,7 @@ export async function getOverdueJobs(workspaceId: string): Promise<OverdueJob[]>
     .eq('workspace_id', workspaceId)
     .eq('status', 'open')
     .lt('due', now)
+    .gte('due', floor)
     .order('due', { ascending: true })
     .limit(20)
 

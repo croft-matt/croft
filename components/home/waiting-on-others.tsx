@@ -46,7 +46,8 @@ export function WaitingOnOthers({ persons }: WaitingOnOthersProps) {
       {visible.map((person) => {
         const name = displayName(person)
         const meta = metaLine(person)
-        const visibleItems = person.items.slice(0, 4)
+        const visibleItems = person.items.slice(0, 2)
+        const itemOverflow = person.items.length - 2
 
         return (
           <div
@@ -56,34 +57,39 @@ export function WaitingOnOthers({ persons }: WaitingOnOthersProps) {
             <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-medium text-foreground">{name}</p>
               {meta && (
-                <p className="text-sm text-muted-foreground truncate mt-0.5">{meta}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{meta}</p>
               )}
             </div>
 
-            <div className="px-4 py-2.5 space-y-2">
+            <div className="px-4 py-2.5 space-y-1.5">
               {visibleItems.map((item) => (
                 <Link
                   key={item.jobId}
                   href={`/emails/${item.emailId}?from=/`}
-                  className="flex items-start justify-between gap-3 hover:opacity-70 transition-opacity"
+                  className="flex items-center justify-between gap-3 hover:opacity-70 transition-opacity"
                 >
-                  <p className="text-sm text-foreground leading-relaxed line-clamp-2 flex-1">
+                  <p className="text-sm text-foreground truncate flex-1">
                     {item.description}
                   </p>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums whitespace-nowrap pt-0.5">
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                     {formatAge(item.receivedAt)}
                   </span>
                 </Link>
               ))}
+              {itemOverflow > 0 && (
+                <p className="text-xs text-muted-foreground pt-0.5">
+                  + {itemOverflow} more
+                </p>
+              )}
             </div>
           </div>
         )
       })}
 
       {overflow > 0 && (
-        <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-          <p className="text-xs text-muted-foreground">+ {overflow} more {overflow === 1 ? 'person' : 'people'}</p>
-        </div>
+        <p className="px-1 text-xs text-muted-foreground">
+          + {overflow} more {overflow === 1 ? 'person' : 'people'}
+        </p>
       )}
     </div>
   )
