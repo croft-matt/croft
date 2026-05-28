@@ -67,6 +67,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${errorUrl}${errorParam}`)
   }
 
+  if (userId !== user.id) {
+    return NextResponse.redirect(`${errorUrl}invalid_state`)
+  }
+
   // Exchange the authorisation code for tokens.
   const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
