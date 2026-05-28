@@ -470,6 +470,7 @@ export type Database = {
           source: string
           subject: string | null
           subject_summary: string | null
+          suppress_notifications: boolean
           thread_id: string | null
           to_addresses: Json
           urgency_reason: string | null
@@ -504,6 +505,7 @@ export type Database = {
           source?: string
           subject?: string | null
           subject_summary?: string | null
+          suppress_notifications?: boolean
           thread_id?: string | null
           to_addresses?: Json
           urgency_reason?: string | null
@@ -538,6 +540,7 @@ export type Database = {
           source?: string
           subject?: string | null
           subject_summary?: string | null
+          suppress_notifications?: boolean
           thread_id?: string | null
           to_addresses?: Json
           urgency_reason?: string | null

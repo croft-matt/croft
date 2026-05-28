@@ -31,7 +31,7 @@ export async function extractAttachmentText(
       type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       filename.toLowerCase().endsWith('.docx')
     ) {
-      const mammoth = await import('mammoth')
+      const { default: mammoth } = await import('mammoth')
       const result = await mammoth.extractRawText({ buffer: bytes })
       const text = result.value?.trim()
       return text || null
