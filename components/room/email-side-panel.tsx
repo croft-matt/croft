@@ -208,17 +208,24 @@ function ComposeArea({ email, roomId, emailJobs, onClose, onSent, initialJobIds 
     })
   }, [pickerOpen, pickerFetched, email.id])
 
-  // cmd+J toggles the job picker.
+  // Keyboard shortcuts: cmd+J toggles the job picker, Escape closes panel.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault()
         setPickerOpen((p) => !p)
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (pickerOpen) { setPickerOpen(false); return }
+        if (assetModalOpen) { setAssetModalOpen(false); return }
+        close()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [pickerOpen, assetModalOpen, close])
 
   function openAssetModal() {
     setAssetModalOpen(true)
@@ -572,7 +579,7 @@ type PanelState =
   | { mode: 'sent'; preview: SentEmailPreview }
 
 export function EmailSidePanel() {
-  const { emailId, history, close, goBack, consumePendingResolveJobIds } = useEmailSidePanel()
+  const { emailId, initialTab, history, close, goBack, consumePendingResolveJobIds } = useEmailSidePanel()
   const [data, setData] = useState<EmailPanelData | null>(null)
   const [loading, setLoading] = useState(false)
   const [panelState, setPanelState] = useState<PanelState>({ mode: 'view' })
@@ -602,6 +609,19 @@ export function EmailSidePanel() {
   // consumePendingResolveJobIds is stable (Zustand action), safe to include.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailId])
+
+  // ESC closes the panel (or navigates back if there's history).
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (history.length > 0) { goBack(); return }
+        close()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [history, close, goBack])
 
   const canGoBack = history.length > 0
   const roomId = data?.rooms[0]?.id ?? null
@@ -687,6 +707,7 @@ export function EmailSidePanel() {
               initialClosedByJobs={data.closedByThisEmail}
               rooms={data.rooms}
               workspaceId={data.workspaceId}
+              initialTab={initialTab}
             />
 
             {panelState.mode === 'sent' && (

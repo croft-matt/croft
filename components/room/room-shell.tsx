@@ -99,7 +99,8 @@ export function RoomShell({
     const emailId = params.get('email')
     if (emailId) {
       setActiveTab('jobs')
-      openEmailPanel(emailId)
+      const panelTab = params.get('panel_tab')
+      openEmailPanel(emailId, panelTab === 'email' ? 'email' : 'jobs')
     }
   // openEmailPanel is a stable Zustand action
   // eslint-disable-next-line react-hooks/exhaustive-deps
