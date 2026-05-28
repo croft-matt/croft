@@ -26,7 +26,7 @@ export const noiseGateTask = task({
 
     // Sent emails are always work-relevant — skip the model call entirely.
     // The user deliberately sent this email, so there is no spam/noise risk.
-    if (email.source === 'user_sent') {
+    if (email.source === 'user_sent' || email.in_reply_to) {
       await supabase
         .from('emails')
         .update({ processing_state: 'urgency_scanned' })
