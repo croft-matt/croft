@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
 import { logAiUsage } from '@/lib/command-palette/usage'
+import { aiInteractiveRatelimit } from '@/lib/ratelimit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -46,6 +47,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!member) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { success: aiAllowed } = await aiInteractiveRatelimit.limit(workspaceId)
+  if (!aiAllowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
   }
 
   // Resolve sender name from user metadata, falling back to email local part.

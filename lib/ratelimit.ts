@@ -20,3 +20,10 @@ export const sendRatelimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(60, '1 h'),
   prefix: 'croft:send',
 })
+
+// Interactive AI calls (/api/ask, /api/nudge): 20 per minute per workspace.
+export const aiInteractiveRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '1 m'),
+  prefix: 'croft:ai',
+})

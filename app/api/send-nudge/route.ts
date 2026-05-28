@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { requireUser } from '@/lib/auth/helpers'
 import { createClient } from '@/lib/supabase/server'
+import { sendRatelimit } from '@/lib/ratelimit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -34,6 +35,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!member) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { success: sendAllowed } = await sendRatelimit.limit(workspaceId)
+  if (!sendAllowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
   }
 
   // Fetch workspace Croft address and user reply-to address.
