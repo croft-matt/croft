@@ -88,69 +88,39 @@ export async function synthesiseRoom(roomId: string, emailId?: string): Promise<
   const supabase = createAdminClient()
   const now = new Date().toISOString()
 
-  // Gather all email IDs filed to this room.
-  const { data: roomEmails } = await supabase
-    .from('room_emails')
-    .select('email_id')
-    .eq('room_id', roomId)
+  // Fetch the workspace's connected account address so the overdue count only
+  // includes jobs the user themselves is responsible for, not supplier-owned work.
+  const { data: room } = await supabase
+    .from('rooms')
+    .select('workspace_id')
+    .eq('id', roomId)
+    .single()
 
-  const emailIds = (roomEmails ?? []).map((re) => re.email_id)
-
-  let progressTotal = 0
-  let progressClosed = 0
-  let alertText: string | null = null
-
-  if (emailIds.length > 0) {
-    // Fetch the workspace's connected account address so overdue counts only
-    // jobs the user themselves is responsible for, not supplier-owned work.
-    const { data: room } = await supabase
-      .from('rooms')
-      .select('workspace_id')
-      .eq('id', roomId)
-      .single()
-
-    let connectedAddress: string | null = null
-    if (room?.workspace_id) {
-      const { data: account } = await supabase
-        .from('email_accounts')
-        .select('email_address')
-        .eq('workspace_id', room.workspace_id)
-        .limit(1)
-        .maybeSingle()
-      connectedAddress = account?.email_address ?? null
-    }
-
-    let overdueQuery = supabase
-      .from('jobs')
-      .select('*', { count: 'exact', head: true })
-      .in('email_id', emailIds)
-      .eq('status', 'open')
-      .lt('due', now)
-
-    if (connectedAddress) {
-      overdueQuery = overdueQuery.eq('owner', connectedAddress)
-    }
-
-    const [{ count: total }, { count: closed }, { count: overdue }] = await Promise.all([
-      supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .in('email_id', emailIds),
-      supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .in('email_id', emailIds)
-        .eq('status', 'closed'),
-      overdueQuery,
-    ])
-
-    progressTotal = total ?? 0
-    progressClosed = closed ?? 0
-
-    if (overdue && overdue > 0) {
-      alertText = `${overdue} ${overdue === 1 ? 'job' : 'jobs'} overdue`
-    }
+  let connectedAddress: string | null = null
+  if (room?.workspace_id) {
+    const { data: account } = await supabase
+      .from('email_accounts')
+      .select('email_address')
+      .eq('workspace_id', room.workspace_id)
+      .limit(1)
+      .maybeSingle()
+    connectedAddress = account?.email_address ?? null
   }
+
+  // Single RPC call replaces: fetch all email IDs + 3 IN clause COUNT queries.
+  // The function joins jobs through room_emails inside Postgres, avoiding the
+  // round-trip to build an email ID array and the URL length risk of large IN lists.
+  const { data: counts } = await supabase.rpc('get_room_job_counts', {
+    p_room_id: roomId,
+    p_connected_address: connectedAddress,
+  })
+
+  const countsRow = Array.isArray(counts) ? counts[0] : null
+  const progressTotal = Number(countsRow?.total ?? 0)
+  const progressClosed = Number(countsRow?.closed ?? 0)
+  const overdueCount = Number(countsRow?.overdue ?? 0)
+  const alertText: string | null =
+    overdueCount > 0 ? `${overdueCount} ${overdueCount === 1 ? 'job' : 'jobs'} overdue` : null
 
   // Merge facts when triggered by a new email being processed.
   let roomData: Record<string, unknown> | undefined

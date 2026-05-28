@@ -998,6 +998,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_room_job_counts: {
+        Args: { p_connected_address?: string; p_room_id: string }
+        Returns: {
+          closed: number
+          overdue: number
+          total: number
+        }[]
+      }
       match_emails_for_context: {
         Args: {
           match_count?: number
