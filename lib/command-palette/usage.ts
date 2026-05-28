@@ -13,9 +13,7 @@ interface UsageEvent {
 export async function logAiUsage(event: UsageEvent): Promise<void> {
   try {
     const supabase = await createClient()
-    // ai_usage_events is not yet in the generated types -- cast until types:gen runs post-migration.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('ai_usage_events').insert({
+    await supabase.from('ai_usage_events').insert({
       workspace_id: event.workspaceId,
       user_id: event.userId,
       event_type: event.eventType,
