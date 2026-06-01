@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Settings, Home, Users, Paperclip, CheckSquare, Mail, Plus } from 'lucide-react'
+import { Settings, Home, Users, Paperclip, CheckSquare, Mail, Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RoomsTree } from '@/components/nav/rooms-tree'
 import { NotificationBell } from '@/components/nav/notification-bell'
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { createRoom } from '@/lib/rooms/actions'
 import type { RoomWithOverdue } from '@/lib/queries/cockpit'
+import { useCommandPalette } from '@/stores/command-palette-store'
 
 interface SidebarProps {
   rooms: RoomWithOverdue[]
@@ -19,7 +20,11 @@ interface SidebarProps {
   unreadCount: number
 }
 
-const topNavItems = [
+type NavItem =
+  | { kind: 'link'; href: string; label: string; icon: React.ComponentType<{ className?: string }> }
+  | { kind: 'action'; label: string; icon: React.ComponentType<{ className?: string }>; action: () => void }
+
+const LINK_NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/all-jobs', label: 'All jobs', icon: CheckSquare },
   { href: '/all-emails', label: 'All emails', icon: Mail },
@@ -30,6 +35,7 @@ const topNavItems = [
 export function Sidebar({ rooms, workspaceId, unreadCount }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { openSearch } = useCommandPalette()
   const [roomsOpen, setRoomsOpen] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState('')
@@ -89,23 +95,44 @@ export function Sidebar({ rooms, workspaceId, unreadCount }: SidebarProps) {
 
       {/* Top nav items */}
       <div className="px-3">
-        {topNavItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href
+        {((): NavItem[] => [
+          { kind: 'link', href: '/', label: 'Home', icon: LINK_NAV_ITEMS[0].icon },
+          { kind: 'action', label: 'Search', icon: Search, action: openSearch },
+          ...LINK_NAV_ITEMS.slice(1).map((item) => ({ kind: 'link' as const, ...item })),
+        ])().map((item) => {
+          if (item.kind === 'link') {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg px-2 h-7 text-xs font-medium transition-colors',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                )}
+                style={{ color: isActive ? undefined : 'var(--sidebar-muted-foreground)' }}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                {item.label}
+              </Link>
+            )
+          }
           return (
-            <Link
-              key={href}
-              href={href}
+            <button
+              key={item.label}
+              type="button"
+              onClick={item.action}
               className={cn(
-                'flex items-center gap-2.5 rounded-lg px-2 h-7 text-xs font-medium transition-colors',
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                'w-full flex items-center gap-2.5 rounded-lg px-2 h-7 text-xs font-medium transition-colors',
+                'hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
               )}
-              style={{ color: isActive ? undefined : 'var(--sidebar-muted-foreground)' }}
+              style={{ color: 'var(--sidebar-muted-foreground)' }}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
-              {label}
-            </Link>
+              <item.icon className="h-3.5 w-3.5 shrink-0" />
+              {item.label}
+            </button>
           )
         })}
         <NotificationBell workspaceId={workspaceId} initialCount={unreadCount} />
