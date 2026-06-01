@@ -105,11 +105,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
   }
 
-  let context: string
+  let context = await buildGlobalContext(workspaceId, supabase)
   if (roomId) {
-    context = await buildRoomContext(roomId, workspaceId, supabase)
+    const roomDetail = await buildRoomContext(roomId, workspaceId, supabase)
+    context = `${roomDetail}\n\n---\n\nOther rooms:\n${context}`
   } else {
-    context = await buildGlobalContext(workspaceId, supabase)
+    // context already set above — no-op branch kept for clarity
   }
 
   const response = await anthropic.messages.create({

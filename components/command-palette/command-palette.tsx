@@ -223,7 +223,10 @@ export function CommandPalette({ rooms, workspaceId }: CommandPaletteProps) {
         <CommandInput
           placeholder="Type / to navigate or ask anything..."
           value={inputValue}
-          onValueChange={setInputValue}
+          onValueChange={(val) => {
+            setInputValue(val)
+            if (askState !== 'idle') resetAsk()
+          }}
           readOnly={askState === 'loading'}
         />
 
