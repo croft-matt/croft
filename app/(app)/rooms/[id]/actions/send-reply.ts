@@ -129,6 +129,17 @@ export async function getReplysuggestion(
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return ''
+
+  // Do not generate suggestions for the user's own sent emails.
+  // Replying to a sent email would be replying to yourself.
+  const { data: email } = await supabase
+    .from('emails')
+    .select('source')
+    .eq('id', emailId)
+    .single()
+
+  if (email?.source === 'user_sent') return ''
+
   return generateReplySuggestion({ emailId, roomId })
 }
 

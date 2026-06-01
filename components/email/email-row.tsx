@@ -3,17 +3,18 @@
 import { useRouter } from 'next/navigation'
 import { CornerDownLeft, CornerUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { warmPanelCache } from '@/lib/email/panel-cache'
 import type { AllEmailsRow } from '@/lib/queries/all-emails'
 
 function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 60) return `${mins}m`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return `${hours}h`
   const days = Math.floor(hours / 24)
   if (days === 1) return 'yesterday'
-  if (days < 7) return `${days}d ago`
+  if (days < 7) return `${days}d`
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
@@ -32,64 +33,69 @@ export function EmailRow({ email }: EmailRowProps) {
 
   const showUrgency = (email.urgencyScore ?? 0) >= 7
   const showJobs = email.jobCount > 0
-  const showBadges = showUrgency || showJobs
 
-  // Link to the room with this email open in the side panel.
   const emailPanelHref = email.roomId
     ? `/rooms/${email.roomId}?email=${email.id}&panel_tab=email`
     : null
 
+  function handleMouseEnter() {
+    if (!emailPanelHref) return
+    warmPanelCache(email.id)
+    router.prefetch(emailPanelHref)
+  }
+
   return (
     <div
       onClick={emailPanelHref ? () => router.push(emailPanelHref) : undefined}
+      onMouseEnter={emailPanelHref ? handleMouseEnter : undefined}
       className={cn(
-        'rounded-xl border border-border bg-card px-4 py-3 space-y-1',
-        emailPanelHref && 'cursor-pointer hover:bg-accent/40 transition-colors'
+        'flex items-center gap-3 px-4 py-2.5 group',
+        emailPanelHref && 'cursor-pointer hover:bg-accent/50 transition-colors'
       )}
     >
-      {/* Line 1: direction icon + sender + time */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 min-w-0">
-          {email.source === 'user_sent'
-            ? <CornerUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-            : <CornerDownLeft className="h-3 w-3 shrink-0 text-muted-foreground" />
-          }
-          <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
-        </div>
-        <span className="text-xs text-muted-foreground shrink-0">
-          {formatRelative(email.receivedAt)}
-        </span>
-      </div>
+      {/* Direction icon */}
+      <span className="shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
+        {email.source === 'user_sent'
+          ? <CornerUpRight className="h-3.5 w-3.5" />
+          : <CornerDownLeft className="h-3.5 w-3.5" />
+        }
+      </span>
 
-      {/* Line 2: subject + room pill */}
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm text-muted-foreground truncate">{displaySubject}</span>
+      {/* Sender — fixed width so subjects always start at the same position */}
+      <span className="shrink-0 w-36 text-sm font-medium text-foreground truncate">
+        {displayName}
+      </span>
+
+      {/* Subject — fills remaining space */}
+      <span className="flex-1 min-w-0 text-sm text-muted-foreground truncate">
+        {displaySubject ?? '(no subject)'}
+      </span>
+
+      {/* Right side metadata */}
+      <div className="shrink-0 flex items-center gap-2">
+        {showUrgency && (
+          <span className="text-[11px] rounded px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 font-medium leading-none">
+            Urgent
+          </span>
+        )}
+        {showJobs && (
+          <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5 leading-none">
+            {email.jobCount === 1 ? '1 job' : `${email.jobCount} jobs`}
+          </span>
+        )}
         {email.roomId && email.roomName && (
           <a
             href={`/rooms/${email.roomId}`}
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5 hover:bg-muted/80 transition-colors"
+            className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5 leading-none hover:bg-border transition-colors max-w-[128px] truncate"
           >
             {email.roomName}
           </a>
         )}
+        <span className="text-xs text-muted-foreground/60 w-12 text-right tabular-nums shrink-0">
+          {formatRelative(email.receivedAt)}
+        </span>
       </div>
-
-      {/* Line 3: badges — only rendered when at least one applies */}
-      {showBadges && (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          {showUrgency && (
-            <span className="text-[11px] rounded px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 font-medium">
-              Urgent
-            </span>
-          )}
-          {showJobs && (
-            <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
-              {email.jobCount === 1 ? '1 job' : `${email.jobCount} jobs`}
-            </span>
-          )}
-        </div>
-      )}
     </div>
   )
 }

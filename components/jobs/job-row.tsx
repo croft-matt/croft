@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useJobModal } from '@/stores/job-modal-store'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
+import { warmPanelCache } from '@/lib/email/panel-cache'
 import { cn } from '@/lib/utils'
 
 export interface JobRowData {
@@ -94,6 +95,9 @@ export function JobRow({ job, chaseCount, className }: JobRowProps) {
         role="button"
         tabIndex={0}
         onClick={handleRowClick}
+        onMouseEnter={() => {
+          if (job.emailId) warmPanelCache(job.emailId)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') handleRowClick()
         }}

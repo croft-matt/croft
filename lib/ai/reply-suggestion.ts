@@ -1,22 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { getConnectedAddresses } from '@/lib/jobs/open-loops'
+import { REPLY_SUGGESTION_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-const REPLY_SYSTEM_PROMPT = `You are helping a project professional reply to an email. Draft the most useful, concise reply given the context.
-
-Rules:
-- Under 100 words.
-- Active voice.
-- State the next action clearly if one exists.
-- If an asset in the room is clearly relevant (e.g. the sender asked for a document that exists in the assets list), mention it will be attached. Do not fabricate assets.
-- Do not repeat information the recipient already knows.
-- No pleasantries beyond a brief opener if appropriate.
-- No em-dashes. Use hyphens or rewrite the sentence.
-- Do not refer to the user by name.
-- Do not mention Croft.
-- Plain text only, no markdown.`
 
 export interface ComposeAsset {
   id: string
@@ -29,6 +16,7 @@ export interface ComposeAsset {
 export async function generateReplySuggestion(params: {
   emailId: string
   roomId: string
+  workspaceContext?: string | null
 }): Promise<string> {
   try {
     const { emailId, roomId } = params
@@ -49,7 +37,31 @@ export async function generateReplySuggestion(params: {
       supabase.from('room_emails').select('email_id').eq('room_id', roomId),
     ])
 
+    // Do not generate a reply suggestion for the user's own sent emails.
+    // If the from_address is a connected address, this is an outbound email
+    // and replying to it makes no sense.
+    const connectedSet = new Set(connectedAddresses)
+    if (connectedSet.has(email.from_address)) return ''
+
     const emailIds = (roomEmailsResult.data ?? []).map((r) => r.email_id)
+
+    // Scope open loops to the current thread only.
+    // If the email has no thread_id, scope to just this email.
+    // Never fall back to all room emails -- that causes jobs from
+    // unrelated threads to bleed into the draft.
+    let threadEmailIds: string[] = [emailId]
+
+    if (email.thread_id) {
+      const { data: threadEmails } = await supabase
+        .from('emails')
+        .select('id')
+        .eq('thread_id', email.thread_id)
+        .eq('workspace_id', workspaceId)
+
+      if (threadEmails && threadEmails.length > 0) {
+        threadEmailIds = threadEmails.map((e) => e.id)
+      }
+    }
 
     const [threadResult, jobsResult, roomResult, assetsResult] = await Promise.all([
       email.thread_id
@@ -62,13 +74,11 @@ export async function generateReplySuggestion(params: {
             .limit(3)
         : Promise.resolve({ data: [] as Array<{ body_text: string | null; from_address: string; received_at: string }> }),
 
-      emailIds.length > 0
-        ? supabase
-            .from('jobs')
-            .select('description, owner, due')
-            .in('email_id', emailIds)
-            .eq('status', 'open')
-        : Promise.resolve({ data: [] as Array<{ description: string; owner: string | null; due: string | null }> }),
+      supabase
+        .from('jobs')
+        .select('description, owner, due')
+        .in('email_id', threadEmailIds)
+        .eq('status', 'open'),
 
       supabase.from('rooms').select('room_data').eq('id', roomId).single(),
 
@@ -91,11 +101,19 @@ export async function generateReplySuggestion(params: {
 
     const threadHistory = threadResult.data ?? []
     const allJobs = jobsResult.data ?? []
-    const connectedSet = new Set(connectedAddresses)
-
-    // Jobs where the user is the owner (their court)
-    const openLoops = allJobs.filter((j) => j.owner != null && connectedSet.has(j.owner))
     const assets = (assetsResult.data ?? []).filter((a) => a.storage_path != null)
+
+    // Jobs where the user is the owner (their court), scoped to this thread.
+    // Cap at 5, sorted by due date ascending (soonest first, nulls last).
+    const openLoops = allJobs
+      .filter((j) => j.owner != null && connectedSet.has(j.owner))
+      .sort((a, b) => {
+        if (!a.due && !b.due) return 0
+        if (!a.due) return 1
+        if (!b.due) return -1
+        return a.due.localeCompare(b.due)
+      })
+      .slice(0, 5)
 
     // Flatten facts from room_data JSONB. Same structure as flattenFacts in room-realtime.tsx.
     const roomData = (roomResult.data?.room_data ?? {}) as Record<string, unknown>
@@ -120,8 +138,11 @@ export async function generateReplySuggestion(params: {
             .map((e) => `[${e.from_address}]: ${(e.body_text ?? '').slice(0, 300)}`)
             .join('\n\n')}`
         : '',
+      params.workspaceContext
+        ? `\nWorkspace context: ${params.workspaceContext}`
+        : '',
       openLoops.length > 0
-        ? `\nOpen items on your side:\n${openLoops
+        ? `\nOpen items on your side (this thread only):\n${openLoops
             .map((j) => `- ${j.description}${j.due ? ` (due ${j.due})` : ''}`)
             .join('\n')}`
         : '',
@@ -141,7 +162,7 @@ export async function generateReplySuggestion(params: {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
-      system: REPLY_SYSTEM_PROMPT,
+      system: REPLY_SUGGESTION_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     })
 

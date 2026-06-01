@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { triggerClassifyNow, getEmailExtractionData } from '@/lib/email/actions'
 import type { Email, Job, Asset, ExtractedContact, Room, Extraction } from '@/lib/types/database'
@@ -35,15 +35,29 @@ export function EmailProcessingProvider({
   const isProcessed = email.processing_state === 'processed'
   const extraction = email.extraction as Extraction | null
 
+  // Trigger classification once on mount if not yet processed. Separate from
+  // the Realtime effect so a state change never causes the channel to rebuild.
   useEffect(() => {
     if (!isProcessed) {
       void triggerClassifyNow(email.id)
     }
+    // Intentionally omitting isProcessed — we only want this to fire once per email.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email.id])
 
+  // Unique channel name per component instance. crypto.randomUUID() is stable
+  // across re-renders (useMemo with no deps) but unique per mount, so it never
+  // collides with a channel from a prior mount whose removeChannel() is still
+  // pending on the singleton Supabase client.
+  const channelName = useMemo(() => `email:${email.id}:state:${crypto.randomUUID()}`, [email.id])
+
+  // Subscribe to processing state updates. Depends only on email.id so the
+  // channel is never torn down and rebuilt mid-flight.
+  useEffect(() => {
     const supabase = createClient()
 
     const channel = supabase
-      .channel(`email:${email.id}:state`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -71,7 +85,7 @@ export function EmailProcessingProvider({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [email.id, isProcessed])
+  }, [email.id, channelName])
 
   const showFlag =
     isProcessed &&

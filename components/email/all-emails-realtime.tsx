@@ -43,7 +43,7 @@ export function AllEmailsRealtime({ workspaceId, initialEmails }: AllEmailsRealt
   }
 
   return (
-    <div className="space-y-2">
+    <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
       {initialEmails.map((email) => (
         <EmailRow key={email.id} email={email} />
       ))}

@@ -5,6 +5,7 @@ import { X, ArrowLeft, Paperclip, Send, Loader2, CheckCheck, Plus } from 'lucide
 import { cn } from '@/lib/utils'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { getEmailPanelData, type EmailPanelData } from '@/lib/email/actions'
+import { getPanelCache, setPanelCache } from '@/lib/email/panel-cache'
 import { EmailHeader } from '@/components/email/email-header'
 import { EmailProcessingProvider } from '@/components/email/email-processing'
 import {
@@ -591,11 +592,26 @@ export function EmailSidePanel() {
       return
     }
 
+    // Cache hit: render immediately with no loading state.
+    const cached = getPanelCache(emailId)
+    if (cached) {
+      setData(cached)
+      setLoading(false)
+      setPanelState({ mode: 'view' })
+      const resolveJobIds = consumePendingResolveJobIds()
+      if (resolveJobIds.length > 0) {
+        setPanelState({ mode: 'compose', resolveJobIds })
+      }
+      return
+    }
+
+    // Cache miss: fetch, store, then render.
     setLoading(true)
     setData(null)
     setPanelState({ mode: 'view' })
 
     getEmailPanelData(emailId).then((result) => {
+      if (result) setPanelCache(emailId, result)
       setData(result)
       setLoading(false)
 
