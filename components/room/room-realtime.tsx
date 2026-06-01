@@ -51,6 +51,7 @@ function buildOpenLoopsLocal(
         age_days,
         from_name: isSelf ? null : (fromNameMap.get(job.email_id) ?? null),
         source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
+        sourceFromAddress: fromAddressMap.get(job.email_id) ?? null,
       }
     })
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())

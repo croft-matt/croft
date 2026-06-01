@@ -8,6 +8,9 @@ export interface OpenLoop extends Job {
   // Narrowed from the DB string type. 'extracted' = from an actual email;
   // 'anticipated' = created from watch_context before any matching email arrived.
   source: 'extracted' | 'anticipated'
+  // The from_address of the email this job was extracted from.
+  // Null for anticipated jobs (no source email yet).
+  sourceFromAddress: string | null
 }
 
 export interface OpenLoops {
@@ -62,6 +65,7 @@ export function buildOpenLoops(
         age_days,
         from_name: isSelf ? null : (fromNameMap.get(job.email_id) ?? null),
         source: (job.source === 'anticipated' ? 'anticipated' : 'extracted') as 'extracted' | 'anticipated',
+        sourceFromAddress: fromAddressMap.get(job.email_id) ?? null,
       }
     })
     // Oldest first

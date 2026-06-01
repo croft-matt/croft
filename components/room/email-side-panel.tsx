@@ -78,7 +78,7 @@ interface JobBlockProps {
   onChange: (answer: string) => void
 }
 
-const intentBadgeClass: Record<string, string> = {
+export const intentBadgeClass: Record<string, string> = {
   REQUEST: 'bg-amber-500/10 text-amber-400',
   DELIVER: 'bg-blue-500/10 text-blue-400',
   CONFIRM: 'bg-muted text-foreground',
@@ -580,7 +580,7 @@ type PanelState =
   | { mode: 'sent'; preview: SentEmailPreview }
 
 export function EmailSidePanel() {
-  const { emailId, initialTab, history, close, goBack, consumePendingResolveJobIds } = useEmailSidePanel()
+  const { emailId, initialTab, history, close, goBack, consumePendingResolveJobIds, openRespond } = useEmailSidePanel()
   const [data, setData] = useState<EmailPanelData | null>(null)
   const [loading, setLoading] = useState(false)
   const [panelState, setPanelState] = useState<PanelState>({ mode: 'view' })
@@ -642,8 +642,14 @@ export function EmailSidePanel() {
   const canGoBack = history.length > 0
   const roomId = data?.rooms[0]?.id ?? null
 
-  function handleReply() {
-    setPanelState({ mode: 'compose' })
+  function handleRespond() {
+    if (!data) return
+    openRespond({
+      personAddress: data.email.from_address,
+      personName: data.email.from_name ?? null,
+      roomId: data.rooms[0]?.id ?? '',
+      returnToEmailId: data.email.id,
+    })
   }
 
   function handleCancelCompose() {
@@ -712,7 +718,7 @@ export function EmailSidePanel() {
               email={data.email}
               jobs={data.jobs}
               rooms={data.rooms}
-              onReply={handleReply}
+              onRespond={data.email.source === 'inbound' ? handleRespond : undefined}
               repliedTo={panelState.mode === 'sent'}
             />
             <EmailProcessingProvider

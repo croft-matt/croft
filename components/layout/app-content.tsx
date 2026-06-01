@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useEmailSidePanel } from '@/stores/email-side-panel-store'
 import { EmailSidePanel } from '@/components/room/email-side-panel'
+import { PersonResponsePanel } from '@/components/room/person-response-panel'
 
 interface AppContentProps {
   children: React.ReactNode
 }
 
 export function AppContent({ children }: AppContentProps) {
-  const { isOpen } = useEmailSidePanel()
+  const { isOpen, respondMode } = useEmailSidePanel()
   const [showPanel, setShowPanel] = useState(false)
 
   // Keep panel in the DOM for 200ms after close so the exit animation completes.
@@ -48,7 +49,7 @@ export function AppContent({ children }: AppContentProps) {
               isOpen ? 'translate-x-0' : 'translate-x-full',
             )}
           >
-            <EmailSidePanel />
+            {respondMode ? <PersonResponsePanel /> : <EmailSidePanel />}
           </div>
         )}
       </div>

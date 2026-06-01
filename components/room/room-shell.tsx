@@ -189,6 +189,7 @@ export function RoomShell({
             loops={readModel.openLoops}
             connectedAddresses={readModel.connectedAddresses}
             workspaceId={readModel.workspaceId}
+            roomId={room.id}
             closedJobs={closedJobs}
           />
         )
