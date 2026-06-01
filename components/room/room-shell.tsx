@@ -13,7 +13,6 @@ import type { OwnerGroup } from '@/lib/jobs/open-loops'
 import { RoomHeader } from '@/components/room/room-header'
 import { CrossReferenceCards } from '@/components/room/cross-reference-cards'
 import { useCommandPalette } from '@/stores/command-palette-store'
-import { useRoomCommands } from '@/lib/command-palette/use-room-commands'
 import { BriefTab } from '@/components/room/brief-tab'
 import { JobsTab } from '@/components/room/jobs-tab'
 import { DatesTab } from '@/components/room/dates-tab'
@@ -111,11 +110,11 @@ export function RoomShell({
   const dragCounter = useRef(0)
   const { upload, openPicker } = useRoomUpload(room.id)
 
-  // Set palette context and room ID while this room shell is mounted.
+  // Set room ID in search store while this room shell is mounted.
   useEffect(() => {
-    useCommandPalette.setState({ context: 'in-room', currentRoomId: room.id })
+    useCommandPalette.setState({ currentRoomId: room.id })
     return () => {
-      useCommandPalette.setState({ context: 'always', currentRoomId: null })
+      useCommandPalette.setState({ currentRoomId: null })
     }
   // room.id is stable for the lifetime of a room shell mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,24 +164,6 @@ export function RoomShell({
     return () => window.removeEventListener('croft:switch-tab', handleTabSwitch)
   }, [room.id])
 
-  // Register room-level command palette commands.
-  // activeBlocks defaults to [] since block rows are not yet passed through
-  // the realtime provider. Block add/remove commands still work; "Remove a block"
-  // is hidden when activeBlocks is empty, which is safe.
-  useRoomCommands({
-    room: {
-      id: room.id,
-      name: room.name,
-      archived_at: room.archived_at ?? null,
-      status: room.status,
-    },
-    openLoops: readModel.openLoops,
-    activeBlocks: [],
-    allRooms,
-    router,
-    workspaceId,
-    ownerGroups,
-  })
 
   const overdueJobs = jobs.filter(
     (j) => j.status === 'open' && j.due && new Date(j.due) < new Date(),
