@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/nav/sidebar'
 import { JobModal } from '@/components/job-modal/job-modal'
 import { CommandPalette } from '@/components/command-palette/command-palette'
-import { NudgeModal } from '@/components/command-palette/nudge-modal'
 import { NotificationToaster } from '@/components/notifications/notification-toaster'
 import { getRoomsTree } from '@/lib/queries/cockpit'
 import { getUnreadCount } from '@/lib/queries/notifications'
@@ -36,8 +35,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <JobModal />
       {/* CommandPalette renders a portal dialog, position in tree does not matter */}
       <CommandPalette rooms={paletteRooms} workspaceId={workspaceId} />
-      {/* NudgeModal is independent of the palette -- both can be in the layout */}
-      <NudgeModal />
       {/* NotificationToaster subscribes to Realtime and fires toasts on new events */}
       {workspaceId && <NotificationToaster workspaceId={workspaceId} />}
     </div>
